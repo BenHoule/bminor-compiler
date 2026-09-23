@@ -1,0 +1,97 @@
+#include "token.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+typedef enum {
+  STAGE_SCAN,
+  STAGE_PARSE,
+  STAGE_PRINT,
+  STAGE_RESOLVE,
+  STAGE_TYPECHECK,
+  STAGE_CODEGEN,
+  STAGE_INVALID
+} stage_t;
+
+#define EXIT_COMPILE_ERROR 1  // Bad Input program
+#define EXIT_USAGE_ERROR 2    // Bad CLI command
+
+// Lookup table: command-line flags -> compilation stages
+static stage_t stage_from_flag(const char *user_flag) {
+  struct {
+    const char *flag;
+    stage_t stage;
+  } flag_table[] = {
+    {"-scan",      STAGE_SCAN},
+    {"-parse",     STAGE_PARSE},
+    {"-print",     STAGE_PRINT},
+    {"-resolve",   STAGE_RESOLVE},
+    {"-typecheck", STAGE_TYPECHECK},
+    {"-codegen",   STAGE_CODEGEN}
+  };
+
+  for (size_t i = 0; i < sizeof(flag_table) / sizeof(flag_table[0]); i++) {
+    // Include null terminator in strncmp so that exact match is required
+    const size_t flag_length = strlen(flag_table[i].flag) + 1;
+    if (strncmp(user_flag, flag_table[i].flag, flag_length) == 0) {
+      return flag_table[i].stage;
+    }
+  }
+
+  return STAGE_INVALID;
+}
+
+static void print_usage(const char *prog_name) {
+  fprintf(stderr, "Usage: %s <stage> <input file>\n", prog_name);
+}
+
+// - `argv[1]` = stage flag
+// - `argv[2]` = input file
+int main(int argc, char *argv[]) {
+  if (argc != 3) {
+    print_usage(argv[0]);
+    return EXIT_USAGE_ERROR;
+  }
+
+  const stage_t stage = stage_from_flag(argv[1]);
+  switch (stage) {
+    case STAGE_SCAN: {
+      // Stupid C grammar doesn't allow declarations immediately after
+      // a case label (fixed in C23 - scope block tricks older compilers).
+      FILE *input_file = fopen(argv[2], "r");
+      if (input_file == NULL) {
+        char err_msg[256];
+        snprintf(err_msg, sizeof(err_msg),
+          "bminor: failed to open '%s'", argv[2]);
+        perror(err_msg);
+        return EXIT_COMPILE_ERROR;
+      }
+      scanner_open(input_file);
+
+      int token = 0;
+      while((token = scanner_next_token()) != 0) {
+        char buf[24] = {0}; // 24 chosen arbitrarily
+        get_token_name(buf, token, sizeof(buf));
+        printf("%s\n", buf);
+      }
+
+      fclose(input_file);
+      break;
+    }
+    case STAGE_PARSE:
+    case STAGE_PRINT:
+    case STAGE_RESOLVE:
+    case STAGE_TYPECHECK:
+    case STAGE_CODEGEN:
+      fprintf(stderr, "bminor: stage not implemented (%s)\n", argv[1]);
+      return EXIT_COMPILE_ERROR;
+    case STAGE_INVALID:
+    default:
+      fprintf(stderr, "bminor: invalid flag (%s)\n", argv[1]);
+      print_usage(argv[0]);
+      return EXIT_USAGE_ERROR;
+  }
+
+  return scanner_error_count() > 0 ? EXIT_COMPILE_ERROR : EXIT_SUCCESS;
+}
+
