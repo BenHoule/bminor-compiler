@@ -16,7 +16,7 @@ Make a branch
 git checkout -b <branch>
 ```
 
-...make changes...
+*...make changes...*
 
 Push changes
 ```sh
