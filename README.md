@@ -9,6 +9,7 @@ make test
 ```
 **NOTE:** Makefile uses gcc-14 and `-std=c23` / `-std=gnu23` flags
 
+---
 ### Contributing
 Make a branch
 ```sh
