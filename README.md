@@ -16,8 +16,8 @@ git checkout -b <branch>
 ```
 ...make changes...
 ```sh
-git add ---
-git commit ---
+git add .
+git commit -m "message"
 git checkout main
 git pull
 git checkout <branch>
