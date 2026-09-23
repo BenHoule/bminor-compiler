@@ -1,0 +1,8 @@
+build/
+bminor
+*.o
+*.d
+*.s
+*.out
+core
+vgcore.*
