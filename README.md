@@ -14,7 +14,10 @@ Make a branch
 ```sh
 git checkout -b <branch>
 ```
+
 ...make changes...
+
+Push changes
 ```sh
 git add .
 git commit -m "message"
