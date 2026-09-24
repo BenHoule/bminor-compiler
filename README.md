@@ -84,7 +84,7 @@ primary_expr: TOKEN_IDENTIFIER
             | '(' expr ')'
             ;
 ```
-**NOTE:**  bottom-up structure (upper "consists of" lower); e.g. A unary (-, !) expression consists of a power (^) expression:
+**NOTE:**  bottom-up structure (upper "consists of" lower); e.g. A `unary_expr` (-, !) consists of a `pow_expr` (^):
 ```
 " -x^2 "
 unary_expr
@@ -104,6 +104,7 @@ unary_expr
 pow_expr
 -> (unary_expr + '^' + pow_expr)
 -> (('-' + unary_expr) + '^' + unary_expr)
+-> (('-' + len_expr) + '^' + len_expr)
 -> (('-' + postfix_expr) + '^' + postfix_expr)
 -> (('-' + primary_expr) + '^' + primary_expr)
 -> (('-' + TOKEN_NAME) + '^' + TOKEN_INTEGER_LITERAL)
