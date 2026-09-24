@@ -2,8 +2,6 @@
 #ifndef PARAM_LIST_H
 #define PARAM_LIST_H
 
-#include <stdio.h>
-
 struct type;
 struct symbol;
 
