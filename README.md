@@ -32,3 +32,81 @@ git merge --ff-only <branch>
 git push
 ```
 
+---
+### Grammar
+```
+expr        : assign_expr
+            ;
+
+assign_expr : or_expr '=' assign_expr        /* right-recursive */
+            | or_expr
+            ;
+
+or_expr     : or_expr TOKEN_OR and_expr      /* left-recursive */
+            | and_expr
+            ;
+
+and_expr    : /* ... && ... */
+            ;
+
+cmp_expr    : /* < <= > >= == != */
+            ;
+
+add_expr    : /* + - */
+            ;
+
+mul_expr    : /* * / % */
+            ;
+
+unary_expr  : '-' unary_expr
+            | '!' unary_expr
+            | len_expr
+            ;
+
+len_expr    : '#' len_expr
+            | pow_expr
+            ;
+
+pow_expr    : postfix_expr '^' unary_expr    /* see note below */
+            | postfix_expr
+            ;
+
+postfix_expr: postfix_expr TOKEN_INC
+            | postfix_expr TOKEN_DEC
+            | postfix_expr '[' expr ']'
+            | postfix_expr '(' opt_arg_list ')'
+            | primary_expr
+            ;
+
+primary_expr: TOKEN_IDENTIFIER
+            | TOKEN_INTEGER_LITERAL
+            | /* other literals, true, false */
+            | '(' expr ')'
+            ;
+```
+**NOTE:**  bottom-up structure (upper "consists of" lower); e.g. A unary (-, !) expression consists of a power (^) expression:
+```
+" -x^2 "
+unary_expr
+-> '-' + len_expr
+-> '-' + pow_expr
+-> '-' + (postfix_expr + '^' + unary_expr)
+-> '-' + (primary_expr + '^' + len_expr)
+-> '-' + (TOKEN_NAME + '^' + pow_expr)
+-> '-' + (TOKEN_NAME + '^' + postfix_expr)
+-> '-' + (TOKEN_NAME + '^' + primary_expr)
+-> '-' + (TOKEN_NAME + '^' + TOKEN_INTEGER_LITERAL)
+-> semantically " -(x^2) "
+```
+`unary_expr` has no path to `primary_exp` that does not pass through `pow_expr`. Were it the other way around, the derivation would look like:
+```
+" -x^2 "
+pow_expr
+-> (unary_expr + '^' + pow_expr)
+-> (('-' + unary_expr) + '^' + unary_expr)
+-> (('-' + postfix_expr) + '^' + postfix_expr)
+-> (('-' + primary_expr) + '^' + primary_expr)
+-> (('-' + TOKEN_NAME) + '^' + TOKEN_INTEGER_LITERAL)
+-> semantically " (-x)^2 "
+```
+
