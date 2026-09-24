@@ -38,24 +38,36 @@ git push
 expr        : assign_expr
             ;
 
-assign_expr : or_expr '=' assign_expr        /* right-recursive */
+assign_expr : or_expr '=' assign_expr        /* right-associative */
             | or_expr
             ;
 
-or_expr     : or_expr TOKEN_OR and_expr      /* left-recursive */
+or_expr     : or_expr TOKEN_OR and_expr      /* left-associative */
             | and_expr
             ;
 
-and_expr    : /* ... && ... */
+and_expr    : and_expr TOKEN_AND cmp_expr
+            | cmp_expr
             ;
 
-cmp_expr    : /* < <= > >= == != */
+cmp_expr    : cmp_expr '<' add_expr
+            | cmp_expr '>' add_expr
+            | cmp_expr TOKEN_LE add_expr
+            | cmp_expr TOKEN_GE add_expr
+            | cmp_expr TOKEN_EQ add_expr
+            | cmp_expr TOKEN_NE add_expr
+            | add_expr
             ;
 
-add_expr    : /* + - */
+add_expr    : add_expr '+' mul_expr
+            | add_expr '-' mul_expr
+            | mul_expr
             ;
 
-mul_expr    : /* * / % */
+mul_expr    : mul_expr '*' unary_expr
+            | mul_expr '/' unary_expr
+            | mul_expr '%' unary_expr
+            | unary_expr
             ;
 
 unary_expr  : '-' unary_expr
@@ -98,7 +110,7 @@ unary_expr
 -> '-' + (TOKEN_NAME + '^' + TOKEN_INTEGER_LITERAL)
 -> semantically " -(x^2) "
 ```
-`unary_expr` has no path to `primary_exp` that does not pass through `pow_expr`. Were it the other way around, the derivation would look like:
+`unary_expr` has no path to `primary_expr` that does not pass through `pow_expr`. Were it the other way around, the derivation would look like:
 ```
 " -x^2 "
 pow_expr
