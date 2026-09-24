@@ -1,9 +1,8 @@
 #ifndef EXPR_H
 #define EXPR_H
 
+#include <stddef.h>
 #include <stdint.h>
-
-struct symbol;
 
 typedef enum {
 	EXPR_ADD,     // 'e + e'
@@ -26,8 +25,8 @@ typedef enum {
   EXPR_OR,      // 'e || e'
   EXPR_NOT,     // '!e'
   EXPR_ASGN,    // 'e = e'
-  EXPR_CALL,    // 'e(...)'
   EXPR_IDX,     // 'e[e]'
+  EXPR_CALL,    // 'e(...)'
   EXPR_INT,     // 'i' (integer literal)
   EXPR_BOOL,    // 'b' (boolean literal)
   EXPR_CHAR,    // 'c' (character literal)
@@ -36,18 +35,31 @@ typedef enum {
   EXPR_NAME     // 'x' (name)
 } expr_t;
 
+struct symbol;  // Forward declaration
+
 struct expr {
 	/* used by all kinds of exprs */
 	expr_t kind;
 	struct expr *left;
 	struct expr *right;
 
-	/* used by various leaf exprs */
-	const char *name;
-	int64_t literal_value;
-  double double_literal;
-	const char * string_literal;
-	struct symbol *symbol;
+  /* union minimizes memory footprint by overlapping mutually exclusive fields */
+  union {
+    /* used by call exprs (and operators with variable operands) */
+    struct {
+      struct expr **argv;
+      size_t argc;
+    } call;
+
+    /* used by various leaf exprs */
+    struct {
+      const char *name;
+      int64_t literal_value;
+      double double_literal;
+      const char *string_literal;
+      struct symbol *symbol;
+    };
+  };
 };
 
 struct expr * expr_create( expr_t kind, struct expr *left, struct expr *right );

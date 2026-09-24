@@ -16,6 +16,7 @@ static inline bool is_printable(const uint8_t byte) {
 }
 
 static inline void byte_to_hexstr(char **out, const uint8_t raw) {
+  // constexpr char hex_digits[] = "0123456789ABCDEF";  <--(c23)
   static const char hex_digits[] = "0123456789ABCDEF";
   **out = hex_digits[(raw >> 4) & 0xF];  // High nibble
   (*out)++;
