@@ -90,8 +90,8 @@ len_expr    : '#' len_expr
             | pow_expr
             ;
 
-pow_expr    : postfix_expr '^' unary_expr    /* see note below */
-            | postfix_expr
+pow_expr    : postfix_expr '^' unary_expr    /* -x^2 -> -(x^2) */
+            | postfix_expr                   /* see note below */
             ;
 
 postfix_expr: postfix_expr TOKEN_INC

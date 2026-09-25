@@ -78,11 +78,11 @@ opt_list    : %empty                     { $$ = NULL; }
             | expr_list                  {  }
             ;
 
-expr_list   : expr ',' expr_list         {  }
-            | expr                       {  }
+expr        : assign_expr                {  }
             ;
 
-expr        : assign_expr                {  }
+expr_list   : assign_expr ',' expr_list         {  }
+            | assign_expr                       {  }
             ;
 
 assign_expr : or_expr '=' assign_expr        /* right-associative */
@@ -126,7 +126,7 @@ len_expr    : '#' len_expr
             | pow_expr
             ;
 
-pow_expr    : postfix_expr '^' unary_expr    /* see note below */
+pow_expr    : postfix_expr '^' unary_expr    /* -x^2 -> -(x^2) */
             | postfix_expr
             ;
 
