@@ -35,6 +35,17 @@ git push
 ---
 ### Grammar
 ```
+program     : expr ';'
+            ;
+
+opt_list    : %empty
+            | expr_list
+            ;
+
+expr_list   : expr ',' expr_list
+            | expr
+            ;
+
 expr        : assign_expr
             ;
 
@@ -86,13 +97,17 @@ pow_expr    : postfix_expr '^' unary_expr    /* see note below */
 postfix_expr: postfix_expr TOKEN_INC
             | postfix_expr TOKEN_DEC
             | postfix_expr '[' expr ']'
-            | postfix_expr '(' opt_arg_list ')'
+            | postfix_expr '(' opt_list ')'
             | primary_expr
             ;
 
 primary_expr: TOKEN_IDENTIFIER
+            | TOKEN_CHAR_LITERAL
+            | TOKEN_DOUBLE_LITERAL
             | TOKEN_INTEGER_LITERAL
-            | /* other literals, true, false */
+            | TOKEN_STRING_LITERAL
+            | TOKEN_FALSE
+            | TOKEN_TRUE
             | '(' expr ')'
             ;
 ```

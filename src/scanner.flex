@@ -1,7 +1,8 @@
 %option noyywrap nounput noinput yylineno
 %{
 
-#include "token.h"
+#include "scanner.h"
+#include "parser.h"
 #include "string_util.h"
 #include <assert.h>
 #include <stdio.h>

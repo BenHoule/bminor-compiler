@@ -1,4 +1,6 @@
-#include "token.h"
+#include "scanner.h"
+#include "parser.h"
+#include "parser_diag.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -78,7 +80,22 @@ int main(int argc, char *argv[]) {
       fclose(input_file);
       break;
     }
-    case STAGE_PARSE:
+    case STAGE_PARSE: {
+      FILE *input_file = fopen(argv[2], "r");
+      if (input_file == NULL) {
+        char err_msg[256];
+        snprintf(err_msg, sizeof(err_msg),
+          "bminor: failed to open '%s'", argv[2]);
+        perror(err_msg);
+        return EXIT_COMPILE_ERROR;
+      }
+      scanner_open(input_file);
+
+      yyparse(); // Parsing logic would go here
+
+      fclose(input_file);
+      break;
+    }
     case STAGE_PRINT:
     case STAGE_RESOLVE:
     case STAGE_TYPECHECK:
@@ -91,7 +108,7 @@ int main(int argc, char *argv[]) {
       print_usage(argv[0]);
       return EXIT_USAGE_ERROR;
   }
-
-  return scanner_error_count() > 0 ? EXIT_COMPILE_ERROR : EXIT_SUCCESS;
+  unsigned int total_err = scanner_error_count() + parser_error_count();
+  return total_err > 0 ? EXIT_COMPILE_ERROR : EXIT_SUCCESS;
 }
 
