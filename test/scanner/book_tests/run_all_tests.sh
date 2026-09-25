@@ -1,8 +1,11 @@
 #!/bin/sh
 
-for testfile in /home/benh/CompilerConstruction/b-minor/test/scanner/book_tests/good*.bminor
+DIR=$(dirname "$0")
+BMINOR="$DIR"/../../../bminor
+
+for testfile in "$DIR"/good*.bminor
 do
-	if /home/benh/CompilerConstruction/b-minor/bminor -scan $testfile > $testfile.out
+	if $BMINOR -scan "$testfile" > "$testfile".out
 	then
 		echo "$testfile success (as expected)"
 	else
@@ -10,9 +13,9 @@ do
 	fi
 done
 
-for testfile in /home/benh/CompilerConstruction/b-minor/test/scanner/book_tests/bad*.bminor
+for testfile in "$DIR"/bad*.bminor
 do
-	if /home/benh/CompilerConstruction/b-minor/bminor -scan $testfile > $testfile.out
+	if $BMINOR -scan "$testfile" > "$testfile".out
 	then
 		echo "$testfile success (INCORRECT)"
 	else
