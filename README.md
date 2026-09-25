@@ -115,26 +115,25 @@ primary_expr: TOKEN_IDENTIFIER
 ```
 " -x^2 "
 unary_expr
--> '-' + len_expr
--> '-' + pow_expr
--> '-' + (postfix_expr + '^' + unary_expr)
--> '-' + (primary_expr + '^' + len_expr)
--> '-' + (TOKEN_NAME + '^' + pow_expr)
--> '-' + (TOKEN_NAME + '^' + postfix_expr)
--> '-' + (TOKEN_NAME + '^' + primary_expr)
--> '-' + (TOKEN_NAME + '^' + TOKEN_INTEGER_LITERAL)
+-> '-' len_expr
+-> '-' pow_expr
+-> '-' (postfix_expr '^' unary_expr)
+-> '-' (primary_expr '^' len_expr)
+-> '-' (TOKEN_NAME   '^' pow_expr)
+-> '-' (TOKEN_NAME   '^' postfix_expr)
+-> '-' (TOKEN_NAME   '^' primary_expr)
+-> '-' (TOKEN_NAME   '^' TOKEN_INTEGER_LITERAL)
 -> semantically " -(x^2) "
 ```
 `unary_expr` has no path to `primary_expr` that does not pass through `pow_expr`. Were it the other way around, the derivation would look like:
 ```
 " -x^2 "
 pow_expr
--> (unary_expr + '^' + pow_expr)
--> (('-' + unary_expr) + '^' + unary_expr)
--> (('-' + len_expr) + '^' + len_expr)
--> (('-' + postfix_expr) + '^' + postfix_expr)
--> (('-' + primary_expr) + '^' + primary_expr)
--> (('-' + TOKEN_NAME) + '^' + TOKEN_INTEGER_LITERAL)
+-> unary_expr '^' pow_expr
+-> ('-' unary_expr)   '^' unary_expr
+-> ('-' len_expr)     '^' len_expr
+-> ('-' postfix_expr) '^' postfix_expr
+-> ('-' primary_expr) '^' primary_expr
+-> ('-' TOKEN_NAME)   '^' TOKEN_INTEGER_LITERAL
 -> semantically " (-x)^2 "
 ```
-
