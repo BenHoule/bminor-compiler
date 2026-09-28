@@ -97,7 +97,7 @@ IDENTIFIER  {L}{A}*
                       }
 \"([^"\\\n]|{ES})*    { yyerror("Unterminated string"); }
 
-'([^'\\\n]|{ES})*'    {
+'([^'\\\n]|{ES})'    {
                         constexpr size_t CHAR_MAX = 2;  // 1 character + null terminator
                         char encoded_char[2] = {0};
                         if (!string_encode(yytext, encoded_char, CHAR_MAX))
