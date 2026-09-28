@@ -9,7 +9,8 @@
 static inline bool is_printable(const uint8_t byte) {
   // spec says "between 32 and 127" but spaces need to be included
   // while DEL is not printable(?).
-  enum { SPACE = 32, DEL = 127 };  // compile-time constants
+  constexpr uint8_t SPACE = 32;
+  constexpr uint8_t DEL = 127;
   return SPACE <= byte && byte < DEL;
 }
 
@@ -123,7 +124,7 @@ void string_decode(const char *raw, char *out, size_t out_size) {
   out_size--;
 
   while (*raw && out_size > 1) {
-    uint8_t byte = (uint8_t)(*raw);
+    const uint8_t byte = (uint8_t)(*raw);
     if (is_printable(byte)) {
       *out = *raw;
       out++;

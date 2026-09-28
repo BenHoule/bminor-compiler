@@ -89,8 +89,8 @@ IDENTIFIER  {L}{A}*
 {D}+"."{E}?      { return TOKEN_DOUBLE_LITERAL; }
 
 \"([^"\\\n]|{ES})*\"  {
-                        static constexpr size_t STRING_MAX = 256;  //  255 + null terminator
-                        char encoded_str[STRING_MAX] = {};
+                        constexpr size_t STRING_MAX = 256;  //  255 + null terminator
+                        char encoded_str[STRING_MAX] = {0};
                         if (!string_encode(yytext, encoded_str, STRING_MAX))
                           yyerror("String literal too long (MAX=255)");
                         return TOKEN_STRING_LITERAL;
