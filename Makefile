@@ -70,6 +70,7 @@ endif
 # Test and valgrind targets
 test: $(BIN)
 	@./test/runtests.sh
+	@./test/scanner/book_tests/run_all_tests.sh
 
 valgrind: $(BIN)
 	@BMINOR_VALGRIND=1 ./test/runtests.sh
