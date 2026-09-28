@@ -9,8 +9,8 @@
 static inline bool is_printable(const uint8_t byte) {
   // spec says "between 32 and 127" but spaces need to be included
   // while DEL is not printable(?).
-  constexpr int SPACE = 32;
-  constexpr int DEL = 127;
+  constexpr uint8_t SPACE = 32;
+  constexpr uint8_t DEL = 127;
   return SPACE <= byte && byte < DEL;
 }
 
