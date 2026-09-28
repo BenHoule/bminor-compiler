@@ -3,6 +3,7 @@
 
 #include "token.h"
 #include "string_util.h"
+
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
@@ -88,45 +89,19 @@ IDENTIFIER  {L}{A}*
 {D}+"."{E}?      { return TOKEN_DOUBLE_LITERAL; }
 
 \"([^"\\\n]|{ES})*\"  {
-                        enum {
-                          STRING_DECODE_FAIL     = -1,
-                          STRING_DECODE_SUCCESS  =  0,
-                          STRING_DECODE_OVERFLOW =  1,
-                          STRING_MAX = 256
-                        };
-                        char decoded_string[STRING_MAX] = {0};
-                        switch(string_decode(
-                            yytext, decoded_string, STRING_MAX)) {
-                          case STRING_DECODE_SUCCESS: break;
-                          case STRING_DECODE_OVERFLOW:
-                            yyerror("String literal too long (MAX=255)");
-                            break;
-                          case STRING_DECODE_FAIL:
-                          default:
-                            yyerror("Unknown error decoding string literal");
-                            break;
-                        }
+                        constexpr size_t STRING_MAX = 256;  //  255 + null terminator
+                        char encoded_str[STRING_MAX] = {0};
+                        if (!string_encode(yytext, encoded_str, STRING_MAX))
+                          yyerror("String literal too long (MAX=255)");
                         return TOKEN_STRING_LITERAL;
                       }
 \"([^"\\\n]|{ES})*    { yyerror("Unterminated string"); }
 
 '([^'\\\n]|{ES})*'    {
-                        enum {
-                          STRING_DECODE_FAIL     = -1,
-                          STRING_DECODE_SUCCESS  =  0,
-                          STRING_DECODE_OVERFLOW =  1
-                        };
-                        char decoded_char[2] = {0};
-                        switch(string_decode(yytext, decoded_char, 2)) {
-                          case STRING_DECODE_SUCCESS: break;
-                          case STRING_DECODE_OVERFLOW:
-                            yyerror("Char literal too long (MAX=1)");
-                            break;
-                          case STRING_DECODE_FAIL:
-                          default:
-                            yyerror("Unknown error decoding char literal");
-                            break;
-                        }
+                        constexpr size_t CHAR_MAX = 2;  // 1 character + null terminator
+                        char encoded_char[2] = {0};
+                        if (!string_encode(yytext, encoded_char, CHAR_MAX))
+                          yyerror("Char literal too long (MAX=1)");
                         return TOKEN_CHAR_LITERAL;
                       }
 '([^'\\\n]|{ES})*       { yyerror("Unterminated char"); }

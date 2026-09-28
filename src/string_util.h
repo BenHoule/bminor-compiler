@@ -2,9 +2,13 @@
 
 #include <stdlib.h>
 
-/* Decodes a quoted lexeme (including surrounding quotes) into raw bytes.
-   Returns decoded length, or -1 if it exceeds out_size. */
-int string_decode(const char *lexeme, char *out, size_t out_size);
+/* Encodes a single character literal (including surrounding quotes) into a raw byte.
+   Returns true on success, false on failure. */
+bool char_encode(const char *in, char *out);
 
-/* Wraps raw bytes in quotes and re-escapes. Used by the printer. */
-void string_encode(const char *raw, char *out, size_t out_size);
+/* Encodes a quoted string literal (including surrounding quotes) into raw bytes.
+   Returns encoded length, or 0 if it exceeds out_size. */
+size_t string_encode(const char *lexeme, char *out, size_t out_size);
+
+/* Decodes raw bytes into a quoted string literal, re-escaping as necessary. Used by the printer. */
+void string_decode(const char *raw, char *out, size_t out_size);
