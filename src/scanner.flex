@@ -1,16 +1,19 @@
 %option noyywrap nounput noinput yylineno
+%option nodefault warn
 %{
 
 #include "scanner.h"
 #include "parser.h"
 #include "string_util.h"
-#include <assert.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdint.h>
 
 static int err_count = 0;
 
-static int yyerror(const char *msg);
+static int block_start_line = 0;
+
+static void scanner_error(const char *msg);
 
 %}
 
@@ -31,19 +34,23 @@ IDENTIFIER  {L}{A}*
 %%
   /* RULES */
 "//"[^\n]*  { /* Single-line comments */ }
-"/*"        { BEGIN(COMMENT_BLOCK); /* Multi-line comments */ }
+"/*"        { // Multi-line comments
+              // NOTE: Need to change too yylloc if using location tracking
+              BEGIN(COMMENT_BLOCK);
+              block_start_line = yylineno;
+            }
 
 <COMMENT_BLOCK>{
   "*/"      { BEGIN(INITIAL); }
 
-  /* NOTE: Pattern matching with ".*" matches one character at a time
-  *  (slow for large comments). The method used below is more efficient.
-  */
   [^*]+     { /* Ignore everything else inside comment */ }
   "*"       { /* Makes scanner check if next char is '/' */ }
 
   <<EOF>>   {
-              yyerror("unterminated block comment");
+              const int block_end_line = yylineno;
+              yylineno = block_start_line;
+              scanner_error("Unterminated block comment");
+              yylineno = block_end_line;
               BEGIN(INITIAL);
               yyterminate();
             }
@@ -89,27 +96,46 @@ IDENTIFIER  {L}{A}*
 {D}+"."{E}?      { return TOKEN_DOUBLE_LITERAL; }
 
 \"([^"\\\n]|{ES})*\"  {
-                        constexpr size_t STRING_MAX = 256;  //  255 + null terminator
-                        char encoded_str[STRING_MAX] = {0};
-                        if (!string_encode(yytext, encoded_str, STRING_MAX))
-                          yyerror("String literal too long (MAX=255)");
+                        constexpr size_t STRING_MAX = 256;  // 255 + null terminator
+                        uint8_t encoded_str[STRING_MAX] = {0};
+                        yytext++;  // Skip the opening double quote
+
+                        constexpr size_t ERR_INVALID_CHAR = 0;
+                        constexpr size_t ERR_TOO_LONG = SIZE_MAX;
+                        switch (string_encode(yytext, encoded_str, STRING_MAX)) {
+                          case ERR_INVALID_CHAR:
+                            scanner_error("String literal contains character outside of ASCII range [0-127]");
+                            break;
+                          case ERR_TOO_LONG:
+                            scanner_error("String literal too long (MAX=255)");
+                            break;
+                          default: break;
+                        }
                         return TOKEN_STRING_LITERAL;
                       }
-\"([^"\\\n]|{ES})*    { yyerror("Unterminated string"); }
+\"([^"\\\n]|{ES})*    { scanner_error("Unterminated string"); }
+'([^'\\\n]|{ES})'     {
+                        uint8_t encoded_char = 0;
+                        yytext++;  // Skip the opening single quote
+                        encoded_char = char_encode(yytext);
 
-'([^'\\\n]|{ES})*'    {
-                        char encoded_char = '\0';
-                        if (!char_encode(yytext, &encoded_char))
-                          yyerror("Char literal too long (MAX=1)");
+                        // NOTE: `char_encode` may return a value outside of
+                        // ASCII range [0-127]. Regex should ensure valid
+                        // single character.
+                        if (encoded_char > 127)
+                          scanner_error("Char outside of ASCII range [0-127]");
+
                         return TOKEN_CHAR_LITERAL;
                       }
-'([^'\\\n]|{ES})*       { yyerror("Unterminated char"); }
+'([^'\\\n]|{ES}){2,}' { scanner_error("Char literal too long (MAX=1)"); }
+'([^'\\\n]|{ES})*     { scanner_error("Unterminated char"); }
+''                    { scanner_error("Empty char literal (use '\\0x00' for null)"); }
 
-{IDENTIFIER}  { /* Last so it loses ties */
-  if (strlen(yytext) > 255) {
-    yyerror("Identifier too long (MAX=255)");
+{IDENTIFIER}  { // Last so it loses ties
+  if (yyleng > 255) {
+    scanner_error("Identifier too long (MAX=255)");
   }
-  /* If B-Minor included typedefs or enums, we would check for those here */
+  // If B-Minor included typedefs or enums, we would check for those here
   return TOKEN_IDENTIFIER;
 }
 
@@ -134,7 +160,7 @@ IDENTIFIER  {L}{A}*
 "<"           { return '<'; }
 "="           { return '='; }
 
-.   { yyerror("Unrecognized character"); }
+.   { scanner_error("Unrecognized character"); }
 
 %%
   /* HELPERS */
@@ -142,10 +168,9 @@ unsigned int scanner_error_count(void) {
   return err_count;
 }
 
-static int yyerror(const char *msg) {
+static void scanner_error(const char *msg) {
   err_count++;
   fprintf(stderr, "line %d: %s\n", yylineno, msg);
-  return 0;
 }
 
 void scanner_open(FILE *file) {

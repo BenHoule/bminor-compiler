@@ -1,113 +1,89 @@
 #include "string_util.h"
 
 #include <assert.h>
-#include <ctype.h>
+#include <stdlib.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
+static constexpr uint8_t SPACE = 32;
+static constexpr uint8_t DEL = 127;
+static constexpr uint8_t INVALID_HEX = 0xFF;
+static constexpr size_t ERR_INVALID_CHAR = 0;
+static constexpr size_t ERR_TOO_LONG = SIZE_MAX;
+
 static inline bool is_printable(const uint8_t byte) {
   // spec says "between 32 and 127" but spaces need to be included
   // while DEL is not printable(?).
-  constexpr uint8_t SPACE = 32;
-  constexpr uint8_t DEL = 127;
   return SPACE <= byte && byte < DEL;
 }
 
-static inline void byte_to_hexstr(char **out, const uint8_t raw) {
+// byte -> "\0xHH"
+static inline void byte_to_hexstr(unsigned char *out, const uint8_t raw) {
   // constexpr char hex_digits[] = "0123456789ABCDEF";  <--(c23)
-  static const char hex_digits[] = "0123456789ABCDEF";
-  **out = hex_digits[(raw >> 4) & 0xF];  // High nibble
-  (*out)++;
-  **out = hex_digits[raw & 0xF];  // Low nibble
+  static const unsigned char hex_digits[] = "0123456789ABCDEF";
+  out[3] = hex_digits[(raw >> 4) & 0xF];  // High nibble
+  out[4] = hex_digits[raw & 0xF];  // Low nibble
 }
 
-static inline void hexstr_to_byte(const char *const in, char *out) {
-  assert(in != NULL);
-  assert(out != NULL);
+//
+static inline uint8_t hexval(unsigned char c) {
+  if ('0' <= c && c <= '9') return c - '0';  // [0...9]
 
-  char hex[3] = {0};
-  if (isxdigit(in[0]) && isxdigit(in[1])) {
-    hex[0] = in[2];
-    hex[1] = in[3];
-    *out = (char)strtoul(hex, NULL, 16);
-  }
+  c |= 0x20;  // (uppercase | 0x20) ==> lowercase
+  if ('a' <= c && c <= 'f') return c - 'a' + 10;  // [10...15]
+
+  return INVALID_HEX;  // Bad hex char
 }
 
-bool char_encode(const char *in, char *out) {
-  assert(in[0] == '\'');
-  assert(out != NULL);  //TODO: add -DNDEBUG to makefile for non-debug builds
+uint8_t char_encode(const unsigned char *in) {
+  assert(in != NULL);  //TODO: add -DNDEBUG to makefile for non-debug builds
 
-  in++;
-  if (*in == '\\' && *(in + 1)) {
-    in++;  // Skip the escape character
-    switch (*in) {
-      case 'a': *out = '\a'; break;
-      case 'b': *out = '\b'; break;
-      case 'e': *out = '\e'; break;
-      case 'f': *out = '\f'; break;
-      case 'n': *out = '\n'; break;
-      case 'r': *out = '\r'; break;
-      case 't': *out = '\t'; break;
-      case 'v': *out = '\v'; break;
-      case '0':
-        if (in[1] == 'x') {
-          hexstr_to_byte(in, out);
-          in += 3;  // Skip to last character of the hex sequence
-          break;
-        }
-        [[fallthrough]];
-      default: *out = *in;
-    }
-  } else *out = *in;
+  if (*in != '\\')
+    return (uint8_t)*in;
 
-  out++;
-  in++;
+  in++;  // Skip the escape character
+  switch (*in) {
+    case 'a': return '\a';
+    case 'b': return '\b';
+    case 'e': return '\e';
+    case 'f': return '\f';
+    case 'n': return '\n';
+    case 'r': return '\r';
+    case 't': return '\t';
+    case 'v': return '\v';
+    case '0':
+      if (in[1] == 'x') {
+        const uint8_t high = hexval(in[2]);
+        if (high == INVALID_HEX) return (uint8_t)*in;
 
-  if (*in != '\'') {
-    return false;  // char literal is too long
+        const uint8_t low = hexval(in[3]);
+        if (low == INVALID_HEX) return (uint8_t)*in;
+
+        in += 3;  // Skip to last character of the hex sequence
+        return (uint8_t)(high << 4) | low;
+      }
+      [[fallthrough]];
+    default: return (uint8_t)*in;
   }
-
-  return true;
 }
 
 // Maps chars -> byte values
-size_t string_encode(const char *in, char *out, size_t out_size) {
-  assert(in[0] == '"');
+size_t string_encode(const unsigned char *in, uint8_t *out, size_t out_size) {
+  assert(in != NULL);
   assert(out != NULL);  //TODO: add -DNDEBUG to makefile for non-debug builds
 
-  char *const start = out;
-  in++;
-  while (*in && *in != '"') {
-    if (out_size <= 1) {
-      return 0;  // Buffer overflow
-    }
+  unsigned char *const start = out;
 
-    if (*in == '\\' && in[1]) {
-      in++;  // Skip the escape character
-      switch (*in) {
-        case 'a': *out = '\a'; break;
-        case 'b': *out = '\b'; break;
-        case 'e': *out = '\e'; break;
-        case 'f': *out = '\f'; break;
-        case 'n': *out = '\n'; break;
-        case 'r': *out = '\r'; break;
-        case 't': *out = '\t'; break;
-        case 'v': *out = '\v'; break;
-        case '0':
-          if (in[1] == 'x') {
-            hexstr_to_byte(in, out);
-            in += 3;  // skip to last character of the hex sequence
-            break;
-          }
-          [[fallthrough]];
-        default: *out = *in;
-      }
-    } else *out = *in;
+  while (*in != '"' && *(in + 1)) {
+    if (out_size <= 1) return ERR_TOO_LONG;  // Buffer overflow
+
+    *out = char_encode(in);
+    if (*out > DEL) return ERR_INVALID_CHAR;  // 128-255 are undefined
 
     out++;
     out_size--;
-    in++;
+    in++;  // `in` points to character following the one just encoded
   }
 
   *out = '\0';
@@ -115,49 +91,56 @@ size_t string_encode(const char *in, char *out, size_t out_size) {
 }
 
 // Maps byte values -> chars (with escaping)
-void string_decode(const char *raw, char *out, size_t out_size) {
-  assert(raw != NULL);
-  assert(out != NULL);  // TODO: make these only active during debugging
+size_t string_decode(const uint8_t *in, unsigned char *out, size_t out_size) {
+  assert(in != NULL);
+  assert(out != NULL);
+  assert(out_size > 2);  //TODO: add -DNDEBUG to makefile for non-debug builds
 
+  constexpr uint8_t ESC_SEQ_REQ_SPACE = 4;  // '\\', 'n', '"', '\0'
+  constexpr uint8_t HEXSTR_REQ_SPACE = 7;  // '\\', '0', 'x', 'H', 'H', '"', '\0'
+  unsigned char *const start = out;
   *out = '"';
   out++;
   out_size--;
 
-  while (*raw && out_size > 1) {
-    const uint8_t byte = (uint8_t)(*raw);
+  while (*in && out_size > 1) {
+    const uint8_t byte = (uint8_t)(*in);
     if (is_printable(byte)) {
-      *out = *raw;
+      *out = *in;
       out++;
       out_size--;
-      raw++;
+      in++;
       continue;
     }
+    if (out_size < ESC_SEQ_REQ_SPACE) return 0;  // Buffer overflow
 
-    switch (*raw) {
-      case '\a': *out = '\\'; out++; *out = 'a'; break;
-      case '\b': *out = '\\'; out++; *out = 'b'; break;
-      case '\e': *out = '\\'; out++; *out = 'e'; break;
-      case '\f': *out = '\\'; out++; *out = 'f'; break;
-      case '\n': *out = '\\'; out++; *out = 'n'; break;
-      case '\r': *out = '\\'; out++; *out = 'r'; break;
-      case '\t': *out = '\\'; out++; *out = 't'; break;
-      case '\v': *out = '\\'; out++; *out = 'v'; break;
-      case '\\': *out = '\\'; out++; *out = '\\'; break;
-      case '\'': *out = '\\'; out++; *out = '\''; break;
-      case '"': *out = '\\'; out++; *out = '"'; break;
+    switch (*in) {
+      case '\a': memcpy(out, "\\a", 2); break;
+      case '\b': memcpy(out, "\\b", 2); break;
+      case '\e': memcpy(out, "\\e", 2); break;
+      case '\f': memcpy(out, "\\f", 2); break;
+      case '\n': memcpy(out, "\\n", 2); break;
+      case '\r': memcpy(out, "\\r", 2); break;
+      case '\t': memcpy(out, "\\t", 2); break;
+      case '\v': memcpy(out, "\\v", 2); break;
+      case '\\': memcpy(out, "\\\\", 2); break;
+      case '\'': memcpy(out, "\\\'", 2); break;
+      case '\"': memcpy(out, "\\\"", 2); break;
       default:
+        if (out_size < HEXSTR_REQ_SPACE) return 0;  // Buffer overflow
         memcpy(out, "\\0x", 3);
-        out += 3;
-        byte_to_hexstr(&out, byte);
+        byte_to_hexstr(out, byte);
+        out += 3;  // +3 for "xHH"
+        out_size -= 3;
     }
-    out++;
-    out_size--;
-    raw++;
+    out += 2;  // +2 for escape sequence (e.g. "\n")
+    out_size -= 2;
+    in++;
   }
 
-  *out = '"';
-  out++;
-  *out = '\0';
+  memcpy(out, "\"\0", 2); //? Is null terminator necessary here?
+  out += 2;
+  out_size -= 2;  // Account for the closing quote and null terminator
 
-  return;
+  return (size_t)(out - start);
 }

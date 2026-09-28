@@ -21,8 +21,8 @@
 '\\'
 '\''
 '\"'
-'\0xFF'
 '\0x00'
+'\0x7F'
 ""
 "TestString0 \a\b\e\f\n\r\t\v\\\'\"\0xFF\0x00"
 true
