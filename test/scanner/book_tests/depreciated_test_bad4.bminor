@@ -1,12 +1,12 @@
 /*
-    Current specifications of the B-Minor language
+    Current (2025) specifications of the B-Minor language
     specify for the support of multiple forms of
     floating point numbers. Our scanner accounts for this.
 
     This test was written for a previous specification of B-Minor
     that *does not* support floating points.
 
-    This test is moot; thus, this test is depreciated from the general run.
+    This test is, thus, depreciated and shan't be used.
 */
 
 // doesn't support floating point
