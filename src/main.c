@@ -1,4 +1,6 @@
-#include "token.h"
+#include "scanner.h"
+#include "parser.h"
+#include "parser_diag.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -41,7 +43,7 @@ static stage_t stage_from_flag(const char *user_flag) {
   return STAGE_INVALID;
 }
 
-static void print_usage(const char *prog_name) {
+static inline void print_usage(const char *prog_name) {
   fprintf(stderr, "Usage: %s <stage> <input file>\n", prog_name);
 }
 
@@ -54,44 +56,45 @@ int main(int argc, char *argv[]) {
   }
 
   const stage_t stage = stage_from_flag(argv[1]);
-  switch (stage) {
-    case STAGE_SCAN: {
-      // Stupid C grammar doesn't allow declarations immediately after
-      // a case label (fixed in C23 - scope block tricks older compilers).
-      FILE *input_file = fopen(argv[2], "r");
-      if (input_file == NULL) {
-        char err_msg[256];
-        snprintf(err_msg, sizeof(err_msg),
-          "bminor: failed to open '%s'", argv[2]);
-        perror(err_msg);
-        return EXIT_COMPILE_ERROR;
-      }
-      scanner_open(input_file);
 
+  FILE *input_file = fopen(argv[2], "r");
+  if (input_file == NULL) {
+    char err_msg[256];
+    snprintf(err_msg, sizeof(err_msg),
+      "bminor: failed to open '%s'", argv[2]);
+    perror(err_msg);
+    return EXIT_COMPILE_ERROR;
+  }
+  scanner_open(input_file);
+
+  switch (stage) {
+    case STAGE_SCAN:
       int token = 0;
       while((token = scanner_next_token()) != 0) {
         char buf[24] = {0}; // 24 chosen arbitrarily
         get_token_name(buf, token, sizeof(buf));
         printf("%s\n", buf);
       }
-
-      fclose(input_file);
       break;
-    }
     case STAGE_PARSE:
+      yyparse(); // Parsing logic would go here
+      break;
     case STAGE_PRINT:
     case STAGE_RESOLVE:
     case STAGE_TYPECHECK:
     case STAGE_CODEGEN:
       fprintf(stderr, "bminor: stage not implemented (%s)\n", argv[1]);
+      fclose(input_file);
       return EXIT_COMPILE_ERROR;
-    case STAGE_INVALID:
     default:
       fprintf(stderr, "bminor: invalid flag (%s)\n", argv[1]);
       print_usage(argv[0]);
+      fclose(input_file);
       return EXIT_USAGE_ERROR;
   }
+  fclose(input_file);
 
-  return scanner_error_count() > 0 ? EXIT_COMPILE_ERROR : EXIT_SUCCESS;
+  unsigned int total_err = scanner_error_count() + parser_error_count();
+  return total_err > 0 ? EXIT_COMPILE_ERROR : EXIT_SUCCESS;
 }
 

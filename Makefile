@@ -63,9 +63,10 @@ $(BUILD_DIR)/%.c $(BUILD_DIR)/%.h: $(SRC_DIR)/%.bison | $(BUILD_DIR)
 $(BUILD_DIR)/%.c: $(SRC_DIR)/%.flex | $(BUILD_DIR)
 	flex --outfile=$@ $<
 
-# Scanner includes the bison-generated token enum, so it must be generated first.
+# Scanner and driver both include the bison-generated header, so it must exist first.
 ifneq ($(wildcard $(SRC_DIR)/parser.bison),)
 $(BUILD_DIR)/scanner.o: $(BUILD_DIR)/parser.h
+$(BUILD_DIR)/main.o: $(BUILD_DIR)/parser.h
 endif
 
 # Test and valgrind targets
