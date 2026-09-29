@@ -8,9 +8,7 @@
 
 static constexpr uint8_t SPACE = 32;
 static constexpr uint8_t DEL = 127;
-static constexpr uint8_t INVALID_HEX = 0xFF;
-static constexpr size_t ERR_INVALID_CHAR = 0;
-static constexpr size_t ERR_TOO_LONG = SIZE_MAX;
+static constexpr uint8_t INVALID_HEX = 0xFF;  // (255)
 
 static inline bool is_printable(const uint8_t byte) {
   // spec says "between 32 and 127" but spaces need to be included
@@ -81,6 +79,8 @@ size_t string_encode(const unsigned char *in, uint8_t *out, size_t out_size) {
 
   unsigned char *const start = out;
 
+  [[maybe_unused]] constexpr size_t ERR_INVALID_CHAR = 0;
+  [[maybe_unused]] constexpr size_t ERR_TOO_LONG = SIZE_MAX;
   while (*in != '"' && *(in + 1)) {
     if (out_size <= 1) return ERR_TOO_LONG;  // Buffer overflow
 
@@ -102,8 +102,8 @@ size_t string_decode(const uint8_t *in, unsigned char *out, size_t out_size) {
   assert(out != NULL);
   assert(out_size > 2);  //TODO: add -DNDEBUG to makefile for non-debug builds
 
-  constexpr uint8_t ESC_SEQ_REQ_SPACE = 4;  // '\\', 'n', '"', '\0'
-  constexpr uint8_t HEXSTR_REQ_SPACE = 7;  // '\\', '0', 'x', 'H', 'H', '"', '\0'
+  static constexpr uint8_t ESC_SEQ_REQ_SPACE = 4;  // '\\', 'n', '"', '\0'
+  static constexpr uint8_t HEXSTR_REQ_SPACE = 7;  // '\\', '0', 'x', 'H', 'H', '"', '\0'
   unsigned char *const start = out;
   *out = '"';
   out++;
