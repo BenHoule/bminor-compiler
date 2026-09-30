@@ -8,9 +8,7 @@
 
 static constexpr uint8_t SPACE = 32;
 static constexpr uint8_t DEL = 127;
-static constexpr uint8_t INVALID_HEX = 0xFF;
-static constexpr size_t ERR_INVALID_CHAR = 0;
-static constexpr size_t ERR_TOO_LONG = SIZE_MAX;
+static constexpr uint8_t ERR_INVALID_HEX = 0xFF;  // (255)
 
 static inline bool is_printable(const uint8_t byte) {
   // spec says "between 32 and 127" but spaces need to be included
@@ -19,9 +17,9 @@ static inline bool is_printable(const uint8_t byte) {
 }
 
 // byte -> "\0xHH"
-static inline void byte_to_hexstr(unsigned char *out, const uint8_t raw) {
+static void byte_to_hexstr(unsigned char *out, const uint8_t raw) {
   // constexpr char hex_digits[] = "0123456789ABCDEF";  <--(c23)
-  static const unsigned char hex_digits[] = "0123456789ABCDEF";
+  static constexpr unsigned char hex_digits[] = "0123456789ABCDEF";
   out[3] = hex_digits[(raw >> 4) & 0xF];  // High nibble
   out[4] = hex_digits[raw & 0xF];  // Low nibble
 }
@@ -33,7 +31,7 @@ static inline uint8_t hexval(unsigned char c) {
   c |= 0x20;  // (uppercase | 0x20) ==> lowercase
   if ('a' <= c && c <= 'f') return c - 'a' + 10;  // [10...15]
 
-  return INVALID_HEX;  // Bad hex char
+  return ERR_INVALID_HEX;  // Bad hex char
 }
 
 uint8_t char_encode(const unsigned char *in) {
@@ -55,10 +53,10 @@ uint8_t char_encode(const unsigned char *in) {
     case '0':
       if (in[1] == 'x') {
         const uint8_t high = hexval(in[2]);
-        if (high == INVALID_HEX) return (uint8_t)*in;
+        if (high == ERR_INVALID_HEX) return (uint8_t)*in;
 
         const uint8_t low = hexval(in[3]);
-        if (low == INVALID_HEX) return (uint8_t)*in;
+        if (low == ERR_INVALID_HEX) return (uint8_t)*in;
 
         in += 3;  // Skip to last character of the hex sequence
         return (uint8_t)(high << 4) | low;
@@ -74,7 +72,10 @@ size_t string_encode(const unsigned char *in, uint8_t *out, size_t out_size) {
   assert(out != NULL);  //TODO: add -DNDEBUG to makefile for non-debug builds
 
   unsigned char *const start = out;
+  in++;  // Skip the opening double quote
 
+  [[maybe_unused]] static constexpr size_t ERR_INVALID_CHAR = 0;
+  [[maybe_unused]] static constexpr size_t ERR_TOO_LONG = SIZE_MAX;
   while (*in != '"' && *(in + 1)) {
     if (out_size <= 1) return ERR_TOO_LONG;  // Buffer overflow
 
@@ -96,8 +97,6 @@ size_t string_decode(const uint8_t *in, unsigned char *out, size_t out_size) {
   assert(out != NULL);
   assert(out_size > 2);  //TODO: add -DNDEBUG to makefile for non-debug builds
 
-  constexpr uint8_t ESC_SEQ_REQ_SPACE = 4;  // '\\', 'n', '"', '\0'
-  constexpr uint8_t HEXSTR_REQ_SPACE = 7;  // '\\', '0', 'x', 'H', 'H', '"', '\0'
   unsigned char *const start = out;
   *out = '"';
   out++;
@@ -112,8 +111,11 @@ size_t string_decode(const uint8_t *in, unsigned char *out, size_t out_size) {
       in++;
       continue;
     }
+
+    static constexpr uint8_t ESC_SEQ_REQ_SPACE = 4;  // '\\', 'n', '"', '\0'
     if (out_size < ESC_SEQ_REQ_SPACE) return 0;  // Buffer overflow
 
+    static constexpr uint8_t HEXSTR_REQ_SPACE = 7;  // '\\', '0', 'x', 'H', 'H', '"', '\0'
     switch (*in) {
       case '\a': memcpy(out, "\\a", 2); break;
       case '\b': memcpy(out, "\\b", 2); break;

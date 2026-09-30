@@ -1,7 +1,8 @@
 %{
 
-#include <stdio.h>
 #include "parser_diag.h"
+#include <errno.h>
+#include <stdio.h>
 
 static int err_count = 0;
 extern int yylineno;  /* defined in scanner.flex (`%option yylineno`) */
@@ -16,16 +17,22 @@ struct node {
 
 %}
 
+%destructor { free($$); } <sval>
+
+
 /* Union of all possible semantic types */
 %union {
-    int num;
-    struct node* list_ptr;
+  long long ival;
+  double dval;
+  char cval;
+  char *sval;
+  struct node* list_ptr;
 }
-/* Associate non-terminals/tokens with the union fields */
+/* Associate non-terminals/tokens with union fields */
 %type <list_ptr> opt_list
 %type <list_ptr> expr_list
 
-%token TOKEN_IDENTIFIER
+%token <sval> TOKEN_IDENTIFIER
 
 /* ATOMIC TYPE TOKENS */
 %token TOKEN_BOOLEAN
@@ -43,10 +50,10 @@ struct node {
 %token TOKEN_VOID
 
 /* LITERAL TOKENS */
-%token TOKEN_CHAR_LITERAL
-%token TOKEN_DOUBLE_LITERAL
-%token TOKEN_INTEGER_LITERAL
-%token TOKEN_STRING_LITERAL
+%token <cval> TOKEN_CHAR_LITERAL
+%token <dval> TOKEN_DOUBLE_LITERAL
+%token <ival> TOKEN_INTEGER_LITERAL
+%token <sval> TOKEN_STRING_LITERAL
 %token TOKEN_FALSE
 %token TOKEN_TRUE
 

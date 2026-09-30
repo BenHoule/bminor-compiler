@@ -74,6 +74,9 @@ int main(int argc, char *argv[]) {
         char buf[24] = {0}; // 24 chosen arbitrarily
         get_token_name(buf, token, sizeof(buf));
         printf("%s\n", buf);
+        if (token == TOKEN_STRING_LITERAL || token == TOKEN_IDENTIFIER) {
+          free(yylval.sval);
+        }
       }
       break;
     case STAGE_PARSE:

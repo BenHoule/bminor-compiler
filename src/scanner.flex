@@ -7,6 +7,7 @@
 #include "string_util.h"
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 #include <stdint.h>
 
 static int err_count = 0;
@@ -14,6 +15,9 @@ static int err_count = 0;
 static int block_start_line = 0;
 
 static void scanner_error(const char *msg);
+
+static void send_integer_to_yylval(const uint8_t base);
+static void send_double_to_yylval();
 
 %}
 
@@ -28,6 +32,9 @@ L   [a-zA-Z_]
 A   [a-zA-Z_0-9]
 E   ([eE][+-]?{D}+)
 ES  (\\(0x{H}{H}|[^\n]))
+C  ([^\'\\\n]|{ES})
+S  ([^\"\\\n]|{ES})
+NUL  \\0x00
 WHITESPACE  [ \t\r\n\f]
 IDENTIFIER  {L}{A}*
 
@@ -87,54 +94,95 @@ IDENTIFIER  {L}{A}*
 "<="          { return TOKEN_LE; }
 "!="          { return TOKEN_NE; }
 
-"0x"{H}+         { return TOKEN_INTEGER_LITERAL; }
-"0b"{B}+         { return TOKEN_INTEGER_LITERAL; }
-{D}+             { return TOKEN_INTEGER_LITERAL; }
+"0x"{H}+  { /* INTEGER_LITERAL*/
+            static constexpr uint8_t BASE_16 = 16;
+            send_integer_to_yylval(BASE_16);
+            return TOKEN_INTEGER_LITERAL;
+          }
+"0b"{B}+  {
+            static constexpr uint8_t BASE_2 = 2;
+            send_integer_to_yylval(BASE_2);
+            return TOKEN_INTEGER_LITERAL;
+          }
+{D}+      {
+            static constexpr uint8_t BASE_10 = 10;
+            send_integer_to_yylval(BASE_10);
+            return TOKEN_INTEGER_LITERAL;
+          }
 
-{D}+{E}          { return TOKEN_DOUBLE_LITERAL; }
-{D}*"."{D}+{E}?  { return TOKEN_DOUBLE_LITERAL; }
-{D}+"."{E}?      { return TOKEN_DOUBLE_LITERAL; }
+{D}+{E}           { /* DOUBLE_LITERAL */
+                    send_double_to_yylval();
+                    return TOKEN_DOUBLE_LITERAL;
+                  }
+{D}*"."{D}+{E}?   {
+                    send_double_to_yylval();
+                    return TOKEN_DOUBLE_LITERAL;
+                  }
+{D}+"."{E}?       {
+                    send_double_to_yylval();
+                    return TOKEN_DOUBLE_LITERAL;
+                  }
 
-\"([^"\\\n]|{ES})*\"  {
-                        constexpr size_t STRING_MAX = 256;  // 255 + null terminator
-                        uint8_t encoded_str[STRING_MAX] = {0};
-                        yytext++;  // Skip the opening double quote
+\"{S}*\"            { /* STRING_LITERAL */
+                      yylval.sval = NULL;
 
-                        constexpr size_t ERR_INVALID_CHAR = 0;
-                        constexpr size_t ERR_TOO_LONG = SIZE_MAX;
-                        switch (string_encode(yytext, encoded_str, STRING_MAX)) {
-                          case ERR_INVALID_CHAR:
-                            scanner_error("String literal contains character outside of ASCII range [0-127]");
-                            break;
-                          case ERR_TOO_LONG:
-                            scanner_error("String literal too long (MAX=255)");
-                            break;
-                          default: break;
-                        }
+                      // Worst-Case: '\0xHH' repeated 255 times + 2 quotes
+                      static constexpr size_t STRING_MAX = 255;
+                      if (yyleng > ((STRING_MAX * 5) + 2)) {
+                        scanner_error("String literal too long (MAX=255)");
                         return TOKEN_STRING_LITERAL;
                       }
-\"([^"\\\n]|{ES})*    { scanner_error("Unterminated string"); }
-'([^'\\\n]|{ES})'     {
-                        uint8_t encoded_char = 0;
-                        yytext++;  // Skip the opening single quote
-                        encoded_char = char_encode(yytext);
+                      uint8_t encoded_str[STRING_MAX + 1] = {0};
 
-                        // NOTE: `char_encode` may return a value outside of
-                        // ASCII range [0-127]. Regex should ensure valid
-                        // single character.
-                        if (encoded_char > 127)
-                          scanner_error("Char outside of ASCII range [0-127]");
-
-                        return TOKEN_CHAR_LITERAL;
+                      static constexpr size_t ERR_INVALID_CHAR = 0;
+                      static constexpr size_t ERR_TOO_LONG = SIZE_MAX;
+                      switch (string_encode(yytext, encoded_str, STRING_MAX + 1)) {
+                        case ERR_INVALID_CHAR:
+                          scanner_error("String literal contains character outside of ASCII range [0-127]");
+                          break;
+                        case ERR_TOO_LONG:
+                          scanner_error("String literal too long (MAX=255)");
+                          return TOKEN_STRING_LITERAL;
+                        default: break;
                       }
-'([^'\\\n]|{ES}){2,}' { scanner_error("Char literal too long (MAX=1)"); }
-'([^'\\\n]|{ES})*     { scanner_error("Unterminated char"); }
-''                    { scanner_error("Empty char literal (use '\\0x00' for null)"); }
+
+                      yylval.sval = strdup(encoded_str);
+                      if (yylval.sval == NULL)
+                        scanner_error("Failed to allocate memory for string literal");
+
+                      return TOKEN_STRING_LITERAL;
+                    }
+\"{S}*              { scanner_error("Unterminated string"); }
+\"{S}*{NUL}{S}*\"   { scanner_error("String contains null character");
+                      /* There are likely better ways to handle this case */ }
+
+'{C}'       { /* CHAR_LITERAL
+               * NOTE: `char_encode` may return a value outside of
+               * ASCII range [0-127], though Regex should ensure
+               * yytext is a valid single character.
+               */
+              yylval.cval = char_encode(yytext + 1);  // Skip opening quote
+              if (yylval.cval > 127)
+                scanner_error("Char outside of ASCII range [0-127]");
+
+              return TOKEN_CHAR_LITERAL;
+            }
+'{C}{2,}'   { scanner_error("Char literal too long (MAX=1)"); }
+'{C}*       { scanner_error("Unterminated char"); }
+''          { scanner_error("Empty char literal (use '\\0x00' for null)"); }
 
 {IDENTIFIER}  { // Last so it loses ties
-  if (yyleng > 255) {
+  yylval.sval = NULL;
+  static constexpr size_t IDENTIFIER_MAX = 255;
+  if (yyleng > IDENTIFIER_MAX) {
     scanner_error("Identifier too long (MAX=255)");
+    return TOKEN_IDENTIFIER;
   }
+
+  yylval.sval = strdup(yytext);
+  if (yylval.sval == NULL)
+    scanner_error("Failed to allocate memory for identifier");
+
   // If B-Minor included typedefs or enums, we would check for those here
   return TOKEN_IDENTIFIER;
 }
@@ -171,6 +219,18 @@ unsigned int scanner_error_count(void) {
 static void scanner_error(const char *msg) {
   err_count++;
   fprintf(stderr, "line %d: %s\n", yylineno, msg);
+}
+
+static void send_integer_to_yylval(const uint8_t base) {
+  errno = 0;
+  yylval.ival = strtoll(yytext, NULL, base);
+  if (errno == ERANGE) scanner_error("Integer literal out of range (-2e63, 2e63-1)");
+}
+
+static void send_double_to_yylval() {
+  errno = 0;
+  yylval.dval = strtod(yytext, NULL);
+  if (errno == ERANGE) scanner_error("Double literal out of range (+-1.7e-308, +-1.7e308)");
 }
 
 void scanner_open(FILE *file) {
