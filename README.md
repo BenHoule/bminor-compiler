@@ -22,6 +22,12 @@ chmod +rwx ./test/<stage>/runtsets.sh
 ```
 Tests from the compiler book are kept isolated in their own `book_tests/` subdirectory within each stage. They can be ran using the corresponding (and poorly named) `book_tests/run_all_tests.sh` file.
 
+Individual tests may be passed directly to the compiler, output is sent to stdout/stderr:
+```sh
+make
+./bminor -scan test/scanner/good_keywords.bminor
+```
+
 ---
 ### Contributing
 Make a branch
