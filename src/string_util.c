@@ -34,22 +34,24 @@ static inline uint8_t hexval(unsigned char c) {
   return ERR_INVALID_HEX;  // Bad hex char
 }
 
-uint8_t char_encode(const unsigned char *in) {
+uint8_t char_encode(const unsigned char **in) {
   assert(in != NULL);  //TODO: add -DNDEBUG to makefile for non-debug builds
-
-  if (*in != '\\')
-    return (uint8_t)*in;
-
-  in++;  // Skip the escape character
-  switch (*in) {
-    case 'a': return '\a';
-    case 'b': return '\b';
-    case 'e': return '\e';
-    case 'f': return '\f';
-    case 'n': return '\n';
-    case 'r': return '\r';
-    case 't': return '\t';
-    case 'v': return '\v';
+   const unsigned char *p = *in;  // Save the original pointer
+  if (*p != '\\'){
+    *in = p + 1;
+    return *p;
+  }
+  p++;  // Move past the escape character
+  uint8_t result; // Store the decoded character
+  switch (*p) {
+    case 'a': result = '\a'; break;
+    case 'b': result = '\b'; break;
+    case 'e': result = '\e'; break;
+    case 'f': result = '\f'; break;
+    case 'n': result = '\n'; break;
+    case 'r': result = '\r'; break;
+    case 't': result = '\t'; break;
+    case 'v': result = '\v'; break;
     case '0':
       if (in[1] == 'x') {
         const uint8_t high = hexval(in[2]);
@@ -58,12 +60,16 @@ uint8_t char_encode(const unsigned char *in) {
         const uint8_t low = hexval(in[3]);
         if (low == ERR_INVALID_HEX) return (uint8_t)*in;
 
-        in += 3;  // Skip to last character of the hex sequence
+        *in = (unsigned char*)(p + 4);  // Skip to last character of the hex sequence
         return (uint8_t)(high << 4) | low;
       }
       [[fallthrough]];
-    default: return (uint8_t)*in;
+    default:
+    result = *p;
+    break;
   }
+  *in = p + 1;  // Skip to the character following the escape sequence
+  return result;
 }
 
 // Maps chars -> byte values
@@ -79,12 +85,12 @@ size_t string_encode(const unsigned char *in, uint8_t *out, size_t out_size) {
   while (*in != '"' && *(in + 1)) {
     if (out_size <= 1) return ERR_TOO_LONG;  // Buffer overflow
 
-    *out = char_encode(in);
+    *out = char_encode(&in);
     if (*out > DEL) return ERR_INVALID_CHAR;  // 128-255 are undefined
 
     out++;
     out_size--;
-    in++;  // `in` points to character following the one just encoded
+
   }
 
   *out = '\0';
