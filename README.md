@@ -33,6 +33,18 @@ git push
 ```
 
 ---
+### Testing
+```sh
+make test
+```
+Will run all test suites in sequence. The `test/` directory is grouped by compiler stage; tests for each stage can be ran using that directory's `runtests.sh` file, e.g.
+```sh
+chmod +rwx ./test/<stage>/runtsets.sh
+./test/<stage>/runtests.sh
+```
+Tests from the compiler book are kept isolated in their own `book_tests/` subdirectory within each stage. They can be ran using the corresponding (and poorly named) `book_tests/run_all_tests.sh` file.
+
+---
 ### Grammar
 ```
 program     : expr ';'
