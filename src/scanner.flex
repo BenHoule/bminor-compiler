@@ -117,7 +117,9 @@ IDENTIFIER  {L}{A}*
 '([^'\\\n]|{ES})'     {
                         uint8_t encoded_char = 0;
                         yytext++;  // Skip the opening single quote
-                        encoded_char = char_encode(yytext);
+
+                        const unsigned char *p = (const unsigned char *)yytext;
+                        encoded_char = char_encode(&p);
 
                         // NOTE: `char_encode` may return a value outside of
                         // ASCII range [0-127]. Regex should ensure valid

@@ -14,7 +14,7 @@ static inline uint8_t hexval(unsigned char c);
 
 /* Encodes a single character literal into a raw byte.
    Returns the converted byte. */
-uint8_t char_encode(const unsigned char *in);
+uint8_t char_encode(const unsigned char **in);
 
 /* Encodes a quoted string literal (including surrounding quotes) into raw bytes.
    Returns encoded length, or 0 if it exceeds out_size. */
