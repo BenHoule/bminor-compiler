@@ -24,7 +24,6 @@ Tests from the compiler book are kept isolated in their own `book_tests/` subdir
 
 Individual tests may be passed directly to the compiler, output is sent to stdout/stderr:
 ```sh
-make
 ./bminor -scan test/scanner/good_keywords.bminor
 ```
 
