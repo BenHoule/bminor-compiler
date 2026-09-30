@@ -13,8 +13,9 @@ make test
 ### Testing
 ```sh
 make test
+make valgrind
 ```
-Will run all test suites in sequence. The `test/` directory is grouped by compiler stage; tests for each stage can be ran using that directory's `runtests.sh` file, e.g.
+Will run all test suites in sequence, with/without valgrind. The `test/` directory is grouped by compiler stage; tests for each stage can be ran using that directory's `runtests.sh` file, e.g.
 ```sh
 chmod +rwx ./test/<stage>/runtsets.sh
 ./test/<stage>/runtests.sh
