@@ -20,6 +20,7 @@ chmod +rwx ./test/<stage>/runtsets.sh
 ./test/<stage>/runtests.sh
 ```
 Tests from the compiler book are kept isolated in their own `book_tests/` subdirectory within each stage. They can be ran using the corresponding (and poorly named) `book_tests/run_all_tests.sh` file.
+
 ---
 ### Contributing
 Make a branch
