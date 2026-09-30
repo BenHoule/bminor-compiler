@@ -11,13 +11,16 @@
 #include <stdint.h>
 
 static int err_count = 0;
-
 static int block_start_line = 0;
 
 static void scanner_error(const char *msg);
-
 static void send_integer_to_yylval(const uint8_t base);
 static void send_double_to_yylval();
+
+
+void scanner_open(FILE *file);
+int scanner_next_token(void);
+void get_token_name(char *buf, int token, size_t buf_size);
 
 %}
 
@@ -123,7 +126,13 @@ IDENTIFIER  {L}{A}*
                     return TOKEN_DOUBLE_LITERAL;
                   }
 
-\"{S}*\"            { /* STRING_LITERAL */
+\"{S}*{NUL}{S}*\"   { /* STRING_LITERAL
+                       * NOTE:There are likely cleaner ways to handle this case */
+                      yylval.sval = NULL;
+                      scanner_error("String contains null character");
+                      return TOKEN_STRING_LITERAL;
+                    }
+\"{S}*\"            {
                       yylval.sval = NULL;
 
                       // Worst-Case: '\0xHH' repeated 255 times + 2 quotes
@@ -152,9 +161,11 @@ IDENTIFIER  {L}{A}*
 
                       return TOKEN_STRING_LITERAL;
                     }
-\"{S}*              { scanner_error("Unterminated string"); }
-\"{S}*{NUL}{S}*\"   { scanner_error("String contains null character");
-                      /* There are likely better ways to handle this case */ }
+\"{S}*              {
+                      yylval.sval = NULL;
+                      scanner_error("Unterminated string");
+                      return TOKEN_STRING_LITERAL;
+                    }
 
 '{C}'       { /* CHAR_LITERAL
                * NOTE: `char_encode` may return a value outside of
@@ -167,9 +178,9 @@ IDENTIFIER  {L}{A}*
 
               return TOKEN_CHAR_LITERAL;
             }
-'{C}{2,}'   { scanner_error("Char literal too long (MAX=1)"); }
-'{C}*       { scanner_error("Unterminated char"); }
-''          { scanner_error("Empty char literal (use '\\0x00' for null)"); }
+'{C}{2,}'   { scanner_error("Char literal too long (MAX=1)"); return TOKEN_CHAR_LITERAL;}
+'{C}*       { scanner_error("Unterminated char"); return TOKEN_CHAR_LITERAL; }
+''          { scanner_error("Empty char literal (use '\\0x00' for null)"); return TOKEN_CHAR_LITERAL; }
 
 {IDENTIFIER}  { // Last so it loses ties
   yylval.sval = NULL;
