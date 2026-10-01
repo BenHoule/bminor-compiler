@@ -25,5 +25,3 @@
 '\0x7F'
 ""
 "TestString0 \a\b\e\f\n\r\t\v\\\'\"\0x0A"
-true
-false

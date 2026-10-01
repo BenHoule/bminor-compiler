@@ -1,5 +1,5 @@
 #include "scanner.h"
-#include "parser.h"
+#include "bminor.tab.h"
 #include "parser_diag.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -70,16 +70,19 @@ int main(int argc, char *argv[]) {
   switch (stage) {
     case STAGE_SCAN:
       int token = 0;
+      yylloc.first_line = yylloc.last_line = 1;
+      yylloc.first_column = yylloc.last_column = 1;
       while((token = scanner_next_token()) != 0) {
-        char buf[24] = {0}; // 24 chosen arbitrarily
-        get_token_name(buf, token, sizeof(buf));
-        printf("%s\n", buf);
+        const char *name = token_name(token);
+        printf("%s\n", name);
         if (token == TOKEN_STRING_LITERAL || token == TOKEN_IDENTIFIER) {
           free(yylval.sval);
         }
       }
       break;
     case STAGE_PARSE:
+      yylloc.first_line = yylloc.last_line = 1;
+      yylloc.first_column = yylloc.last_column = 1;
       yyparse(); // Parsing logic would go here
       break;
     case STAGE_PRINT:

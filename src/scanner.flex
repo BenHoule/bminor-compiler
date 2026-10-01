@@ -1,26 +1,43 @@
-%option noyywrap nounput noinput yylineno
-%option nodefault warn
+%option noyywrap nounput noinput nodefault warn
+%option yylineno
 %{
 
 #include "scanner.h"
-#include "parser.h"
+#include "bminor.tab.h"
 #include "string_util.h"
+
+#include <stdarg.h>
 #include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
+
+static int line = 1;
+static int col = 1;
+/* Macro executed automatically before every token action */
+#define YY_USER_ACTION \
+  yylloc.first_line   = line; \
+  yylloc.first_column = col; \
+  yylloc.last_line     = line; \
+  yylloc.last_column   = col + yyleng - 1; \
+  for (int i = 1; i <= yyleng; i++) { \
+    if (yytext[i] == '\n') { \
+      line++; \
+      col = 1; \
+    } else { \
+      col++; \
+    } \
+  }
 
 static int err_count = 0;
-static int block_start_line = 0;
+static int block_start_line = 1;
+static int block_start_col = 1;
 
-static void scanner_error(const char *msg);
+/* Tells compiler to check printf-style format and arguments for scanner_error */
+[[gnu::format(printf, 1, 2)]]
+static void scanner_error(const char *msg, ...);
 static void send_integer_to_yylval(const uint8_t base);
 static void send_double_to_yylval();
-
-
-void scanner_open(FILE *file);
-int scanner_next_token(void);
-void get_token_name(char *buf, int token, size_t buf_size);
 
 %}
 
@@ -47,7 +64,8 @@ IDENTIFIER  {L}{A}*
 "/*"        { // Multi-line comments
               // NOTE: Need to change too yylloc if using location tracking
               BEGIN(COMMENT_BLOCK);
-              block_start_line = yylineno;
+              block_start_line = yylloc.first_line;
+              block_start_col = yylloc.first_column;
             }
 
 <COMMENT_BLOCK>{
@@ -57,10 +75,9 @@ IDENTIFIER  {L}{A}*
   "*"       { /* Makes scanner check if next char is '/' */ }
 
   <<EOF>>   {
-              const int block_end_line = yylineno;
-              yylineno = block_start_line;
-              scanner_error("Unterminated block comment");
-              yylineno = block_end_line;
+              err_count++;
+              fprintf(stderr, "line %d, col %d: Unterminated block comment\n",
+                      block_start_line, block_start_col);
               BEGIN(INITIAL);
               yyterminate();
             }
@@ -227,9 +244,14 @@ unsigned int scanner_error_count(void) {
   return err_count;
 }
 
-static void scanner_error(const char *msg) {
+static void scanner_error(const char *fmt, ...) {
   err_count++;
-  fprintf(stderr, "line %d: %s\n", yylineno, msg);
+  va_list args;
+  va_start(args, fmt);
+  fprintf(stderr, "line %d, col %d: ", yylloc.first_line, yylloc.first_column);
+  vfprintf(stderr, fmt, args);
+  fprintf(stderr, "\n");
+  va_end(args);
 }
 
 static void send_integer_to_yylval(const uint8_t base) {
@@ -252,54 +274,5 @@ int scanner_next_token(void) {
   return yylex();
 }
 
-void get_token_name(char *buf, int token, size_t buf_size) {
-  const char *name = NULL;
 
-  switch(token) {
-    case TOKEN_IDENTIFIER: name = "TOKEN_IDENTIFIER"; break;
-    case TOKEN_BOOLEAN: name = "TOKEN_BOOLEAN"; break;
-    case TOKEN_CHAR: name = "TOKEN_CHAR"; break;
-    case TOKEN_DOUBLE: name = "TOKEN_DOUBLE"; break;
-    case TOKEN_FLOAT: name = "TOKEN_FLOAT"; break;
-    case TOKEN_INTEGER: name = "TOKEN_INTEGER"; break;
-    case TOKEN_STRING: name = "TOKEN_STRING"; break;
-    case TOKEN_ARRAY: name = "TOKEN_ARRAY"; break;
-    case TOKEN_AUTO: name = "TOKEN_AUTO"; break;
-    case TOKEN_CARRAY: name = "TOKEN_CARRAY"; break;
-    case TOKEN_FUNCTION: name = "TOKEN_FUNCTION"; break;
-    case TOKEN_VOID: name = "TOKEN_VOID"; break;
-    case TOKEN_CHAR_LITERAL: name = "TOKEN_CHAR_LITERAL"; break;
-    case TOKEN_DOUBLE_LITERAL: name = "TOKEN_DOUBLE_LITERAL"; break;
-    case TOKEN_INTEGER_LITERAL: name = "TOKEN_INTEGER_LITERAL"; break;
-    case TOKEN_STRING_LITERAL: name = "TOKEN_STRING_LITERAL"; break;
-    case TOKEN_FALSE: name = "TOKEN_FALSE"; break;
-    case TOKEN_TRUE: name = "TOKEN_TRUE"; break;
-    case TOKEN_ELSE: name = "TOKEN_ELSE"; break;
-    case TOKEN_FOR: name = "TOKEN_FOR"; break;
-    case TOKEN_IF: name = "TOKEN_IF"; break;
-    case TOKEN_RETURN: name = "TOKEN_RETURN"; break;
-    case TOKEN_WHILE: name = "TOKEN_WHILE"; break;
-    case TOKEN_INC: name = "TOKEN_INC"; break;
-    case TOKEN_DEC: name = "TOKEN_DEC"; break;
-    case TOKEN_AND: name = "TOKEN_AND"; break;
-    case TOKEN_OR: name = "TOKEN_OR"; break;
-    case TOKEN_EQ: name = "TOKEN_EQ"; break;
-    case TOKEN_GE: name = "TOKEN_GE"; break;
-    case TOKEN_LE: name = "TOKEN_LE"; break;
-    case TOKEN_NE: name = "TOKEN_NE"; break;
-    case TOKEN_PRINT: name = "TOKEN_PRINT"; break;
-    default:
-      if (token < 0 || 127 < token) {
-        name = "UNKNOWN_TOKEN";
-        break;
-      }
-      buf[0] = (char)token;
-      buf[1] = '\0';
-      break;
-  }
-  if (name != NULL) {
-    strncpy(buf, name, buf_size - 1);
-    buf[buf_size - 1] = '\0';
-  }
-}
 

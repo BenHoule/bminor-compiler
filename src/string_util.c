@@ -11,7 +11,7 @@ static constexpr uint8_t DEL = 127;
 static constexpr uint8_t ERR_INVALID_HEX = 0xFF;  // (255)
 
 static inline bool is_printable(const uint8_t byte) {
-  // spec says "between 32 and 127" but spaces need to be included
+  // NOTE: spec says "between 32 and 127" but spaces need to be included
   // while DEL is not printable(?).
   return SPACE <= byte && byte < DEL;
 }
@@ -44,7 +44,7 @@ uint8_t char_encode(const unsigned char *in) {
   switch (*in) {
     case 'a': return '\a';
     case 'b': return '\b';
-    case 'e': return '\e';
+    case 'e': return 0x1B;  // NOTE: '\e' not supported by MSVC - using 0x1B for portability
     case 'f': return '\f';
     case 'n': return '\n';
     case 'r': return '\r';
@@ -119,7 +119,7 @@ size_t string_decode(const uint8_t *in, unsigned char *out, size_t out_size) {
     switch (*in) {
       case '\a': memcpy(out, "\\a", 2); break;
       case '\b': memcpy(out, "\\b", 2); break;
-      case '\e': memcpy(out, "\\e", 2); break;
+      case 0x1B: memcpy(out, "\\e", 2); break;  // NOTE: '\e' not supported by MSVC - using 0x1B for portability
       case '\f': memcpy(out, "\\f", 2); break;
       case '\n': memcpy(out, "\\n", 2); break;
       case '\r': memcpy(out, "\\r", 2); break;

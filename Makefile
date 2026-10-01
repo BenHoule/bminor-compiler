@@ -20,6 +20,7 @@ HAND_SRC  := $(filter-out $(SRC_DIR)/library.c,$(wildcard $(SRC_DIR)/*.c))
 # Generated source files
 GEN_SRC   := $(patsubst $(SRC_DIR)/%.flex,$(BUILD_DIR)/%.c,$(FLEX_SRC)) \
              $(patsubst $(SRC_DIR)/%.bison,$(BUILD_DIR)/%.c,$(BISON_SRC))
+BISON_HEADERS := $(patsubst $(SRC_DIR)/%.bison,$(BUILD_DIR)/%.tab.h,$(BISON_SRC))
 
 # Object files
 OBJS      := $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(HAND_SRC)) \
@@ -55,8 +56,8 @@ $(BUILD_DIR)/%.o: $(BUILD_DIR)/%.c
 
 # Generate bison source files
 # -v/--report-file produce build/parser.output: read this to debug grammar conflicts.
-$(BUILD_DIR)/%.c $(BUILD_DIR)/%.h: $(SRC_DIR)/%.bison | $(BUILD_DIR)
-	bison --defines=$(BUILD_DIR)/$*.h --output=$(BUILD_DIR)/$*.c \
+$(BUILD_DIR)/%.c $(BUILD_DIR)/%.tab.h: $(SRC_DIR)/%.bison | $(BUILD_DIR)
+	bison --defines=$(BUILD_DIR)/$*.tab.h --output=$(BUILD_DIR)/$*.c \
 	      -v --report-file=$(BUILD_DIR)/$*.output $<
 
 # Generate flex source files
@@ -64,10 +65,7 @@ $(BUILD_DIR)/%.c: $(SRC_DIR)/%.flex | $(BUILD_DIR)
 	flex --outfile=$@ $<
 
 # Scanner and driver both include the bison-generated header, so it must exist first.
-ifneq ($(wildcard $(SRC_DIR)/parser.bison),)
-$(BUILD_DIR)/scanner.o: $(BUILD_DIR)/parser.h
-$(BUILD_DIR)/main.o: $(BUILD_DIR)/parser.h
-endif
+$(BUILD_DIR)/scanner.o $(BUILD_DIR)/main.o: $(BISON_HEADERS)
 
 # Test and valgrind targets
 test: $(BIN)

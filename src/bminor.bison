@@ -17,6 +17,9 @@ struct node {
 
 %}
 
+%locations
+%define parse.error detailed
+%define parse.lac full
 %destructor { free($$); } <sval>
 
 
@@ -32,50 +35,50 @@ struct node {
 %type <list_ptr> opt_list
 %type <list_ptr> expr_list
 
-%token <sval> TOKEN_IDENTIFIER
-
-/* ATOMIC TYPE TOKENS */
-%token TOKEN_BOOLEAN
-%token TOKEN_CHAR
-%token TOKEN_DOUBLE
-%token TOKEN_FLOAT  /* Reserved for expansion(?) */
-%token TOKEN_INTEGER
-%token TOKEN_STRING
-
-/* NON-ATOMIC TYPE TOKENS */
-%token TOKEN_ARRAY
-%token TOKEN_AUTO
-%token TOKEN_CARRAY
-%token TOKEN_FUNCTION
-%token TOKEN_VOID
+%token <sval> TOKEN_IDENTIFIER "identifier"
 
 /* LITERAL TOKENS */
-%token <cval> TOKEN_CHAR_LITERAL
-%token <dval> TOKEN_DOUBLE_LITERAL
-%token <ival> TOKEN_INTEGER_LITERAL
-%token <sval> TOKEN_STRING_LITERAL
-%token TOKEN_FALSE
-%token TOKEN_TRUE
+%token <cval> TOKEN_CHAR_LITERAL "char_literal"
+%token <dval> TOKEN_DOUBLE_LITERAL "double_literal"
+%token <ival> TOKEN_INTEGER_LITERAL "integer_literal"
+%token <sval> TOKEN_STRING_LITERAL "string_literal"
+
+/* ATOMIC TYPE TOKENS */
+%token TOKEN_BOOLEAN "boolean"
+%token TOKEN_CHAR "char"
+%token TOKEN_DOUBLE "double"
+%token TOKEN_FLOAT "float"  /* Reserved for expansion(?) */
+%token TOKEN_INTEGER "integer"
+%token TOKEN_STRING "string"
+
+/* NON-ATOMIC TYPE TOKENS */
+%token TOKEN_ARRAY "array"
+%token TOKEN_AUTO "auto"
+%token TOKEN_CARRAY  "carray"
+%token TOKEN_FUNCTION "function"
+%token TOKEN_VOID "void"
 
 /* CONTROL TOKENS */
-%token TOKEN_ELSE
-%token TOKEN_FOR
-%token TOKEN_IF
-%token TOKEN_RETURN
-%token TOKEN_WHILE  /* Reserved for expansion */
+%token TOKEN_ELSE "else"
+%token TOKEN_FOR "for"
+%token TOKEN_IF "if"
+%token TOKEN_RETURN "return"
+%token TOKEN_WHILE "while"  /* Reserved for expansion */
+%token TOKEN_FALSE "false"
+%token TOKEN_TRUE "true"
 
 /* OPERATOR TOKENS (ops that use 2 chars) */
-%token TOKEN_INC
-%token TOKEN_DEC
-%token TOKEN_AND
-%token TOKEN_OR
-%token TOKEN_EQ
-%token TOKEN_GE
-%token TOKEN_LE
-%token TOKEN_NE
+%token TOKEN_INC "++"
+%token TOKEN_DEC "--"
+%token TOKEN_AND "&&"
+%token TOKEN_OR "||"
+%token TOKEN_EQ "=="
+%token TOKEN_GE ">="
+%token TOKEN_LE "<="
+%token TOKEN_NE "!="
 
 /* PRINT (is a statement, not a function call) */
-%token TOKEN_PRINT
+%token TOKEN_PRINT "print"
 
 %%
 program     : expr ';'
@@ -161,6 +164,21 @@ unsigned int parser_error_count(void) {
 
 int yyerror(const char *msg) {
   err_count++;
-  fprintf(stderr, "line %d: %s\n", yylineno, msg);
+  fprintf(stderr, "line %d, col %d: %s\n",
+          yylloc.first_line, yylloc.first_column, msg);
   return 0;
+}
+
+const char *token_name(int token) {
+  /* Character tokens print as themselves; some aren't in the grammar yet,
+   * so YYTRANSLATE would map them to the "invalid token" symbol.
+   * Remove this check once all character tokens are included in the grammar.
+   */
+  if (token > 0 && token < 256) {
+    static char char_buf[2];
+    char_buf[0] = (char)token;
+    char_buf[1] = '\0';
+    return char_buf;
+  }
+  return yysymbol_name(YYTRANSLATE(token));
 }
