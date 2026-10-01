@@ -70,8 +70,6 @@ int main(int argc, char *argv[]) {
   switch (stage) {
     case STAGE_SCAN:
       int token = 0;
-      yylloc.first_line = yylloc.last_line = 1;
-      yylloc.first_column = yylloc.last_column = 1;
       while((token = scanner_next_token()) != 0) {
         const char *name = token_name(token);
         printf("%s\n", name);
@@ -81,8 +79,6 @@ int main(int argc, char *argv[]) {
       }
       break;
     case STAGE_PARSE:
-      yylloc.first_line = yylloc.last_line = 1;
-      yylloc.first_column = yylloc.last_column = 1;
       yyparse(); // Parsing logic would go here
       break;
     case STAGE_PRINT:

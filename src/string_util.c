@@ -1,31 +1,22 @@
 #include "string_util.h"
 
 #include <assert.h>
+#include <ctype.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
-static constexpr uint8_t SPACE = 32;
-static constexpr uint8_t DEL = 127;
-static constexpr uint8_t ERR_INVALID_HEX = 0xFF;  // (255)
-
-static inline bool is_printable(const uint8_t byte) {
-  // NOTE: spec says "between 32 and 127" but spaces need to be included
-  // while DEL is not printable(?).
-  return SPACE <= byte && byte < DEL;
-}
-
 // byte -> "\0xHH"
 static void byte_to_hexstr(unsigned char *out, const uint8_t raw) {
   // constexpr char hex_digits[] = "0123456789ABCDEF";  <--(c23)
   static constexpr unsigned char hex_digits[] = "0123456789ABCDEF";
-  out[3] = hex_digits[(raw >> 4) & 0xF];  // High nibble
-  out[4] = hex_digits[raw & 0xF];  // Low nibble
+  out[0] = hex_digits[(raw >> 4) & 0xF];  // High nibble
+  out[1] = hex_digits[raw & 0xF];  // Low nibble
 }
 
-//
-static inline uint8_t hexval(unsigned char c) {
+// hex char -> decimal value (0-15)
+static uint8_t hexval(unsigned char c) {
   if ('0' <= c && c <= '9') return c - '0';  // [0...9]
 
   c |= 0x20;  // (uppercase | 0x20) ==> lowercase
@@ -34,14 +25,14 @@ static inline uint8_t hexval(unsigned char c) {
   return ERR_INVALID_HEX;  // Bad hex char
 }
 
-uint8_t char_encode(const unsigned char *in) {
+uint8_t char_encode(const unsigned char **in) {
   assert(in != NULL);  //TODO: add -DNDEBUG to makefile for non-debug builds
 
-  if (*in != '\\')
-    return (uint8_t)*in;
+  if (**in != '\\')
+    return (uint8_t)**in;
 
-  in++;  // Skip the escape character
-  switch (*in) {
+  (*in)++;  // Skip the escape character
+  switch (**in) {
     case 'a': return '\a';
     case 'b': return '\b';
     case 'e': return 0x1B;  // NOTE: '\e' not supported by MSVC - using 0x1B for portability
@@ -51,18 +42,18 @@ uint8_t char_encode(const unsigned char *in) {
     case 't': return '\t';
     case 'v': return '\v';
     case '0':
-      if (in[1] == 'x') {
-        const uint8_t high = hexval(in[2]);
-        if (high == ERR_INVALID_HEX) return (uint8_t)*in;
+      const unsigned char *hex = *in;
+      if (hex[1] == 'x') {
+        const uint8_t high = hexval(hex[2]);
+        const uint8_t low = hexval(hex[3]);
+        if (high == ERR_INVALID_HEX || low == ERR_INVALID_HEX)
+          return '0';
 
-        const uint8_t low = hexval(in[3]);
-        if (low == ERR_INVALID_HEX) return (uint8_t)*in;
-
-        in += 3;  // Skip to last character of the hex sequence
+        *in += 3;  // Skip to last character of the hex sequence
         return (uint8_t)(high << 4) | low;
       }
       [[fallthrough]];
-    default: return (uint8_t)*in;
+    default: return (uint8_t)**in;
   }
 }
 
@@ -74,12 +65,10 @@ size_t string_encode(const unsigned char *in, uint8_t *out, size_t out_size) {
   unsigned char *const start = out;
   in++;  // Skip the opening double quote
 
-  [[maybe_unused]] static constexpr size_t ERR_INVALID_CHAR = 0;
-  [[maybe_unused]] static constexpr size_t ERR_TOO_LONG = SIZE_MAX;
   while (*in != '"' && *(in + 1)) {
     if (out_size <= 1) return ERR_TOO_LONG;  // Buffer overflow
 
-    *out = char_encode(in);
+    *out = char_encode(&in);
     if (*out > DEL) return ERR_INVALID_CHAR;  // 128-255 are undefined
 
     out++;
@@ -102,9 +91,9 @@ size_t string_decode(const uint8_t *in, unsigned char *out, size_t out_size) {
   out++;
   out_size--;
 
-  while (*in && out_size > 1) {
+  while (*in && out_size > 2) {
     const uint8_t byte = (uint8_t)(*in);
-    if (is_printable(byte)) {
+    if (isprint(byte)) {
       *out = *in;
       out++;
       out_size--;
@@ -131,7 +120,7 @@ size_t string_decode(const uint8_t *in, unsigned char *out, size_t out_size) {
       default:
         if (out_size < HEXSTR_REQ_SPACE) return 0;  // Buffer overflow
         memcpy(out, "\\0x", 3);
-        byte_to_hexstr(out, byte);
+        byte_to_hexstr(out + 3, byte);
         out += 3;  // +3 for "xHH"
         out_size -= 3;
     }

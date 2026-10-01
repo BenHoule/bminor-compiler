@@ -1,11 +1,12 @@
 %option noyywrap nounput noinput nodefault warn
-%option yylineno
 %{
 
 #include "scanner.h"
 #include "bminor.tab.h"
 #include "string_util.h"
 
+#include <ctype.h>
+#include <errno.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -20,7 +21,7 @@ static int col = 1;
   yylloc.first_column = col; \
   yylloc.last_line     = line; \
   yylloc.last_column   = col + yyleng - 1; \
-  for (int i = 1; i <= yyleng; i++) { \
+  for (int i = 0; i < yyleng; i++) { \
     if (yytext[i] == '\n') { \
       line++; \
       col = 1; \
@@ -62,7 +63,6 @@ IDENTIFIER  {L}{A}*
   /* RULES */
 "//"[^\n]*  { /* Single-line comments */ }
 "/*"        { // Multi-line comments
-              // NOTE: Need to change too yylloc if using location tracking
               BEGIN(COMMENT_BLOCK);
               block_start_line = yylloc.first_line;
               block_start_col = yylloc.first_column;
@@ -159,9 +159,6 @@ IDENTIFIER  {L}{A}*
                         return TOKEN_STRING_LITERAL;
                       }
                       uint8_t encoded_str[STRING_MAX + 1] = {0};
-
-                      static constexpr size_t ERR_INVALID_CHAR = 0;
-                      static constexpr size_t ERR_TOO_LONG = SIZE_MAX;
                       switch (string_encode(yytext, encoded_str, STRING_MAX + 1)) {
                         case ERR_INVALID_CHAR:
                           scanner_error("String literal contains character outside of ASCII range [0-127]");
@@ -172,7 +169,7 @@ IDENTIFIER  {L}{A}*
                         default: break;
                       }
 
-                      yylval.sval = strdup(encoded_str);
+                      yylval.sval = strdup((const char *)encoded_str);
                       if (yylval.sval == NULL)
                         scanner_error("Failed to allocate memory for string literal");
 
@@ -189,9 +186,11 @@ IDENTIFIER  {L}{A}*
                * ASCII range [0-127], though Regex should ensure
                * yytext is a valid single character.
                */
-              yylval.cval = char_encode(yytext + 1);  // Skip opening quote
-              if (yylval.cval > 127)
+              const unsigned char *ctext = (const unsigned char *)(yytext + 1);  // Skip the opening quote
+              const uint8_t byte = char_encode(&ctext);
+              if (byte > 127)
                 scanner_error("Char outside of ASCII range [0-127]");
+              yylval.cval = (char)byte;
 
               return TOKEN_CHAR_LITERAL;
             }
@@ -236,8 +235,11 @@ IDENTIFIER  {L}{A}*
 "<"           { return '<'; }
 "="           { return '='; }
 
-.   { scanner_error("Unrecognized character"); }
-
+.   {
+      scanner_error("Unrecognized character '%c' (0x%02X)",
+                    isprint((unsigned char)yytext[0]) ? yytext[0] : '?',
+                    (unsigned char)yytext[0]);
+    }
 %%
   /* HELPERS */
 unsigned int scanner_error_count(void) {

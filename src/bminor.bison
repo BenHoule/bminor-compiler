@@ -5,7 +5,6 @@
 #include <stdio.h>
 
 static int err_count = 0;
-extern int yylineno;  /* defined in scanner.flex (`%option yylineno`) */
 
 int yylex(void);
 int yyerror(const char *msg);
@@ -174,7 +173,7 @@ const char *token_name(int token) {
    * so YYTRANSLATE would map them to the "invalid token" symbol.
    * Remove this check once all character tokens are included in the grammar.
    */
-  if (token > 0 && token < 256) {
+  if (0 < token && token < 256) {
     static char char_buf[2];
     char_buf[0] = (char)token;
     char_buf[1] = '\0';
