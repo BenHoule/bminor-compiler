@@ -15,12 +15,11 @@
 
 static int line = 1;
 static int col = 1;
+
 /* Macro executed automatically before every token action */
 #define YY_USER_ACTION \
   yylloc.first_line   = line; \
   yylloc.first_column = col; \
-  yylloc.last_line     = line; \
-  yylloc.last_column   = col + yyleng - 1; \
   for (int i = 0; i < yyleng; i++) { \
     if (yytext[i] == '\n') { \
       line++; \
@@ -28,11 +27,17 @@ static int col = 1;
     } else { \
       col++; \
     } \
-  }
+  } \
+  yylloc.last_line     = line; \
+  yylloc.last_column   = col - 1;
 
-static int err_count = 0;
-static int block_start_line = 1;
-static int block_start_col = 1;
+typedef struct SCANNER_ERR {
+  int count;
+  const YYLTYPE *loc;
+} SCANNER_ERR;
+
+static SCANNER_ERR _err = {0, &yylloc};
+static YYLTYPE block = {0, 0, 0, 0};
 
 /* Tells compiler to check printf-style format and arguments for scanner_error */
 [[gnu::format(printf, 1, 2)]]
@@ -62,12 +67,10 @@ IDENTIFIER  {L}{A}*
 %%
   /* RULES */
 "//"[^\n]*  { /* Single-line comments */ }
-"/*"        { // Multi-line comments
+"/*"        { /* Multi-line comments */
               BEGIN(COMMENT_BLOCK);
-              block_start_line = yylloc.first_line;
-              block_start_col = yylloc.first_column;
+              block = yylloc;
             }
-
 <COMMENT_BLOCK>{
   "*/"      { BEGIN(INITIAL); }
 
@@ -75,9 +78,11 @@ IDENTIFIER  {L}{A}*
   "*"       { /* Makes scanner check if next char is '/' */ }
 
   <<EOF>>   {
-              err_count++;
-              fprintf(stderr, "line %d, col %d: Unterminated block comment\n",
-                      block_start_line, block_start_col);
+              block.last_line = line;
+              block.last_column = col - 1;
+              _err.loc = &block;
+              scanner_error("Unterminated block comment");
+              _err.loc = &yylloc;
               BEGIN(INITIAL);
               yyterminate();
             }
@@ -130,21 +135,14 @@ IDENTIFIER  {L}{A}*
             return TOKEN_INTEGER_LITERAL;
           }
 
+
 {D}+{E}           { /* DOUBLE_LITERAL */
-                    send_double_to_yylval();
-                    return TOKEN_DOUBLE_LITERAL;
-                  }
-{D}*"."{D}+{E}?   {
-                    send_double_to_yylval();
-                    return TOKEN_DOUBLE_LITERAL;
-                  }
-{D}+"."{E}?       {
-                    send_double_to_yylval();
-                    return TOKEN_DOUBLE_LITERAL;
-                  }
+                    send_double_to_yylval(); return TOKEN_DOUBLE_LITERAL; }
+{D}*"."{D}+{E}?   { send_double_to_yylval(); return TOKEN_DOUBLE_LITERAL; }
+{D}+"."{E}?       { send_double_to_yylval(); return TOKEN_DOUBLE_LITERAL; }
 
 \"{S}*{NUL}{S}*\"   { /* STRING_LITERAL
-                       * NOTE:There are likely cleaner ways to handle this case */
+                       * NOTE: There are likely cleaner ways to handle this case */
                       yylval.sval = NULL;
                       scanner_error("String contains null character");
                       return TOKEN_STRING_LITERAL;
@@ -153,11 +151,12 @@ IDENTIFIER  {L}{A}*
                       yylval.sval = NULL;
 
                       // Worst-Case: '\0xHH' repeated 255 times + 2 quotes
-                      static constexpr size_t STRING_MAX = 255;
+                      constexpr size_t STRING_MAX = 255;
                       if (yyleng > ((STRING_MAX * 5) + 2)) {
                         scanner_error("String literal too long (MAX=255)");
                         return TOKEN_STRING_LITERAL;
                       }
+
                       uint8_t encoded_str[STRING_MAX + 1] = {0};
                       switch (string_encode(yytext, encoded_str, STRING_MAX + 1)) {
                         case ERR_INVALID_CHAR:
@@ -184,17 +183,16 @@ IDENTIFIER  {L}{A}*
 '{C}'       { /* CHAR_LITERAL
                * NOTE: `char_encode` may return a value outside of
                * ASCII range [0-127], though Regex should ensure
-               * yytext is a valid single character.
-               */
+               * yytext is a valid single character. */
               const unsigned char *ctext = (const unsigned char *)(yytext + 1);  // Skip the opening quote
               const uint8_t byte = char_encode(&ctext);
               if (byte > 127)
                 scanner_error("Char outside of ASCII range [0-127]");
-              yylval.cval = (char)byte;
 
+              yylval.cval = (char)byte;
               return TOKEN_CHAR_LITERAL;
             }
-'{C}{2,}'   { scanner_error("Char literal too long (MAX=1)"); return TOKEN_CHAR_LITERAL;}
+'{C}{2,}'   { scanner_error("Char literal too long (MAX=1)"); return TOKEN_CHAR_LITERAL; }
 '{C}*       { scanner_error("Unterminated char"); return TOKEN_CHAR_LITERAL; }
 ''          { scanner_error("Empty char literal (use '\\0x00' for null)"); return TOKEN_CHAR_LITERAL; }
 
@@ -243,14 +241,14 @@ IDENTIFIER  {L}{A}*
 %%
   /* HELPERS */
 unsigned int scanner_error_count(void) {
-  return err_count;
+  return _err.count;
 }
 
 static void scanner_error(const char *fmt, ...) {
-  err_count++;
+  _err.count++;
   va_list args;
   va_start(args, fmt);
-  fprintf(stderr, "line %d, col %d: ", yylloc.first_line, yylloc.first_column);
+  fprintf(stderr, "line %d, col %d: ", _err.loc->first_line, _err.loc->first_column);
   vfprintf(stderr, fmt, args);
   fprintf(stderr, "\n");
   va_end(args);
@@ -259,13 +257,15 @@ static void scanner_error(const char *fmt, ...) {
 static void send_integer_to_yylval(const uint8_t base) {
   errno = 0;
   yylval.ival = strtoll(yytext, NULL, base);
-  if (errno == ERANGE) scanner_error("Integer literal out of range (-2e63, 2e63-1)");
+  if (errno == ERANGE)
+    scanner_error("Integer literal out of range (-2e63, 2e63-1)");
 }
 
 static void send_double_to_yylval() {
   errno = 0;
   yylval.dval = strtod(yytext, NULL);
-  if (errno == ERANGE) scanner_error("Double literal out of range (+-1.7e-308, +-1.7e308)");
+  if (errno == ERANGE)
+    scanner_error("Double literal out of range (+-1.7e-308, +-1.7e308)");
 }
 
 void scanner_open(FILE *file) {

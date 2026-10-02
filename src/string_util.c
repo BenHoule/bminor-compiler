@@ -65,10 +65,11 @@ size_t string_encode(const unsigned char *in, uint8_t *out, size_t out_size) {
   unsigned char *const start = out;
   in++;  // Skip the opening double quote
 
-  while (*in != '"' && *(in + 1)) {
+  while (*in != '"' && in[1] != '\0') {
     if (out_size <= 1) return ERR_TOO_LONG;  // Buffer overflow
 
     *out = char_encode(&in);
+    static constexpr uint8_t DEL = 127;
     if (*out > DEL) return ERR_INVALID_CHAR;  // 128-255 are undefined
 
     out++;

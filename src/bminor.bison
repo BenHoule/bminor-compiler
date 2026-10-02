@@ -171,8 +171,7 @@ int yyerror(const char *msg) {
 const char *token_name(int token) {
   /* Character tokens print as themselves; some aren't in the grammar yet,
    * so YYTRANSLATE would map them to the "invalid token" symbol.
-   * Remove this check once all character tokens are included in the grammar.
-   */
+   * Remove this check once all character tokens are included in the grammar. */
   if (0 < token && token < 256) {
     static char char_buf[2];
     char_buf[0] = (char)token;

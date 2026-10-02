@@ -3,9 +3,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-static constexpr uint8_t SPACE = 32;
-static constexpr uint8_t DEL = 127;
-static constexpr uint8_t ERR_INVALID_HEX = 0xFF;  // (255)
+constexpr uint8_t ERR_INVALID_HEX = 0xFF;  // (255)
 
 constexpr size_t ERR_INVALID_CHAR = 0;
 constexpr size_t ERR_TOO_LONG = SIZE_MAX;
