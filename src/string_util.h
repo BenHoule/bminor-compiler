@@ -3,16 +3,8 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-constexpr uint8_t ERR_INVALID_HEX = 0xFF;  // (255)
-
 constexpr size_t ERR_INVALID_CHAR = 0;
 constexpr size_t ERR_TOO_LONG = SIZE_MAX;
-
-// Converts a raw byte into a hexadecimal string representation.
-static void byte_to_hexstr(unsigned char *out, const uint8_t raw);
-
-// Converts a hexadecimal character into its decimal value.
-static uint8_t hexval(unsigned char c);
 
 // Encodes a single character literal into a raw byte.
 // Returns the converted byte.

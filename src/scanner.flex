@@ -31,17 +31,18 @@ static int col = 1;
   yylloc.last_line     = line; \
   yylloc.last_column   = col - 1;
 
-typedef struct SCANNER_ERR {
-  int count;
-  const YYLTYPE *loc;
-} SCANNER_ERR;
-
-static SCANNER_ERR _err = {0, &yylloc};
+static int error_count = 0;
 static YYLTYPE block = {0, 0, 0, 0};
 
 /* Tells compiler to check printf-style format and arguments for scanner_error */
+static void vprint_error(const YYLTYPE *const loc, const char *fmt, va_list args);
+
+[[gnu::format(printf, 2, 3)]]
+static void scanner_error_at(const YYLTYPE *loc, const char *fmt, ...);
+
 [[gnu::format(printf, 1, 2)]]
 static void scanner_error(const char *msg, ...);
+
 static void send_integer_to_yylval(const uint8_t base);
 static void send_double_to_yylval();
 
@@ -80,9 +81,7 @@ IDENTIFIER  {L}{A}*
   <<EOF>>   {
               block.last_line = line;
               block.last_column = col - 1;
-              _err.loc = &block;
-              scanner_error("Unterminated block comment");
-              _err.loc = &yylloc;
+              scanner_error_at(&block, "Unterminated block comment");
               BEGIN(INITIAL);
               yyterminate();
             }
@@ -120,18 +119,15 @@ IDENTIFIER  {L}{A}*
 "!="          { return TOKEN_NE; }
 
 "0x"{H}+  { /* INTEGER_LITERAL*/
-            static constexpr uint8_t BASE_16 = 16;
-            send_integer_to_yylval(BASE_16);
+            send_integer_to_yylval(yytext, 16);
             return TOKEN_INTEGER_LITERAL;
           }
 "0b"{B}+  {
-            static constexpr uint8_t BASE_2 = 2;
-            send_integer_to_yylval(BASE_2);
+            send_integer_to_yylval(yytext, 2);
             return TOKEN_INTEGER_LITERAL;
           }
 {D}+      {
-            static constexpr uint8_t BASE_10 = 10;
-            send_integer_to_yylval(BASE_10);
+            send_integer_to_yylval(yytext, 10);
             return TOKEN_INTEGER_LITERAL;
           }
 
@@ -141,22 +137,10 @@ IDENTIFIER  {L}{A}*
 {D}*"."{D}+{E}?   { send_double_to_yylval(); return TOKEN_DOUBLE_LITERAL; }
 {D}+"."{E}?       { send_double_to_yylval(); return TOKEN_DOUBLE_LITERAL; }
 
-\"{S}*{NUL}{S}*\"   { /* STRING_LITERAL
-                       * NOTE: There are likely cleaner ways to handle this case */
-                      yylval.sval = NULL;
-                      scanner_error("String contains null character");
-                      return TOKEN_STRING_LITERAL;
-                    }
-\"{S}*\"            {
+\"{S}*\"            { /* STRING_LITERAL */
                       yylval.sval = NULL;
 
-                      // Worst-Case: '\0xHH' repeated 255 times + 2 quotes
                       constexpr size_t STRING_MAX = 255;
-                      if (yyleng > ((STRING_MAX * 5) + 2)) {
-                        scanner_error("String literal too long (MAX=255)");
-                        return TOKEN_STRING_LITERAL;
-                      }
-
                       uint8_t encoded_str[STRING_MAX + 1] = {0};
                       switch (string_encode(yytext, encoded_str, STRING_MAX + 1)) {
                         case ERR_INVALID_CHAR:
@@ -165,12 +149,11 @@ IDENTIFIER  {L}{A}*
                         case ERR_TOO_LONG:
                           scanner_error("String literal too long (MAX=255)");
                           return TOKEN_STRING_LITERAL;
-                        default: break;
+                        default:
+                          yylval.sval = strdup((const char *)encoded_str);
+                          if (yylval.sval == NULL)
+                            scanner_error("Failed to allocate memory for string literal");
                       }
-
-                      yylval.sval = strdup((const char *)encoded_str);
-                      if (yylval.sval == NULL)
-                        scanner_error("Failed to allocate memory for string literal");
 
                       return TOKEN_STRING_LITERAL;
                     }
@@ -181,9 +164,8 @@ IDENTIFIER  {L}{A}*
                     }
 
 '{C}'       { /* CHAR_LITERAL
-               * NOTE: `char_encode` may return a value outside of
-               * ASCII range [0-127], though Regex should ensure
-               * yytext is a valid single character. */
+               * NOTE: `char_encode` may return a value outside of standard
+               * ASCII range [0-127] */
               const unsigned char *ctext = (const unsigned char *)(yytext + 1);  // Skip the opening quote
               const uint8_t byte = char_encode(&ctext);
               if (byte > 127)
@@ -241,31 +223,43 @@ IDENTIFIER  {L}{A}*
 %%
   /* HELPERS */
 unsigned int scanner_error_count(void) {
-  return _err.count;
+  return error_count;
 }
 
-static void scanner_error(const char *fmt, ...) {
-  _err.count++;
-  va_list args;
-  va_start(args, fmt);
-  fprintf(stderr, "line %d, col %d: ", _err.loc->first_line, _err.loc->first_column);
+static void vprint_error(const YYLTYPE *const loc, const char *fmt, va_list args) {
+  error_count++;
+  fprintf(stderr, "line %d, col %d: ", loc->first_line, loc->first_column);
   vfprintf(stderr, fmt, args);
   fprintf(stderr, "\n");
+}
+
+static void scanner_error_at(const YYLTYPE *const loc, const char *fmt, ...) {
+  error_count++;
+  va_list args;
+  va_start(args, fmt);
+  vprint_error(loc, fmt, args);
   va_end(args);
 }
 
-static void send_integer_to_yylval(const uint8_t base) {
+static void scanner_error(const char *fmt, ...) {
+  va_list args;
+  va_start(args, fmt);
+  vprint_error(&yylloc, fmt, args);
+  va_end(args);
+}
+
+static void send_integer_to_yylval(const char *text, const int base) {
   errno = 0;
-  yylval.ival = strtoll(yytext, NULL, base);
+  yylval.ival = strtoll(text, NULL, base);
   if (errno == ERANGE)
-    scanner_error("Integer literal out of range (-2e63, 2e63-1)");
+    scanner_error("Integer literal out of range [-2^63, 2^63)");
 }
 
 static void send_double_to_yylval() {
   errno = 0;
   yylval.dval = strtod(yytext, NULL);
   if (errno == ERANGE)
-    scanner_error("Double literal out of range (+-1.7e-308, +-1.7e308)");
+    scanner_error("Double literal out of range [+-1.7e-308, +-1.7e308]");
 }
 
 void scanner_open(FILE *file) {

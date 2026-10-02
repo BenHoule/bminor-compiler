@@ -7,6 +7,8 @@
 #include <stdio.h>
 #include <string.h>
 
+constexpr uint8_t ERR_INVALID_HEX = 0xFF;  // (255)
+
 // byte -> "\0xHH"
 static void byte_to_hexstr(unsigned char *out, const uint8_t raw) {
   // constexpr char hex_digits[] = "0123456789ABCDEF";  <--(c23)
@@ -65,12 +67,12 @@ size_t string_encode(const unsigned char *in, uint8_t *out, size_t out_size) {
   unsigned char *const start = out;
   in++;  // Skip the opening double quote
 
-  while (*in != '"' && in[1] != '\0') {
+  while (*in != '"') {
     if (out_size <= 1) return ERR_TOO_LONG;  // Buffer overflow
 
     *out = char_encode(&in);
     static constexpr uint8_t DEL = 127;
-    if (*out > DEL) return ERR_INVALID_CHAR;  // 128-255 are undefined
+    if (*out > DEL || *out == '\0') return ERR_INVALID_CHAR;  // 128-255 are undefined
 
     out++;
     out_size--;
@@ -92,9 +94,21 @@ size_t string_decode(const uint8_t *in, unsigned char *out, size_t out_size) {
   out++;
   out_size--;
 
-  while (*in && out_size > 2) {
-    const uint8_t byte = (uint8_t)(*in);
-    if (isprint(byte)) {
+  while (*in) {
+    constexpr uint8_t MIN_REQ_SPACE = 2;
+    if (out_size < MIN_REQ_SPACE) return 0;  // Buffer overflow
+
+    constexpr uint8_t ESC_SEQ_REQ_SPACE = 4;  // '\\' '\\' '"' '\0'
+    if (out_size >= ESC_SEQ_REQ_SPACE && (*in == '\"' || *in == '\\')) {
+      const char escape_char[2] = {'\\', *in};
+      memcpy(out, escape_char, 2);
+      out += 2;
+      out_size -= 2;
+      in++;
+      continue;
+    }
+
+    if (isprint(*in)) {
       *out = *in;
       out++;
       out_size--;
@@ -102,10 +116,9 @@ size_t string_decode(const uint8_t *in, unsigned char *out, size_t out_size) {
       continue;
     }
 
-    static constexpr uint8_t ESC_SEQ_REQ_SPACE = 4;  // '\\', 'n', '"', '\0'
     if (out_size < ESC_SEQ_REQ_SPACE) return 0;  // Buffer overflow
 
-    static constexpr uint8_t HEXSTR_REQ_SPACE = 7;  // '\\', '0', 'x', 'H', 'H', '"', '\0'
+    static constexpr uint8_t HEXSTR_REQ_SPACE = 7;  // '\\' '0' 'x' 'H' 'H' '"' '\0'
     switch (*in) {
       case '\a': memcpy(out, "\\a", 2); break;
       case '\b': memcpy(out, "\\b", 2); break;
@@ -115,13 +128,10 @@ size_t string_decode(const uint8_t *in, unsigned char *out, size_t out_size) {
       case '\r': memcpy(out, "\\r", 2); break;
       case '\t': memcpy(out, "\\t", 2); break;
       case '\v': memcpy(out, "\\v", 2); break;
-      case '\\': memcpy(out, "\\\\", 2); break;
-      case '\'': memcpy(out, "\\\'", 2); break;
-      case '\"': memcpy(out, "\\\"", 2); break;
       default:
         if (out_size < HEXSTR_REQ_SPACE) return 0;  // Buffer overflow
         memcpy(out, "\\0x", 3);
-        byte_to_hexstr(out + 3, byte);
+        byte_to_hexstr(out + 3, (uint8_t)*in);
         out += 3;  // +3 for "xHH"
         out_size -= 3;
     }
@@ -130,9 +140,7 @@ size_t string_decode(const uint8_t *in, unsigned char *out, size_t out_size) {
     in++;
   }
 
-  memcpy(out, "\"\0", 2); //? Is null terminator necessary here?
-  out += 2;
-  out_size -= 2;  // Account for the closing quote and null terminator
+  memcpy(out, "\"\0", 2);
 
   return (size_t)(out - start);
 }
