@@ -43,7 +43,7 @@ static void scanner_error_at(const YYLTYPE *loc, const char *fmt, ...);
 [[gnu::format(printf, 1, 2)]]
 static void scanner_error(const char *msg, ...);
 
-static void send_integer_to_yylval(const uint8_t base);
+static void send_integer_to_yylval(const char *text, const int base);
 static void send_double_to_yylval();
 
 %}
