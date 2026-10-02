@@ -34,16 +34,16 @@ static int col = 1;
 static int error_count = 0;
 static YYLTYPE block = {0, 0, 0, 0};
 
-/* Tells compiler to check printf-style format and arguments for scanner_error */
 static void vprint_error(const YYLTYPE *const loc, const char *fmt, va_list args);
 
+/* Tells compiler to check printf-style format and arguments for scanner_error */
 [[gnu::format(printf, 2, 3)]]
 static void scanner_error_at(const YYLTYPE *loc, const char *fmt, ...);
 
 [[gnu::format(printf, 1, 2)]]
 static void scanner_error(const char *msg, ...);
 
-static void send_integer_to_yylval(const char *text, const int base);
+static void send_integer_to_yylval(const int base);
 static void send_double_to_yylval();
 
 %}
@@ -52,7 +52,6 @@ static void send_double_to_yylval();
 
   /* DEFINITIONS */
 D   [0-9]
-NZ  [1-9]
 H   [a-fA-F0-9]
 B   [01]
 L   [a-zA-Z_]
@@ -61,7 +60,6 @@ E   ([eE][+-]?{D}+)
 ES  (\\(0x{H}{H}|[^\n]))
 C  ([^\'\\\n]|{ES})
 S  ([^\"\\\n]|{ES})
-NUL  \\0x00
 WHITESPACE  [ \t\r\n\f]
 IDENTIFIER  {L}{A}*
 
@@ -119,15 +117,17 @@ IDENTIFIER  {L}{A}*
 "!="          { return TOKEN_NE; }
 
 "0x"{H}+  { /* INTEGER_LITERAL*/
-            send_integer_to_yylval(yytext, 16);
+            yytext += 2;
+            send_integer_to_yylval(16);
             return TOKEN_INTEGER_LITERAL;
           }
 "0b"{B}+  {
-            send_integer_to_yylval(yytext, 2);
+            yytext += 2;
+            send_integer_to_yylval(2);
             return TOKEN_INTEGER_LITERAL;
           }
 {D}+      {
-            send_integer_to_yylval(yytext, 10);
+            send_integer_to_yylval(10);
             return TOKEN_INTEGER_LITERAL;
           }
 
@@ -141,16 +141,16 @@ IDENTIFIER  {L}{A}*
                       yylval.sval = NULL;
 
                       constexpr size_t STRING_MAX = 255;
-                      uint8_t encoded_str[STRING_MAX + 1] = {0};
+                      char encoded_str[STRING_MAX + 1] = {0};
                       switch (string_encode(yytext, encoded_str, STRING_MAX + 1)) {
                         case ERR_INVALID_CHAR:
-                          scanner_error("String literal contains character outside of ASCII range [0-127]");
+                          scanner_error("String literal contains character outside of ASCII range [1-127]");
                           break;
                         case ERR_TOO_LONG:
                           scanner_error("String literal too long (MAX=255)");
                           return TOKEN_STRING_LITERAL;
                         default:
-                          yylval.sval = strdup((const char *)encoded_str);
+                          yylval.sval = strdup(encoded_str);
                           if (yylval.sval == NULL)
                             scanner_error("Failed to allocate memory for string literal");
                       }
@@ -166,10 +166,10 @@ IDENTIFIER  {L}{A}*
 '{C}'       { /* CHAR_LITERAL
                * NOTE: `char_encode` may return a value outside of standard
                * ASCII range [0-127] */
-              const unsigned char *ctext = (const unsigned char *)(yytext + 1);  // Skip the opening quote
+              const char *ctext = yytext + 1;  // Skip the opening quote
               const uint8_t byte = char_encode(&ctext);
               if (byte > 127)
-                scanner_error("Char outside of ASCII range [0-127]");
+                scanner_error("Char literal outside of ASCII range [0-127]");
 
               yylval.cval = (char)byte;
               return TOKEN_CHAR_LITERAL;
@@ -216,9 +216,9 @@ IDENTIFIER  {L}{A}*
 "="           { return '='; }
 
 .   {
-      scanner_error("Unrecognized character '%c' (0x%02X)",
-                    isprint((unsigned char)yytext[0]) ? yytext[0] : '?',
-                    (unsigned char)yytext[0]);
+      scanner_error("Unrecognized token '%c' (0x%02X)",
+                    isprint(yytext[0]) ? yytext[0] : '?',
+                    (uint8_t)yytext[0]);
     }
 %%
   /* HELPERS */
@@ -234,7 +234,6 @@ static void vprint_error(const YYLTYPE *const loc, const char *fmt, va_list args
 }
 
 static void scanner_error_at(const YYLTYPE *const loc, const char *fmt, ...) {
-  error_count++;
   va_list args;
   va_start(args, fmt);
   vprint_error(loc, fmt, args);
@@ -248,9 +247,9 @@ static void scanner_error(const char *fmt, ...) {
   va_end(args);
 }
 
-static void send_integer_to_yylval(const char *text, const int base) {
+static void send_integer_to_yylval(const int base) {
   errno = 0;
-  yylval.ival = strtoll(text, NULL, base);
+  yylval.ival = strtoll(yytext, NULL, base);
   if (errno == ERANGE)
     scanner_error("Integer literal out of range [-2^63, 2^63)");
 }
@@ -259,7 +258,7 @@ static void send_double_to_yylval() {
   errno = 0;
   yylval.dval = strtod(yytext, NULL);
   if (errno == ERANGE)
-    scanner_error("Double literal out of range [+-1.7e-308, +-1.7e308]");
+    scanner_error("Double literal out of range [+-1.8e-308, +-1.8e308]");
 }
 
 void scanner_open(FILE *file) {

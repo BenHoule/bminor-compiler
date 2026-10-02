@@ -1,8 +1,8 @@
 %{
 
 #include "parser_diag.h"
-#include <errno.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 static int err_count = 0;
 
