@@ -11,7 +11,6 @@ constexpr uint8_t ERR_INVALID_HEX = 0xFF;  // (255)
 
 // byte -> "\0xHH"
 static void byte_to_hexstr(unsigned char *out, const uint8_t raw) {
-  // constexpr char hex_digits[] = "0123456789ABCDEF";  <--(c23)
   static constexpr unsigned char hex_digits[] = "0123456789ABCDEF";
   out[0] = hex_digits[(raw >> 4) & 0xF];  // High nibble
   out[1] = hex_digits[raw & 0xF];  // Low nibble
@@ -68,7 +67,7 @@ size_t string_encode(const unsigned char *in, uint8_t *out, size_t out_size) {
   in++;  // Skip the opening double quote
 
   while (*in != '"') {
-    if (out_size <= 1) return ERR_TOO_LONG;  // Buffer overflow
+    if (out_size <= 1) return ERR_TOO_LONG;  // Overflow
 
     *out = char_encode(&in);
     static constexpr uint8_t DEL = 127;
@@ -95,10 +94,12 @@ size_t string_decode(const uint8_t *in, unsigned char *out, size_t out_size) {
   out_size--;
 
   while (*in) {
+    // closing quote and null terminator = 2 bytes: " \0
     constexpr uint8_t MIN_REQ_SPACE = 2;
-    if (out_size < MIN_REQ_SPACE) return 0;  // Buffer overflow
+    if (out_size < MIN_REQ_SPACE) return ERR_TOO_LONG;  // Overflow
 
-    constexpr uint8_t ESC_SEQ_REQ_SPACE = 4;  // '\\' '\\' '"' '\0'
+    // Escape Sequence (+2 bytes): \ E    (Total: 4 bytes)
+    constexpr uint8_t ESC_SEQ_REQ_SPACE = MIN_REQ_SPACE + 2;
     if (out_size >= ESC_SEQ_REQ_SPACE && (*in == '\"' || *in == '\\')) {
       const char escape_char[2] = {'\\', *in};
       memcpy(out, escape_char, 2);
@@ -116,9 +117,8 @@ size_t string_decode(const uint8_t *in, unsigned char *out, size_t out_size) {
       continue;
     }
 
-    if (out_size < ESC_SEQ_REQ_SPACE) return 0;  // Buffer overflow
-
-    static constexpr uint8_t HEXSTR_REQ_SPACE = 7;  // '\\' '0' 'x' 'H' 'H' '"' '\0'
+    // Escape sequence (+2 bytes): \ E    (Total: 4 bytes)
+    if (out_size < ESC_SEQ_REQ_SPACE) return ERR_TOO_LONG;  // Overflow
     switch (*in) {
       case '\a': memcpy(out, "\\a", 2); break;
       case '\b': memcpy(out, "\\b", 2); break;
@@ -129,13 +129,15 @@ size_t string_decode(const uint8_t *in, unsigned char *out, size_t out_size) {
       case '\t': memcpy(out, "\\t", 2); break;
       case '\v': memcpy(out, "\\v", 2); break;
       default:
-        if (out_size < HEXSTR_REQ_SPACE) return 0;  // Buffer overflow
+        // Hexstring (+3 bytes): x H H    (Total: 7 bytes)
+        constexpr uint8_t HEXSTR_REQ_SPACE = ESC_SEQ_REQ_SPACE + 3;
+        if (out_size < HEXSTR_REQ_SPACE) return ERR_TOO_LONG;  // Overflow
         memcpy(out, "\\0x", 3);
         byte_to_hexstr(out + 3, (uint8_t)*in);
-        out += 3;  // +3 for "xHH"
+        out += 3;
         out_size -= 3;
     }
-    out += 2;  // +2 for escape sequence (e.g. "\n")
+    out += 2;
     out_size -= 2;
     in++;
   }
