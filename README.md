@@ -5,7 +5,7 @@ git clone https://github.com/BenHoule/bminor-compiler
 cd bminor-compiler/
 make
 make test
-./bminor -scan test/scanner/good_keywords.bminor
+./bminor -scan test/scanner/good/keywords.bminor
 ```
 **NOTE:** Makefile uses gcc-14 and `-std=c23` / `-std=gnu23` flags
 
@@ -15,16 +15,30 @@ make test
 make test
 make valgrind
 ```
-Will run all test suites in sequence, with/without valgrind. The `test/` directory is grouped by compiler stage; tests for each stage can be ran using that directory's `runtests.sh` file, e.g.
+Will run all test suites in sequence, with/without valrind. The main `test/` directory is grouped by compiler stage, with passing and failing cases in separate directories:
 ```sh
-chmod +rwx ./test/<stage>/runtsets.sh
-./test/<stage>/runtests.sh
+test/
+  scanner/
+    good/<test>.bminor
+      expected/<test>.expected  # optional exact-output baseline
+      out/<test>.out            # generated test output
+    bad/<test>.bminor
+      expected/<test>.expected
+      out/<test>.out
+  parser/
+    ...
 ```
-Tests from the compiler book are kept isolated in their own `book_tests/` subdirectory within each stage. They can be ran using the corresponding (and poorly named) `book_tests/run_all_tests.sh` file.
 
-Individual tests may be passed directly to the compiler, output is sent to stdout/stderr:
+Each case must have the expected exit status. If its matching file exists under `expected/`, the program output must match exactly. `make clean` removes generated `out/` directories.
+
+Scanner examples from the compiler book remain separate under `test/scanner/book_tests/` and can be run with:
 ```sh
-./bminor -scan test/scanner/good_keywords.bminor
+./test/scanner/book_tests/run_all_tests.sh
+```
+
+Individual tests may be passed directly to the compiler:
+```sh
+./bminor -scan test/scanner/good/keywords.bminor
 ```
 
 ---
