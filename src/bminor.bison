@@ -9,11 +9,6 @@ static int err_count = 0;
 int yylex(void);
 int yyerror(const char *msg);
 
-struct node {
-  int data;
-  struct node* next;
-};
-
 %}
 
 %locations
@@ -27,7 +22,6 @@ struct node {
   double dval;
   char cval;
   char *sval;
-  struct node* list_ptr;
 }
 /* Associate non-terminals/tokens with union fields */
 
@@ -132,7 +126,7 @@ param           : TOKEN_IDENTIFIER ':' param_type
                 ;
 
 param_type      : atomic_type
-                | TOKEN_ARRAY '[' ']' param_type
+                | TOKEN_ARRAY '[' ']' param_type    /* No lengths on array params */
                 | TOKEN_CARRAY '[' ']' param_type
                 ;
 

@@ -1,0 +1,1 @@
+testfunc: function void ( s: string, num: double, vals: array[] integer );

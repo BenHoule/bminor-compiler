@@ -1,1 +1,5 @@
-1 +;
+main: function integer () = {
+  value: integer;
+  value = 1 + ;
+  return 0;
+}
