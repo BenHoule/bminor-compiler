@@ -1,0 +1,5 @@
+// checks that error is returned + location tracking works for block comments
+
+  /* comment starts here
+
+continues to EOF

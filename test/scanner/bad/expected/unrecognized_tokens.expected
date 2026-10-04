@@ -1,0 +1,5 @@
+line 1, col 1: Unrecognized token '@' (0x40)
+line 2, col 1: Unrecognized token '$' (0x24)
+line 3, col 1: Unrecognized token '&' (0x26)
+line 4, col 1: Unrecognized token '|' (0x7C)
+line 5, col 1: Unrecognized token '\' (0x5C)

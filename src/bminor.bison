@@ -21,7 +21,6 @@ struct node {
 %define parse.lac full
 %destructor { free($$); } <sval>
 
-
 /* Union of all possible semantic types */
 %union {
   long long ival;

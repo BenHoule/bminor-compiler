@@ -99,4 +99,3 @@ int main(int argc, char *argv[]) {
   unsigned int total_err = scanner_error_count() + parser_error_count();
   return total_err > 0 ? EXIT_COMPILE_ERROR : EXIT_SUCCESS;
 }
-

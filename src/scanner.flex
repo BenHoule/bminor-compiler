@@ -28,8 +28,8 @@ static int col = 1;
       col++; \
     } \
   } \
-  yylloc.last_line     = line; \
-  yylloc.last_column   = col - 1;
+  yylloc.last_line   = line; \
+  yylloc.last_column = col - 1;
 
 static int error_count = 0;
 static YYLTYPE block = {0, 0, 0, 0};
@@ -268,6 +268,3 @@ void scanner_open(FILE *file) {
 int scanner_next_token(void) {
   return yylex();
 }
-
-
-

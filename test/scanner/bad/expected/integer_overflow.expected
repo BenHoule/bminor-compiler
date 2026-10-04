@@ -1,0 +1,2 @@
+line 1, col 1: Integer literal out of range [-2^63, 2^63)
+integer_literal

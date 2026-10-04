@@ -1,0 +1,22 @@
+if
+(
+identifier
+line 2, col 7: Unrecognized token '|' (0x7C)
+identifier
+)
+{
+print
+string_literal
+;
+}
+if
+(
+identifier
+line 6, col 7: Unrecognized token '&' (0x26)
+identifier
+)
+{
+print
+string_literal
+;
+}

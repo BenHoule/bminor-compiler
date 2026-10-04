@@ -1,0 +1,2 @@
+line 1, col 1: String literal too long (MAX=255)
+string_literal

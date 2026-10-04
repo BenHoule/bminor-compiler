@@ -1,0 +1,2 @@
+line 1, col 1: String literal contains character outside of ASCII range [1-127]
+string_literal

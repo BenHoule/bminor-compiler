@@ -3,9 +3,10 @@
 # B-Minor regression test driver.
 #
 # Layout convention:
-#   test/<stage>/good*.bminor   must exit 0
-#   test/<stage>/bad*.bminor    must exit non-zero
-#   test/<stage>/<name>.expected   optional; if present, stdout must match it
+#   test/<stage>/good/*.bminor   must exit 0
+#   test/<stage>/bad/*.bminor    must exit non-zero
+#   test/<stage>/{good,bad}/expected/<name>.expected is optional
+#   test/<stage>/{good,bad}/out/<name>.out stores the program output
 #
 # Stages run in compiler-pipeline order; a stage directory that does not exist
 # yet is skipped, so this script works from Phase 1 onward without edits.
@@ -39,29 +40,35 @@ RED=$'\e[31m'; GREEN=$'\e[32m'; DIM=$'\e[2m'; RESET=$'\e[0m'
 
 pass=0; fail=0; failed_cases=()
 
-# Output is captured to a file because command substitution strips
-# trailing newlines, making byte-exact comparison impossible.
-OUTFILE=$(mktemp)
-trap 'rm -f "$OUTFILE"' EXIT
-
 run_case() {
-    local flag=$1 file=$2 expect=$3 name
+    local flag=$1 file=$2 expect=$3 name case_dir test_name output_dir output_file expected_file
     name=${file#test/} # strip leading "test/"
+    case_dir=$(dirname "$file")
+    test_name=$(basename "$file" .bminor)
+    output_dir="$case_dir/out"
+    output_file="$output_dir/$test_name.out"
+    expected_file="$case_dir/expected/$test_name.expected"
+
+    if ! mkdir -p "$output_dir"; then
+        printf '%s FAIL%s %s %s(could not create output directory)%s\n' \
+            "$RED" "$RESET" "$name" "$DIM" "$RESET"
+        fail=$((fail+1)); failed_cases+=("$name"); return
+    fi
 
     local status
     if [[ ${BMINOR_VALGRIND:-0} == 1 ]]; then
         valgrind --quiet --error-exitcode=125 --leak-check=full \
                  --errors-for-leak-kinds=definite \
-                 "$BIN" "$flag" "$file" >"$OUTFILE" 2>&1
+                 stdbuf -oL "$BIN" "$flag" "$file" >"$output_file" 2>&1
     else
-        "$BIN" "$flag" "$file" >"$OUTFILE" 2>&1
+        stdbuf -oL "$BIN" "$flag" "$file" >"$output_file" 2>&1
     fi
     status=$? # capture the exit status of the command
 
     if [[ $status -eq 125 && ${BMINOR_VALGRIND:-0} == 1 ]]; then
         # handle valgrind-specific exit code
         printf '%s FAIL%s %s %s(valgrind)%s\n' "$RED" "$RESET" "$name" "$DIM" "$RESET"
-        sed 's/^/      /' "$OUTFILE"
+        sed 's/^/      /' "$output_file"
         fail=$((fail+1)); failed_cases+=("$name"); return
     fi
 
@@ -73,9 +80,8 @@ run_case() {
     fi
 
     # Check expected output if an expected file exists
-    local expected_file=${file%.bminor}.expected
     if [[ $ok -eq 1 && -f $expected_file ]]; then
-        if ! diff -u "$expected_file" "$OUTFILE" >/dev/null; then
+        if ! diff -u "$expected_file" "$output_file" >/dev/null; then
             ok=0; why="output mismatch"
         fi
     fi
@@ -86,9 +92,9 @@ run_case() {
     else
         printf '%s FAIL%s %s %s(%s)%s\n' "$RED" "$RESET" "$name" "$DIM" "$why" "$RESET"
         if [[ $why == "output mismatch" ]]; then
-            diff -u "$expected_file" "$OUTFILE" | tail -n +3 | sed 's/^/      /'
+            diff -u "$expected_file" "$output_file" | tail -n +3 | sed 's/^/      /'
         else
-            sed 's/^/      /' "$OUTFILE"
+            sed 's/^/      /' "$output_file"
         fi
         fail=$((fail+1)); failed_cases+=("$name")
     fi
@@ -103,22 +109,18 @@ for entry in "${STAGES[@]}"; do
         continue
     fi
 
-    # Use nullglob to skip cases where no test files exist for a stage
     shopt -s nullglob
-    cases=(test/"$stage"/*.bminor)
+    good_cases=(test/"$stage"/good/*.bminor)
+    bad_cases=(test/"$stage"/bad/*.bminor)
     shopt -u nullglob
-    [[ ${#cases[@]} -gt 0 ]] || continue
+    [[ ${#good_cases[@]} -gt 0 || ${#bad_cases[@]} -gt 0 ]] || continue
 
-    # Run test cases for this stage
     printf '\n%s=== %s (%s) ===%s\n' "$DIM" "$stage" "$flag" "$RESET"
-    for file in "${cases[@]}"; do
-        base=$(basename "$file")
-        case $base in
-            good*) run_case "$flag" "$file" good ;;
-            bad*)  run_case "$flag" "$file" bad ;;
-            *)     printf '%s SKIP%s %s %s(name must start with good/bad)%s\n' \
-                          "$RED" "$RESET" "$file" "$DIM" "$RESET" ;;
-        esac
+    for file in "${good_cases[@]}"; do
+        run_case "$flag" "$file" good
+    done
+    for file in "${bad_cases[@]}"; do
+        run_case "$flag" "$file" bad
     done
 done
 
