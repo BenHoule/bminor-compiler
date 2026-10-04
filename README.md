@@ -66,7 +66,7 @@ git push
 
 ---
 ### Grammar
-```
+```bison
 program
 	: decl_list
 	;
