@@ -77,10 +77,10 @@ decl_list
 	;
 
 decl
-	: TOKEN_IDENTIFIER : var_type ;
-	| TOKEN_IDENTIFIER : var_type = init ;
-	| TOKEN_IDENTIFIER : func_type ;
-	| TOKEN_IDENTIFIER : func_type = block
+	: TOKEN_IDENTIFIER ':' var_type ';'
+	| TOKEN_IDENTIFIER ':' var_type '=' init ';'
+	| TOKEN_IDENTIFIER ':' func_type ';'
+	| TOKEN_IDENTIFIER ':' func_type '=' block
 	;
 
 /* ------- INITIALIZERS ------- */
