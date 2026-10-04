@@ -1,10 +1,18 @@
 %{
 
 #include "parser_diag.h"
+#include "decl.h"
+#include "stmt.h"
+#include "expr.h"
+#include "type.h"
+#include "param_list.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 
 static int err_count = 0;
+
+struct decl *parser_result = NULL;
 
 int yylex(void);
 int yyerror(const char *msg);
@@ -22,7 +30,19 @@ int yyerror(const char *msg);
   double dval;
   char cval;
   char *sval;
+  struct decl *decl;
+  struct stmt *stmt;
+  struct expr *expr;
+  struct type *type;
+  struct param_list *params;
 }
+%type <decl> program decl_list decl block_item
+%type <stmt> block block_item_list stmt matched_stmt unmatched_stmt simple_stmt
+%type <expr> init init_list expr expr_list opt_expr opt_expr_list
+%type <expr> assign_expr or_expr and_expr cmp_expr add_expr mul_expr unary_expr
+%type <expr> len_expr pow_expr postfix_expr primary_expr
+%type <type> var_type simple_type atomic_type func_type return_type param_type
+%type <params> param opt_param_list param_list
 /* Associate non-terminals/tokens with union fields */
 
 %token <sval> TOKEN_IDENTIFIER "identifier"
@@ -71,14 +91,14 @@ int yyerror(const char *msg);
 %token TOKEN_PRINT "print"
 
 %%
-program   : decl_list
+program   : decl_list       { parser_result = $1; }
           ;
 
-decl_list : %empty                      //{ $$ = NULL; }
-          | decl_list decl
+decl_list : %empty          { $$ = NULL; }
+          | decl decl_list  { $1->next = $2; $$ = $1; }
           ;
 
-decl      : TOKEN_IDENTIFIER ':' var_type ';'
+decl      : TOKEN_IDENTIFIER ':' var_type ';'             {}
           | TOKEN_IDENTIFIER ':' var_type '=' init ';'
           | TOKEN_IDENTIFIER ':' func_type ';'
           | TOKEN_IDENTIFIER ':' func_type '=' block
@@ -97,7 +117,7 @@ init_list : init
 block           : '{' block_item_list '}'
                 ;
 
-block_item_list : %empty                        //{ $$ = NULL; }
+block_item_list : %empty                        { $$ = NULL; }
                 | block_item_list block_item
                 ;
 
@@ -114,7 +134,7 @@ return_type     : atomic_type
                 | TOKEN_AUTO
                 ;
 
-opt_param_list  : %empty                      //{ $$ = NULL; }
+opt_param_list  : %empty                      { $$ = NULL; }
                 | param_list
                 ;
 
@@ -171,7 +191,7 @@ simple_stmt     : expr ';'
                 ;
 
 /* ------- EXPRESSIONS ------- */
-opt_expr_list : %empty                      //{ $$ = NULL; }
+opt_expr_list : %empty                      { $$ = NULL; }
               | expr_list
               ;
 
@@ -179,7 +199,7 @@ expr_list     : expr
               | expr_list ',' expr
               ;
 
-opt_expr      : %empty                      //{ $$ = NULL; }
+opt_expr      : %empty                       { $$ = NULL; }
               | expr
               ;
 
