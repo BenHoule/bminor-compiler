@@ -1,6 +1,4 @@
-
-#ifndef SYMBOL_H
-#define SYMBOL_H
+#pragma once
 
 struct type;
 
@@ -18,5 +16,3 @@ struct symbol {
 };
 
 struct symbol * symbol_create( symbol_t kind, struct type *type, char *name );
-
-#endif

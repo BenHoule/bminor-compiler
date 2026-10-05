@@ -1,6 +1,4 @@
-
-#ifndef DECL_H
-#define DECL_H
+#pragma once
 
 #include "type.h"
 #include "stmt.h"
@@ -18,6 +16,3 @@ struct decl {
 
 struct decl * decl_create( char *name, struct type *type, struct expr *value, struct stmt *code, struct decl *next );
 void decl_print( struct decl *d, int indent );
-
-#endif
-

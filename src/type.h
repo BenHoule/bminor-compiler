@@ -1,5 +1,4 @@
-#ifndef TYPE_H
-#define TYPE_H
+#pragma once
 
 struct param_list;
 struct expr;
@@ -26,5 +25,3 @@ struct type {
 
 struct type * type_create( type_t kind, struct type *subtype, struct param_list *params, struct expr *size );
 void          type_print( struct type *t );
-
-#endif

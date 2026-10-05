@@ -1,5 +1,4 @@
-#ifndef EXPR_H
-#define EXPR_H
+#pragma once
 
 #include <stddef.h>
 #include <stdint.h>
@@ -54,7 +53,7 @@ struct expr {
     /* used by various leaf exprs */
     struct {
       const char *name;
-      int64_t literal_value;  // B-minor uses 64-bit integers
+      int64_t int_literal;  // B-minor uses 64-bit integers
       double double_literal;
       const char *string_literal;
       struct symbol *symbol;
@@ -72,5 +71,3 @@ struct expr * expr_create_char_literal( char c );
 struct expr * expr_create_string_literal( const char *str );
 
 void expr_print( struct expr *e );
-
-#endif
