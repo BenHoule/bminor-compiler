@@ -50,14 +50,17 @@ struct expr {
       size_t argc;
     } call;
 
-    /* used by various leaf exprs */
     struct {
       const char *name;
-      int64_t int_literal;  // B-minor uses 64-bit integers
-      double double_literal;
-      const char *string_literal;
       struct symbol *symbol;
-    };
+    } identifier;
+
+    bool bool_literal;  // Negligibly larger compiler >>> using 64-bits for booleans
+    char char_literal;
+    double double_literal;
+    int64_t int_literal;  // B-minor uses 64-bit integers
+    const char *string_literal;
+    struct symbol *symbol;
   };
 };
 
@@ -66,8 +69,12 @@ struct expr * expr_create( expr_t kind, struct expr *left, struct expr *right );
 struct expr * expr_create_name( const char *n );
 struct expr * expr_create_integer_literal( int64_t c );
 struct expr * expr_create_double_literal( double c );
-struct expr * expr_create_boolean_literal( int c );
+struct expr * expr_create_boolean_literal( bool c );
 struct expr * expr_create_char_literal( char c );
 struct expr * expr_create_string_literal( const char *str );
+struct expr * expr_create_call( struct expr **argv, size_t argc );
+struct expr * expr_create_false();
+struct expr * expr_create_true();
+
 
 void expr_print( struct expr *e );

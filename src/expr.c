@@ -10,37 +10,55 @@ struct expr * expr_create( expr_t kind, struct expr *left, struct expr *right ) 
   e->kind = kind;
   e->left = left;
   e->right = right;
-  e->name = NULL;
   e->int_literal = 0;
-  e->double_literal = 0.0;
-  e->string_literal = NULL;
-  e->symbol = NULL;
   return e;
 }
 
-// Wrapper for expr_create(EXPR_NAME, n, NULL)
 struct expr * expr_create_name( const char *n ) {
-  return expr_create( EXPR_NAME, (struct expr *)n, NULL );
+  struct expr *e = expr_create( EXPR_NAME, NULL, NULL );
+  e->identifier.name = n;
+  return e;
 }
-// Wrapper for expr_create(EXPR_INTEGER_LITERAL, c, NULL)
-struct expr * expr_create_integer_literal( int64_t c ) {
-  return expr_create( EXPR_INT, (struct expr *)(intptr_t)c, NULL );
+struct expr * expr_create_integer_literal( int64_t i ) {
+  struct expr *e = expr_create( EXPR_INT, NULL, NULL );
+  e->int_literal = i;
+  return e;
 }
-// Wrapper for expr_create(EXPR_DOUBLE_LITERAL, c, NULL)
-struct expr * expr_create_double_literal( double c ) {
-  return expr_create( EXPR_DOUBLE, (struct expr *)(intptr_t)c, NULL );
+struct expr * expr_create_double_literal( double d ) {
+  struct expr *e = expr_create( EXPR_DOUBLE, NULL, NULL );
+  e->double_literal = d;
+  return e;
 }
-// Wrapper for expr_create(EXPR_BOOLEAN_LITERAL, c, NULL)
-struct expr * expr_create_boolean_literal( int c ) {
-  return expr_create( EXPR_BOOL, (struct expr *)(intptr_t)c, NULL );
+struct expr * expr_create_boolean_literal( bool b ) {
+  struct expr * e = expr_create( EXPR_BOOL, NULL, NULL );
+  e->bool_literal = b;
+  return e;
 }
-// Wrapper for expr_create(EXPR_CHAR_LITERAL, c, NULL)
 struct expr * expr_create_char_literal( char c ) {
-  return expr_create( EXPR_CHAR, (struct expr *)(intptr_t)c, NULL );
+  struct expr *e = expr_create( EXPR_CHAR, NULL, NULL );
+  e->char_literal = c;
+  return e;
 }
-// Wrapper for expr_create(EXPR_STRING_LITERAL, str, NULL)
 struct expr * expr_create_string_literal( const char *str ) {
-  return expr_create( EXPR_STR, (struct expr *)str, NULL );
+  struct expr *e = expr_create( EXPR_STR, NULL, NULL );
+  e->string_literal = str;
+  return e;
+}
+struct expr * expr_create_call( struct expr **argv, size_t argc ) {
+  struct expr *e = expr_create( EXPR_CALL, NULL, NULL );
+  e->call.argv = argv;
+  e->call.argc = argc;
+  return e;
+}
+struct expr * expr_create_false() {
+  struct expr *e = expr_create( EXPR_BOOL, NULL, NULL );
+  e->bool_literal = false;
+  return e;
+}
+struct expr * expr_create_true() {
+  struct expr *e = expr_create( EXPR_BOOL, NULL, NULL );
+  e->bool_literal = true;
+  return e;
 }
 
 // Print the expression `e` in a human-readable format

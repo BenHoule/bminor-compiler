@@ -1,6 +1,6 @@
 #include "scanner.h"
 #include "bminor.tab.h"
-#include "parser_diag.h"
+#include "bminor_parser.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

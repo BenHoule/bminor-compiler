@@ -1,6 +1,6 @@
 %{
 
-#include "parser_diag.h"
+#include "bminor_parser.h"
 #include "decl.h"
 #include "stmt.h"
 #include "expr.h"
@@ -11,7 +11,6 @@
 #include <stdlib.h>
 
 static int err_count = 0;
-
 struct decl *parser_result = NULL;
 
 int yylex(void);
@@ -39,8 +38,8 @@ int yyerror(const char *msg);
 %type <decl> program decl_list decl block_item
 %type <stmt> block block_item_list stmt matched_stmt unmatched_stmt simple_stmt
 %type <expr> init init_list expr expr_list opt_expr opt_expr_list
-%type <expr> assign_expr or_expr and_expr cmp_expr add_expr mul_expr unary_expr
-%type <expr> len_expr pow_expr postfix_expr primary_expr
+%type <expr> or_expr and_expr cmp_expr add_expr mul_expr unary_expr len_expr
+%type <expr> pow_expr postfix_expr primary_expr
 %type <type> var_type simple_type atomic_type func_type return_type param_type
 %type <params> param opt_param_list param_list
 /* Associate non-terminals/tokens with union fields */
@@ -94,178 +93,174 @@ int yyerror(const char *msg);
 program   : decl_list       { parser_result = $1; }
           ;
 
-decl_list : %empty          { $$ = NULL; }
-          | decl decl_list  { $1->next = $2; $$ = $1; }
+decl_list : decl decl_list  { $1->next = $2; $$ = $1; }
+          | %empty          { $$ = NULL; }
           ;
 
-decl      : TOKEN_IDENTIFIER ':' var_type ';'             {}
-          | TOKEN_IDENTIFIER ':' var_type '=' init ';'
-          | TOKEN_IDENTIFIER ':' func_type ';'
-          | TOKEN_IDENTIFIER ':' func_type '=' block
+decl      : TOKEN_IDENTIFIER ':' var_type ';'             { $$ = decl_create($1, $3, NULL, NULL, NULL); }
+          | TOKEN_IDENTIFIER ':' var_type '=' init ';'    { $$ = decl_create($1, $3, $5, NULL, NULL); }
+          | TOKEN_IDENTIFIER ':' func_type ';'            { $$ = decl_create($1, $3, NULL, NULL, NULL); }
+          | TOKEN_IDENTIFIER ':' func_type '=' block      { $$ = decl_create($1, $3, NULL, NULL, NULL); }
           ;
 
 /* ------- INITIALIZERS ------- */
 init      : expr
-          | '{' init_list '}'
+          | '{' init_list '}'                   { $$ = $2; }
           ;
 
 init_list : init
-          | init_list ',' init
+          | init ',' init_list                  { /* !! TODO !! */ }
           ;
 
 /* ------- BLOCKS ------- */
-block           : '{' block_item_list '}'
+block           : '{' block_item_list '}'       { $$ = $2; }
                 ;
 
-block_item_list : %empty                        { $$ = NULL; }
-                | block_item_list block_item
+block_item_list : block_item block_item_list    { /* !! TODO !! */ }
+                | %empty                        { $$ = NULL; }
                 ;
 
 block_item      : decl
-                | stmt
+                | stmt                          { $$ = NULL; }
                 ;
 
 /* ------- TYPES ------- */
-func_type       : TOKEN_FUNCTION return_type '(' opt_param_list ')'
+func_type       : TOKEN_FUNCTION return_type '(' opt_param_list ')'     { $$ = type_create_function($2, $4); }
                 ;
 
 return_type     : atomic_type
-                | TOKEN_VOID
-                | TOKEN_AUTO
+                | TOKEN_VOID          { $$ = type_create_void(); }
+                | TOKEN_AUTO          { $$ = type_create_auto(); }
                 ;
 
-opt_param_list  : %empty                      { $$ = NULL; }
-                | param_list
+opt_param_list  : param_list
+                | %empty              { $$ = NULL; }
                 ;
 
 param_list      : param
-                | param_list ',' param
+                | param ',' param_list         { $1->next = $3; $$ = $1; }
                 ;
 
-param           : TOKEN_IDENTIFIER ':' param_type
+param           : TOKEN_IDENTIFIER ':' param_type   { $$ = param_list_create($1, $3, NULL); }
                 ;
 
 param_type      : atomic_type
-                | TOKEN_ARRAY '[' ']' param_type    /* No lengths on array params */
-                | TOKEN_CARRAY '[' ']' param_type
+                | TOKEN_ARRAY '[' ']' param_type    { $$ = type_create_array($4, NULL); }  /* No lengths on array params */
+                | TOKEN_CARRAY '[' ']' param_type   { $$ = type_create_carray($4, NULL); }
                 ;
 
-var_type        : TOKEN_AUTO
-                | simple_type
+var_type        : simple_type
+                | TOKEN_AUTO        { $$ = type_create_auto(); }
                 ;
 
 simple_type     : atomic_type
-                | TOKEN_ARRAY '[' expr ']' simple_type
-                | TOKEN_CARRAY '[' expr ']' simple_type
+                | TOKEN_ARRAY '[' expr ']' simple_type     { $$ = type_create_array($5, $3); }
+                | TOKEN_CARRAY '[' expr ']' simple_type    { $$ = type_create_carray($5, $3); }
                 ;
 
-atomic_type     : TOKEN_BOOLEAN
-                | TOKEN_CHAR
-                | TOKEN_DOUBLE
-                | TOKEN_INTEGER
-                | TOKEN_STRING
+atomic_type     : TOKEN_BOOLEAN       { $$ = type_create_boolean(); }
+                | TOKEN_CHAR          { $$ = type_create_character(); }
+                | TOKEN_DOUBLE        { $$ = type_create_double(); }
+                | TOKEN_INTEGER       { $$ = type_create_integer(); }
+                | TOKEN_STRING        { $$ = type_create_string(); }
                 ;
 
 /* ------- STATEMENTS ------- */
 stmt            : matched_stmt
-                | unmatched_stmt    /* Dangling else resolution */
+                | unmatched_stmt        /* Dangling else resolution */
                 ;
 
 matched_stmt    : simple_stmt
-                | TOKEN_IF '(' expr ')' matched_stmt TOKEN_ELSE matched_stmt
-                | TOKEN_FOR '(' opt_expr ';' opt_expr ';' opt_expr ')' matched_stmt
+                | TOKEN_IF '(' expr ')' matched_stmt TOKEN_ELSE matched_stmt           { $$ = stmt_create(STMT_IF_ELSE,  NULL, NULL, NULL, NULL, NULL, NULL, NULL); }
+                | TOKEN_FOR '(' opt_expr ';' opt_expr ';' opt_expr ')' matched_stmt    { $$ = stmt_create(STMT_FOR, NULL, NULL, NULL, NULL, NULL, NULL, NULL); }
                 ;
 
-unmatched_stmt  : TOKEN_IF '(' expr ')' stmt
-                | TOKEN_IF '(' expr ')' matched_stmt TOKEN_ELSE unmatched_stmt
-                | TOKEN_FOR '(' opt_expr ';' opt_expr ';' opt_expr ')' unmatched_stmt
+unmatched_stmt  : TOKEN_IF '(' expr ')' stmt                                             { $$ = stmt_create(STMT_IF_ELSE,  NULL, NULL, NULL, NULL, NULL, NULL, NULL); }
+                | TOKEN_IF '(' expr ')' matched_stmt TOKEN_ELSE unmatched_stmt           { $$ = stmt_create(STMT_IF_ELSE,  NULL, NULL, NULL, NULL, NULL, NULL, NULL); }
+                | TOKEN_FOR '(' opt_expr ';' opt_expr ';' opt_expr ')' unmatched_stmt    { $$ = stmt_create(STMT_FOR, NULL, NULL, NULL, NULL, NULL, NULL, NULL); }
                 ;
 
-
-simple_stmt     : expr ';'
-                | TOKEN_RETURN ';'
-                | TOKEN_RETURN expr ';'
-                | TOKEN_PRINT ';'
-                | TOKEN_PRINT expr_list ';'
-                | block
+simple_stmt     : block
+                | expr ';'                      { $$ = stmt_create(STMT_EXPR,   NULL, NULL, NULL, NULL, NULL, NULL, NULL); }
+                | TOKEN_RETURN ';'              { $$ = stmt_create(STMT_RETURN, NULL, NULL, NULL, NULL, NULL, NULL, NULL); }
+                | TOKEN_RETURN expr ';'         { $$ = stmt_create(STMT_RETURN, NULL, NULL, NULL, NULL, NULL, NULL, NULL); }
+                | TOKEN_PRINT ';'               { $$ = stmt_create(STMT_PRINT,  NULL, NULL, NULL, NULL, NULL, NULL, NULL); }
+                | TOKEN_PRINT expr_list ';'     { $$ = stmt_create(STMT_PRINT,  NULL, NULL, NULL, NULL, NULL, NULL, NULL); }
                 ;
 
 /* ------- EXPRESSIONS ------- */
-opt_expr_list : %empty                      { $$ = NULL; }
-              | expr_list
+opt_expr_list : expr_list
+              | %empty                      { $$ = NULL; }
               ;
 
 expr_list     : expr
-              | expr_list ',' expr
+              | expr ',' expr_list          { /* !! TODO !! */ }
               ;
 
-opt_expr      : %empty                       { $$ = NULL; }
-              | expr
+opt_expr      : expr
+              | %empty                      { $$ = NULL; }
               ;
 
-expr          : assign_expr
+expr          : or_expr
+              | or_expr '=' expr                { $$ = expr_create(EXPR_ASGN, $1, $3); }
+              ; /* right-associative */
+
+or_expr       : and_expr
+              | or_expr TOKEN_OR and_expr       { $$ = expr_create(EXPR_OR, $1, $3); }
+              ; /* left-associative */
+
+and_expr      : cmp_expr
+              | and_expr TOKEN_AND cmp_expr     { $$ = expr_create(EXPR_AND, $1, $3); }
               ;
 
-assign_expr   : or_expr '=' assign_expr        /* right-associative */
-              | or_expr
+cmp_expr      : add_expr
+              | cmp_expr '<' add_expr           { $$ = expr_create(EXPR_LT, $1, $3); }
+              | cmp_expr '>' add_expr           { $$ = expr_create(EXPR_GT, $1, $3); }
+              | cmp_expr TOKEN_LE add_expr      { $$ = expr_create(EXPR_LE, $1, $3); }
+              | cmp_expr TOKEN_GE add_expr      { $$ = expr_create(EXPR_GE, $1, $3); }
+              | cmp_expr TOKEN_EQ add_expr      { $$ = expr_create(EXPR_EQ, $1, $3); }
+              | cmp_expr TOKEN_NE add_expr      { $$ = expr_create(EXPR_NE, $1, $3); }
               ;
 
-or_expr       : or_expr TOKEN_OR and_expr      /* left-associative */
-              | and_expr
+add_expr      : mul_expr
+              | add_expr '+' mul_expr           { $$ = expr_create(EXPR_ADD, $1, $3); }
+              | add_expr '-' mul_expr           { $$ = expr_create(EXPR_SUB, $1, $3); }
               ;
 
-and_expr      : and_expr TOKEN_AND cmp_expr
-              | cmp_expr
+mul_expr      : unary_expr
+              | mul_expr '*' unary_expr         { $$ = expr_create(EXPR_MUL, $1, $3); }
+              | mul_expr '/' unary_expr         { $$ = expr_create(EXPR_DIV, $1, $3); }
+              | mul_expr '%' unary_expr         { $$ = expr_create(EXPR_MOD, $1, $3); }
               ;
 
-cmp_expr      : cmp_expr '<' add_expr
-              | cmp_expr '>' add_expr
-              | cmp_expr TOKEN_LE add_expr
-              | cmp_expr TOKEN_GE add_expr
-              | cmp_expr TOKEN_EQ add_expr
-              | cmp_expr TOKEN_NE add_expr
-              | add_expr
+unary_expr    : len_expr
+              | '-' unary_expr                  { $$ = expr_create(EXPR_NEG, $2, NULL); }
+              | '!' unary_expr                  { $$ = expr_create(EXPR_NOT, $2, NULL); }
               ;
 
-add_expr      : add_expr '+' mul_expr
-              | add_expr '-' mul_expr
-              | mul_expr
+len_expr      : pow_expr
+              | '#' len_expr                    { $$ = expr_create(EXPR_LEN, $2, NULL); }
               ;
 
-mul_expr      : mul_expr '*' unary_expr
-              | mul_expr '/' unary_expr
-              | mul_expr '%' unary_expr
-              | unary_expr
+pow_expr      : postfix_expr
+              | postfix_expr '^' unary_expr    { $$ = expr_create(EXPR_POW, $1, $3); }  /* -x^2 -> -(x^2) */
               ;
 
-unary_expr    : '-' unary_expr
-              | '!' unary_expr
-              | len_expr
+postfix_expr  : primary_expr
+              | postfix_expr TOKEN_INC                { $$ = expr_create(EXPR_INC,  $1, NULL); }
+              | postfix_expr TOKEN_DEC                { $$ = expr_create(EXPR_DEC,  $1, NULL); }
+              | postfix_expr '[' expr ']'             { $$ = expr_create(EXPR_IDX,  $1, $3); }
+              | postfix_expr '(' opt_expr_list ')'    { $$ = expr_create(EXPR_CALL, $1, $3); }
               ;
 
-len_expr      : '#' len_expr
-              | pow_expr
-              ;
-
-pow_expr      : postfix_expr '^' unary_expr    /* -x^2 -> -(x^2) */
-              | postfix_expr
-              ;
-
-postfix_expr  : postfix_expr TOKEN_INC
-              | postfix_expr TOKEN_DEC
-              | postfix_expr '[' expr ']'
-              | postfix_expr '(' opt_expr_list ')'
-              | primary_expr
-              ;
-
-primary_expr  : TOKEN_IDENTIFIER
-              | TOKEN_CHAR_LITERAL
-              | TOKEN_DOUBLE_LITERAL
-              | TOKEN_INTEGER_LITERAL
-              | TOKEN_STRING_LITERAL
-              | TOKEN_FALSE
-              | TOKEN_TRUE
-              | '(' expr ')'
+primary_expr  : '(' expr ')'            { $$ = $2; }
+              | TOKEN_IDENTIFIER        { $$ = expr_create_name($1); }
+              | TOKEN_CHAR_LITERAL      { $$ = expr_create_char_literal($1); }
+              | TOKEN_DOUBLE_LITERAL    { $$ = expr_create_double_literal($1); }
+              | TOKEN_INTEGER_LITERAL   { $$ = expr_create_integer_literal($1); }
+              | TOKEN_STRING_LITERAL    { $$ = expr_create_string_literal($1); }
+              | TOKEN_FALSE             { $$ = expr_create_false(); }
+              | TOKEN_TRUE              { $$ = expr_create_true(); }
               ;
 
 %%
