@@ -15,7 +15,7 @@ struct decl * decl_create( char *name, struct type *type, struct expr *value, st
 
 // Print the declaration `d` with the given indentation level.
 void decl_print( struct decl *d, int indent ) {
-  (void)*d;
+  (void)d;
   (void)indent;
   return;
 }

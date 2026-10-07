@@ -144,8 +144,8 @@ param_list      : param
 param           : TOKEN_IDENTIFIER ':' param_type   { $$ = param_list_create($1, $3, NULL); }
                 ;
 
-param_type      : atomic_type
-                | TOKEN_ARRAY '[' ']' param_type    { $$ = type_create_array($4, NULL); }  /* No lengths on array params */
+param_type      : atomic_type    /* No lengths on array params */
+                | TOKEN_ARRAY '[' ']' param_type    { $$ = type_create_array($4, NULL); }
                 | TOKEN_CARRAY '[' ']' param_type   { $$ = type_create_carray($4, NULL); }
                 ;
 

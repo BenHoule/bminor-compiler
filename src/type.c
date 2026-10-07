@@ -4,6 +4,7 @@
 // Create a new type with the given kind, subtype, parameter list, and size.
 struct type * type_create( type_t kind, struct type *subtype, struct param_list *params, struct expr *size ) {
   struct type *t = malloc(sizeof(struct type));
+  if (!t) return NULL;
   t->kind = kind;
   t->subtype = subtype;
   t->params = params;
@@ -44,6 +45,6 @@ struct type * type_create_auto() {
 
 // Print a type in a human-readable format.
 void type_print( struct type *t ) {
-  (void)*t;
+  (void)t;
   return;
 }

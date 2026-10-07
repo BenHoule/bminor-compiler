@@ -12,6 +12,6 @@ struct param_list * param_list_create( char *name, struct type *type, struct par
 
 // Print a parameter list node in a human-readable format.
 void param_list_print( struct param_list *a ) {
-  (void)*a;
+  (void)a;
   return;
 }

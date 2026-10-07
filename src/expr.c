@@ -63,6 +63,6 @@ struct expr * expr_create_true() {
 
 // Print the expression `e` in a human-readable format
 void expr_print( struct expr *e ) {
-  (void)*e;
+  (void)e;
   return;
 }
