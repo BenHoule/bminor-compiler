@@ -171,21 +171,21 @@ stmt            : matched_stmt
                 ;
 
 matched_stmt    : simple_stmt
-                | TOKEN_IF '(' expr ')' matched_stmt TOKEN_ELSE matched_stmt           { $$ = stmt_create(STMT_IF_ELSE,  NULL, NULL, NULL, NULL, NULL, NULL, NULL); }
-                | TOKEN_FOR '(' opt_expr ';' opt_expr ';' opt_expr ')' matched_stmt    { $$ = stmt_create(STMT_FOR, NULL, NULL, NULL, NULL, NULL, NULL, NULL); }
+                | TOKEN_IF '(' expr ')' matched_stmt TOKEN_ELSE matched_stmt           { $$ = stmt_create_if_else($3, $5, $7); }
+                | TOKEN_FOR '(' opt_expr ';' opt_expr ';' opt_expr ')' matched_stmt    { $$ = stmt_create_for($3, $5, $7, $9); }
                 ;
 
-unmatched_stmt  : TOKEN_IF '(' expr ')' stmt                                             { $$ = stmt_create(STMT_IF_ELSE,  NULL, NULL, NULL, NULL, NULL, NULL, NULL); }
-                | TOKEN_IF '(' expr ')' matched_stmt TOKEN_ELSE unmatched_stmt           { $$ = stmt_create(STMT_IF_ELSE,  NULL, NULL, NULL, NULL, NULL, NULL, NULL); }
-                | TOKEN_FOR '(' opt_expr ';' opt_expr ';' opt_expr ')' unmatched_stmt    { $$ = stmt_create(STMT_FOR, NULL, NULL, NULL, NULL, NULL, NULL, NULL); }
+unmatched_stmt  : TOKEN_IF '(' expr ')' stmt                                             { $$ = stmt_create_if_else($3, $5, NULL); }
+                | TOKEN_IF '(' expr ')' matched_stmt TOKEN_ELSE unmatched_stmt           { $$ = stmt_create_if_else($3, $5, $7); }
+                | TOKEN_FOR '(' opt_expr ';' opt_expr ';' opt_expr ')' unmatched_stmt    { $$ = stmt_create_for($3, $5, $7, $9); }
                 ;
 
 simple_stmt     : block
-                | expr ';'                      { $$ = stmt_create(STMT_EXPR,   NULL, NULL, NULL, NULL, NULL, NULL, NULL); }
-                | TOKEN_RETURN ';'              { $$ = stmt_create(STMT_RETURN, NULL, NULL, NULL, NULL, NULL, NULL, NULL); }
-                | TOKEN_RETURN expr ';'         { $$ = stmt_create(STMT_RETURN, NULL, NULL, NULL, NULL, NULL, NULL, NULL); }
-                | TOKEN_PRINT ';'               { $$ = stmt_create(STMT_PRINT,  NULL, NULL, NULL, NULL, NULL, NULL, NULL); }
-                | TOKEN_PRINT expr_list ';'     { $$ = stmt_create(STMT_PRINT,  NULL, NULL, NULL, NULL, NULL, NULL, NULL); }
+                | expr ';'                      { $$ = stmt_create_simple(STMT_EXPR, $1, NULL); }
+                | TOKEN_RETURN ';'              { $$ = stmt_create_return(NULL); }
+                | TOKEN_RETURN expr ';'         { $$ = stmt_create_return($2); }
+                | TOKEN_PRINT ';'               { $$ = stmt_create_print(NULL); }
+                | TOKEN_PRINT expr_list ';'     { $$ = stmt_create_print($2); }
                 ;
 
 /* ------- EXPRESSIONS ------- */

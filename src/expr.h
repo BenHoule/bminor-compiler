@@ -60,7 +60,6 @@ struct expr {
     double double_literal;
     int64_t int_literal;  // B-minor uses 64-bit integers
     const char *string_literal;
-    struct symbol *symbol;
   };
 };
 
