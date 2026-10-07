@@ -3,7 +3,6 @@
 #include "type.h"
 #include "stmt.h"
 #include "expr.h"
-#include <stdio.h>
 
 struct decl {
 	char *name;

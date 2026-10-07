@@ -1,10 +1,15 @@
 #include "type.h"
+
+#include <stdio.h>
 #include <stdlib.h>
 
 // Create a new type with the given kind, subtype, parameter list, and size.
 struct type * type_create( type_t kind, struct type *subtype, struct param_list *params, struct expr *size ) {
   struct type *t = malloc(sizeof(struct type));
-  if (!t) return NULL;
+  if (!t) {
+    fprintf(stderr, "Failed to allocate memory for type\n");
+    exit(EXIT_FAILURE);
+  }
   t->kind = kind;
   t->subtype = subtype;
   t->params = params;

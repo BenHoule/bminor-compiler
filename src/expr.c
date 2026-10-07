@@ -1,12 +1,16 @@
 #include "expr.h"
 
-
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 // Create a new expression node with the given kind and child expressions.
 struct expr * expr_create( expr_t kind, struct expr *left, struct expr *right ) {
   struct expr *e = (struct expr *)malloc(sizeof(struct expr));
+  if (!e) {
+    fprintf(stderr, "Failed to allocate memory for expression\n");
+    exit(EXIT_FAILURE);
+  }
   e->kind = kind;
   e->left = left;
   e->right = right;

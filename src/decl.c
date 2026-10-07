@@ -1,10 +1,15 @@
 #include "decl.h"
 
 #include <stdlib.h>
+#include <stdio.h>
 
 // Create a new declaration node with the given properties.
 struct decl * decl_create( char *name, struct type *type, struct expr *value, struct stmt *code, struct decl *next ) {
   struct decl *d = (struct decl *)malloc(sizeof(struct decl));
+  if (!d) {
+    fprintf(stderr, "Failed to allocate memory for declaration\n");
+    exit(EXIT_FAILURE);
+  }
   d->name = name;
   d->type = type;
   d->value = value;
