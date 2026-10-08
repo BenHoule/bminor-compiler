@@ -35,8 +35,9 @@ int yyerror(const char *msg);
   struct type *type;
   struct param_list *params;
 }
-%type <decl> program decl_list decl block_item
-%type <stmt> block block_item_list stmt matched_stmt unmatched_stmt simple_stmt
+%type <decl> program decl_list decl
+%type <stmt> block block_item_list block_item
+%type <stmt> stmt matched_stmt unmatched_stmt simple_stmt
 %type <expr> init init_list expr expr_list opt_expr opt_expr_list
 %type <expr> or_expr and_expr cmp_expr add_expr mul_expr unary_expr len_expr
 %type <expr> pow_expr postfix_expr primary_expr
@@ -100,7 +101,7 @@ decl_list : decl decl_list  { $1->next = $2; $$ = $1; }
 decl      : TOKEN_IDENTIFIER ':' var_type ';'             { $$ = decl_create($1, $3, NULL, NULL, NULL); }
           | TOKEN_IDENTIFIER ':' var_type '=' init ';'    { $$ = decl_create($1, $3, $5, NULL, NULL); }
           | TOKEN_IDENTIFIER ':' func_type ';'            { $$ = decl_create($1, $3, NULL, NULL, NULL); }
-          | TOKEN_IDENTIFIER ':' func_type '=' block      { $$ = decl_create($1, $3, NULL, NULL, NULL); }
+          | TOKEN_IDENTIFIER ':' func_type '=' block      { $$ = decl_create($1, $3, NULL, $5, NULL); }
           ;
 
 /* ------- INITIALIZERS ------- */
@@ -108,20 +109,20 @@ init      : expr
           | '{' init_list '}'                   { $$ = $2; }
           ;
 
-init_list : init
-          | init ',' init_list                  { /* !! TODO !! */ }
+init_list : init                                { $$ = expr_create(EXPR_ARG, $1, NULL); }
+          | init ',' init_list                  { $$ = expr_create(EXPR_ARG, $1, $3); }
           ;
 
 /* ------- BLOCKS ------- */
 block           : '{' block_item_list '}'       { $$ = $2; }
                 ;
 
-block_item_list : block_item block_item_list    { /* !! TODO !! */ }
+block_item_list : block_item block_item_list    { $1->next = $2; $$ = $1; }
                 | %empty                        { $$ = NULL; }
                 ;
 
-block_item      : decl
-                | stmt                          { $$ = NULL; }
+block_item      : decl                          { $$ = stmt_create_decl($1, NULL); }
+                | stmt                          { $$ = $1; }
                 ;
 
 /* ------- TYPES ------- */
@@ -144,7 +145,7 @@ param_list      : param
 param           : TOKEN_IDENTIFIER ':' param_type   { $$ = param_list_create($1, $3, NULL); }
                 ;
 
-param_type      : atomic_type    /* No lengths on array params */
+param_type      : atomic_type         /* No lengths on array params */
                 | TOKEN_ARRAY '[' ']' param_type    { $$ = type_create_array($4, NULL); }
                 | TOKEN_CARRAY '[' ']' param_type   { $$ = type_create_carray($4, NULL); }
                 ;
@@ -180,8 +181,8 @@ unmatched_stmt  : TOKEN_IF '(' expr ')' stmt                                    
                 | TOKEN_FOR '(' opt_expr ';' opt_expr ';' opt_expr ')' unmatched_stmt    { $$ = stmt_create_for($3, $5, $7, $9); }
                 ;
 
-simple_stmt     : block
-                | expr ';'                      { $$ = stmt_create_simple(STMT_EXPR, $1, NULL); }
+simple_stmt     : block                         { $$ = stmt_create_block($1); }
+                | expr ';'                      { $$ = stmt_create_expr($1); }
                 | TOKEN_RETURN ';'              { $$ = stmt_create_return(NULL); }
                 | TOKEN_RETURN expr ';'         { $$ = stmt_create_return($2); }
                 | TOKEN_PRINT ';'               { $$ = stmt_create_print(NULL); }
@@ -193,8 +194,8 @@ opt_expr_list : expr_list
               | %empty                      { $$ = NULL; }
               ;
 
-expr_list     : expr
-              | expr ',' expr_list          { /* !! TODO !! */ }
+expr_list     : expr                        { $$ = expr_create(EXPR_ARG, $1, NULL); }
+              | expr ',' expr_list          { $$ = expr_create(EXPR_ARG, $1, $3); }
               ;
 
 opt_expr      : expr

@@ -26,12 +26,14 @@ typedef enum {
   EXPR_ASGN,    // 'e = e'
   EXPR_IDX,     // 'e[e]'
   EXPR_CALL,    // 'e(...)'
-  EXPR_INT,     // 'i' (integer literal)
-  EXPR_BOOL,    // 'b' (boolean literal)
-  EXPR_CHAR,    // 'c' (character literal)
-  EXPR_STR,     // 'c1...ck' (string literal)
-  EXPR_DOUBLE,  // 'i.i' (double literal)
-  EXPR_NAME     // 'x' (name)
+  EXPR_ARG,     // '(e, ...)'
+  EXPR_INIT,    // '{e, ...}'
+  EXPR_INT,     // 'i'
+  EXPR_BOOL,    // 'b'
+  EXPR_CHAR,    // 'c'
+  EXPR_STR,     // 'c1...ck'
+  EXPR_DOUBLE,  // 'i.i'
+  EXPR_NAME     // 'x'
 } expr_t;
 
 struct symbol;  // Forward declaration
@@ -44,12 +46,6 @@ struct expr {
 
   /* union minimizes memory footprint by overlapping mutually exclusive fields */
   union {
-    /* used by call exprs (and operators with variable operands) */
-    struct {
-      struct expr **argv;
-      size_t argc;
-    } call;
-
     struct {
       const char *name;
       struct symbol *symbol;
@@ -71,7 +67,6 @@ struct expr * expr_create_double_literal( double c );
 struct expr * expr_create_boolean_literal( bool c );
 struct expr * expr_create_char_literal( char c );
 struct expr * expr_create_string_literal( const char *str );
-struct expr * expr_create_call( struct expr **argv, size_t argc );
 struct expr * expr_create_false();
 struct expr * expr_create_true();
 

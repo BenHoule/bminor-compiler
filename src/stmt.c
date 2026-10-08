@@ -19,6 +19,9 @@ struct stmt * stmt_create_simple(
   s->next = next;
   return s;
 }
+struct stmt * stmt_create_expr( struct expr *expr ) {
+  return stmt_create_simple(STMT_EXPR, expr, NULL);
+}
 struct stmt * stmt_create_return( struct expr *expr ) {
   return stmt_create_simple(STMT_RETURN, expr, NULL);
 }

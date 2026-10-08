@@ -48,12 +48,6 @@ struct expr * expr_create_string_literal( const char *str ) {
   e->string_literal = str;
   return e;
 }
-struct expr * expr_create_call( struct expr **argv, size_t argc ) {
-  struct expr *e = expr_create( EXPR_CALL, NULL, NULL );
-  e->call.argv = argv;
-  e->call.argc = argc;
-  return e;
-}
 struct expr * expr_create_false() {
   struct expr *e = expr_create( EXPR_BOOL, NULL, NULL );
   e->bool_literal = false;
