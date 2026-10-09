@@ -1,4 +1,5 @@
 #include "type.h"
+#include "param_list.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -50,6 +51,50 @@ struct type * type_create_auto() {
 
 // Print a type in a human-readable format.
 void type_print( struct type *t ) {
-  (void)t;
-  return;
+  if (!t) {
+    fprintf(stderr, "NULL_TYPE");
+  }
+  switch (t->kind) {
+    case TYPE_VOID:
+      fprintf(stderr, "void");
+      break;
+    case TYPE_BOOLEAN:
+      fprintf(stderr, "boolean");
+      break;
+    case TYPE_CHARACTER:
+      fprintf(stderr, "character");
+      break;
+    case TYPE_INTEGER:
+      fprintf(stderr, "integer");
+      break;
+    case TYPE_DOUBLE:
+      fprintf(stderr, "double");
+      break;
+    case TYPE_STRING:
+      fprintf(stderr, "string");
+      break;
+    case TYPE_ARRAY:
+      fprintf(stderr, "array[");
+      type_print(t->subtype);
+      fprintf(stderr, "]");
+      break;
+    case TYPE_CARRAY:
+      fprintf(stderr, "carray[");
+      type_print(t->subtype);
+      fprintf(stderr, "]");
+      break;
+    case TYPE_FUNCTION:
+      fprintf(stderr, "function ");
+      type_print(t->subtype);
+      fprintf(stderr, " ( ");
+      param_list_print(t->params);
+      fprintf(stderr, " )");
+      break;
+    case TYPE_AUTO:
+      fprintf(stderr, "auto");
+      break;
+    default:
+      fprintf(stderr, "UNKNOWN_TYPE");
+      break;
+  }
 }

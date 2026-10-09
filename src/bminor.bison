@@ -106,7 +106,7 @@ decl      : TOKEN_IDENTIFIER ':' var_type ';'             { $$ = decl_create($1,
 
 /* ------- INITIALIZERS ------- */
 init      : expr
-          | '{' init_list '}'                   { $$ = $2; }
+          | '{' init_list '}'                   { $$ = expr_create(EXPR_INIT, $2, NULL); }
           ;
 
 init_list : init                                { $$ = expr_create(EXPR_ARG, $1, NULL); }

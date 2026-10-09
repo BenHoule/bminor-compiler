@@ -1,4 +1,6 @@
 #include "stmt.h"
+#include "decl.h"
+#include "expr.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -82,6 +84,51 @@ struct stmt * stmt_create_for( struct expr *init_expr, struct expr *cond_expr, s
 
 // Print a statement with the given indentation level.
 void stmt_print( struct stmt *s, int indent ) {
+
+  switch (s->kind) {
+    case STMT_DECL:
+      break;
+    case STMT_EXPR:
+      break;
+    case STMT_IF_ELSE:
+      fprintf(stderr, "If (");
+      expr_print(s->cond_expr);
+      fprintf(stderr, ") {\n");
+      stmt_print(s->body, indent + 1);
+      fprintf(stderr, "}");
+      if (s->else_body) {
+        fprintf(stderr, " else {\n");
+        stmt_print(s->else_body, indent + 1);
+        fprintf(stderr, "}");
+      }
+      break;
+    case STMT_FOR:
+      fprintf(stderr, "For (");
+      expr_print(s->init_expr);
+      fprintf(stderr, "; ");
+      expr_print(s->cond_expr);
+      fprintf(stderr, "; ");
+      expr_print(s->loop_expr);
+      fprintf(stderr, ") {\n");
+      stmt_print(s->body, indent + 1);
+      fprintf(stderr, "}");
+      break;
+    case STMT_PRINT:
+      fprintf(stderr, "Print ");
+      expr_print(s->expr);
+      fprintf(stderr, "\n");
+      break;
+    case STMT_RETURN:
+      fprintf(stderr, "Return ");
+      expr_print(s->expr);
+      fprintf(stderr, "\n");
+      break;
+    case STMT_BLOCK:
+      fprintf(stderr, "{\n");
+      stmt_print(s->block, indent + 1);
+      fprintf(stderr, "}\n");
+      break;
+  }
   (void)s;
   (void)indent;
   return;
