@@ -84,7 +84,7 @@ decl      : TOKEN_IDENTIFIER ':' var_type ';'
 
 /* ------- INITIALIZERS ------- */
 init      : expr
-          | '
+          | '{' init_list '}'
           ;
 
 init_list : init
@@ -92,7 +92,7 @@ init_list : init
           ;
 
 /* ------- BLOCKS ------- */
-block           : '
+block           : '{' block_item_list '}'
                 ;
 
 block_item_list : block_item block_item_list
@@ -222,7 +222,7 @@ len_expr      : pow_expr
               ;
 
 pow_expr      : postfix_expr
-              | postfix_expr '^' unary_expr       /* -x^2 -> -(x^2) */
+              | postfix_expr '^' unary_expr        /* -x^2 -> -(x^2) */
               ;
 
 postfix_expr  : primary_expr
