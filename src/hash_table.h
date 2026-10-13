@@ -1,5 +1,4 @@
-#ifndef HASH_TABLE_H
-#define HASH_TABLE_H
+#pragma once
 
 /** @file hash_table.h A general purpose hash table.
 This hash table module maps C strings to arbitrary objects (void pointers).
@@ -117,5 +116,3 @@ int hash_table_nextkey(struct hash_table *h, char **key, void **value);
 */
 
 unsigned hash_string(const char *s);
-
-#endif

@@ -1,6 +1,8 @@
 #include "scanner.h"
 #include "bminor.tab.h"
-#include "parser_diag.h"
+#include "bminor_parser.h"
+#include "decl.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -82,6 +84,13 @@ int main(int argc, char *argv[]) {
       yyparse(); // Parsing logic would go here
       break;
     case STAGE_PRINT:
+      yyparse();
+      if (parser_error_count() > 0) {
+        fclose(input_file);
+        return EXIT_COMPILE_ERROR;
+      }
+      decl_print(parser_result, 0);
+      break;
     case STAGE_RESOLVE:
     case STAGE_TYPECHECK:
     case STAGE_CODEGEN:

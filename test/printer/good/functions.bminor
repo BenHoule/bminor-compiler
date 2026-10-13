@@ -1,0 +1,19 @@
+proto: function void (x: integer);
+noargs: function integer ();
+arrparam: function void (a: array [] integer, c: carray [] string);
+manyargs: function double (x: integer, y: double, z: boolean);
+
+autoret: function auto (x: integer) = {
+	return x + 1;
+}
+
+voidfn: function void () = {
+	return;
+}
+
+caller: function integer () = {
+	proto(1);
+	manyargs(1, 2.0, true);
+	noargs();
+	return 0;
+}

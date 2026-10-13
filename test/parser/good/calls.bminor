@@ -1,1 +1,6 @@
-f(x)[1]++;
+// NOTE: name resolution is a later compiler stage
+
+main: function integer () = {
+    f(x)[1]++;
+    return 0;
+}

@@ -1,0 +1,4 @@
+square: function auto ( x: integer ) = {
+  e: auto = 2;
+	return x^e;
+}

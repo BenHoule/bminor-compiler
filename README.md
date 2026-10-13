@@ -31,14 +31,16 @@ test/
 
 Each case must have the expected exit status. If its matching file exists under `expected/`, the program output must match exactly. `make clean` removes generated `out/` directories.
 
-Scanner examples from the compiler book remain separate under `test/scanner/book_tests/` and can be run with:
-```sh
-./test/scanner/book_tests/run_all_tests.sh
-```
-
 Individual tests may be passed directly to the compiler:
 ```sh
 ./bminor -scan test/scanner/good/keywords.bminor
+```
+
+Examples from the compiler book reside in a separate `book_tests/` directory in the project root and can be run with:
+```sh
+cd book_tests/
+chmod +rwx run-tests.sh
+./run-tests.sh ../bminor <-scan|-parse|etc...> ./
 ```
 
 ---
@@ -67,81 +69,178 @@ git push
 ---
 ### Grammar
 ```bison
-program     : expr ';'
-            ;
+program   : decl_list
+          ;
 
-opt_list    : %empty
-            | expr_list
-            ;
+decl_list : decl decl_list
+          | %empty
+          ;
 
-expr_list   : expr ',' expr_list
-            | expr
-            ;
+decl      : TOKEN_IDENTIFIER ':' var_type ';'
+          | TOKEN_IDENTIFIER ':' var_type '=' init ';'
+          | TOKEN_IDENTIFIER ':' func_type ';'
+          | TOKEN_IDENTIFIER ':' func_type '=' block
+          ;
 
-expr        : assign_expr
-            ;
+/* ------- INITIALIZERS ------- */
+init      : expr
+          | '{' init_list '}'
+          ;
 
-assign_expr : or_expr '=' assign_expr        /* right-associative */
-            | or_expr
-            ;
+init_list : init
+          | init ',' init_list
+          ;
 
-or_expr     : or_expr TOKEN_OR and_expr      /* left-associative */
-            | and_expr
-            ;
+/* ------- BLOCKS ------- */
+block           : '{' block_item_list '}'
+                ;
 
-and_expr    : and_expr TOKEN_AND cmp_expr
-            | cmp_expr
-            ;
+block_item_list : block_item block_item_list
+                | %empty
+                ;
 
-cmp_expr    : cmp_expr '<' add_expr
-            | cmp_expr '>' add_expr
-            | cmp_expr TOKEN_LE add_expr
-            | cmp_expr TOKEN_GE add_expr
-            | cmp_expr TOKEN_EQ add_expr
-            | cmp_expr TOKEN_NE add_expr
-            | add_expr
-            ;
+block_item      : decl
+                | stmt
+                ;
 
-add_expr    : add_expr '+' mul_expr
-            | add_expr '-' mul_expr
-            | mul_expr
-            ;
+/* ------- TYPES ------- */
+func_type       : TOKEN_FUNCTION return_type '(' opt_param_list ')'
+                ;
 
-mul_expr    : mul_expr '*' unary_expr
-            | mul_expr '/' unary_expr
-            | mul_expr '%' unary_expr
-            | unary_expr
-            ;
+return_type     : atomic_type
+                | TOKEN_VOID
+                | TOKEN_AUTO
+                ;
 
-unary_expr  : '-' unary_expr
-            | '!' unary_expr
-            | len_expr
-            ;
+opt_param_list  : param_list
+                | %empty
+                ;
 
-len_expr    : '#' len_expr
-            | pow_expr
-            ;
+param_list      : param
+                | param ',' param_list
+                ;
 
-pow_expr    : postfix_expr '^' unary_expr    /* -x^2 -> -(x^2) */
-            | postfix_expr                   /* see note below */
-            ;
+param           : TOKEN_IDENTIFIER ':' param_type
+                ;
 
-postfix_expr: postfix_expr TOKEN_INC
-            | postfix_expr TOKEN_DEC
-            | postfix_expr '[' expr ']'
-            | postfix_expr '(' opt_list ')'
-            | primary_expr
-            ;
+param_type      : atomic_type         /* No lengths on array params */
+                | TOKEN_ARRAY '[' ']' param_type
+                | TOKEN_CARRAY '[' ']' param_type
+                ;
 
-primary_expr: TOKEN_IDENTIFIER
-            | TOKEN_CHAR_LITERAL
-            | TOKEN_DOUBLE_LITERAL
-            | TOKEN_INTEGER_LITERAL
-            | TOKEN_STRING_LITERAL
-            | TOKEN_FALSE
-            | TOKEN_TRUE
-            | '(' expr ')'
-            ;
+var_type        : simple_type
+                | TOKEN_AUTO
+                ;
+
+simple_type     : atomic_type
+                | TOKEN_ARRAY '[' expr ']' simple_type
+                | TOKEN_CARRAY '[' expr ']' simple_type
+                ;
+
+atomic_type     : TOKEN_BOOLEAN
+                | TOKEN_CHAR
+                | TOKEN_DOUBLE
+                | TOKEN_INTEGER
+                | TOKEN_STRING
+                ;
+
+/* ------- STATEMENTS ------- */
+stmt            : matched_stmt
+                | unmatched_stmt        /* Dangling else resolution */
+                ;
+
+matched_stmt    : simple_stmt
+                | TOKEN_IF '(' expr ')' matched_stmt TOKEN_ELSE matched_stmt
+                | TOKEN_FOR '(' opt_expr ';' opt_expr ';' opt_expr ')' matched_stmt
+                ;
+
+unmatched_stmt  : TOKEN_IF '(' expr ')' stmt
+                | TOKEN_IF '(' expr ')' matched_stmt TOKEN_ELSE unmatched_stmt
+                | TOKEN_FOR '(' opt_expr ';' opt_expr ';' opt_expr ')' unmatched_stmt
+                ;
+
+simple_stmt     : block
+                | expr ';'
+                | TOKEN_RETURN ';'
+                | TOKEN_RETURN expr ';'
+                | TOKEN_PRINT ';'
+                | TOKEN_PRINT expr_list ';'
+                ;
+
+/* ------- EXPRESSIONS ------- */
+opt_expr_list : expr_list
+              | %empty
+              ;
+
+expr_list     : expr
+              | expr ',' expr_list
+              ;
+
+opt_expr      : expr
+              | %empty
+              ;
+
+expr          : or_expr
+              | or_expr '=' expr
+              ; /* right-associative */
+
+or_expr       : and_expr
+              | or_expr TOKEN_OR and_expr
+              ; /* left-associative */
+
+and_expr      : cmp_expr
+              | and_expr TOKEN_AND cmp_expr
+              ;
+
+cmp_expr      : add_expr
+              | cmp_expr '<' add_expr
+              | cmp_expr '>' add_expr
+              | cmp_expr TOKEN_LE add_expr
+              | cmp_expr TOKEN_GE add_expr
+              | cmp_expr TOKEN_EQ add_expr
+              | cmp_expr TOKEN_NE add_expr
+              ;
+
+add_expr      : mul_expr
+              | add_expr '+' mul_expr
+              | add_expr '-' mul_expr
+              ;
+
+mul_expr      : unary_expr
+              | mul_expr '*' unary_expr
+              | mul_expr '/' unary_expr
+              | mul_expr '%' unary_expr
+              ;
+
+unary_expr    : len_expr
+              | '-' unary_expr
+              | '!' unary_expr
+              ;
+
+len_expr      : pow_expr
+              | '#' len_expr
+              ;
+
+pow_expr      : postfix_expr
+              | postfix_expr '^' unary_expr        /* -x^2 -> -(x^2) */
+              ;
+
+postfix_expr  : primary_expr
+              | postfix_expr TOKEN_INC
+              | postfix_expr TOKEN_DEC
+              | postfix_expr '[' expr ']'
+              | postfix_expr '(' opt_expr_list ')'
+              ;
+
+primary_expr  : '(' expr ')'
+              | TOKEN_IDENTIFIER
+              | TOKEN_CHAR_LITERAL
+              | TOKEN_DOUBLE_LITERAL
+              | TOKEN_INTEGER_LITERAL
+              | TOKEN_STRING_LITERAL
+              | TOKEN_FALSE
+              | TOKEN_TRUE
+              ;
 ```
 **NOTE:**  bottom-up structure (upper "consists of" lower); e.g. A `unary_expr` (-, !) consists of a `pow_expr` (^):
 ```

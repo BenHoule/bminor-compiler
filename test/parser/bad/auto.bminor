@@ -1,0 +1,6 @@
+// Function parameters may be of any type except auto or void.
+
+square: function auto ( x: auto ) = {
+  e: auto = 2;
+	return x^e;
+}

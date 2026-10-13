@@ -1,1 +1,5 @@
-(1 + 2;
+main: function integer () = {
+  value: integer;
+  value = (1 + 2 * 3;
+  return 0;
+}

@@ -4,6 +4,7 @@ ROOT_DIR  := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 SRC_DIR   := $(ROOT_DIR)/src
 BUILD_DIR := $(ROOT_DIR)/build
 TEST_DIR  := $(ROOT_DIR)/test
+BOOK_DIR  := $(ROOT_DIR)/book_tests
 
 # -MMD -MP make gcc emit .d files so header edits trigger rebuilds automatically.
 CFLAGS   := -std=c23 -g -Wall -Wextra -Werror -I$(SRC_DIR) -I$(BUILD_DIR) -MMD -MP
@@ -73,10 +74,12 @@ $(BUILD_DIR)/scanner_unit_tests: $(TEST_DIR)/scanner/unit_tests.c $(BUILD_DIR)/s
 	$(CC) $(CFLAGS) -o $@ $^
 
 # Test and valgrind targets
-test: $(BIN) #$(BUILD_DIR)/scanner_unit_tests
+test: $(BIN)
 	@$(TEST_DIR)/runtests.sh
-	@$(TEST_DIR)/scanner/book_tests/run_all_tests.sh
-#	@$(BUILD_DIR)/scanner_unit_tests
+	@$(TEST_DIR)/printer/roundtrip.sh
+	@$(BOOK_DIR)/run-tests.sh $(ROOT_DIR)/bminor -scan $(BOOK_DIR)/scanner
+	@$(BOOK_DIR)/run-tests.sh $(ROOT_DIR)/bminor -parse $(BOOK_DIR)/parser
+	@$(BOOK_DIR)/run-tests.sh $(ROOT_DIR)/bminor -print $(BOOK_DIR)/printer
 
 valgrind: $(BIN)
 	@BMINOR_VALGRIND=1 $(TEST_DIR)/runtests.sh

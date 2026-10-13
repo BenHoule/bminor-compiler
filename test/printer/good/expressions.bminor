@@ -1,0 +1,9 @@
+a: integer = 1 + 2 * 3;
+b: integer = (1 + 2) * 3;
+c: integer = 2 ^ 3 ^ 2;
+d: integer = -a ^ 2;
+e: integer = a - b - c;
+f: integer = a % b / c * d;
+g: boolean = a < b && b >= c || !false;
+h: boolean = a == b != g;
+i: integer = #e;

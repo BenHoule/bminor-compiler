@@ -1,5 +1,6 @@
-// Missing right-hand operand is on line 6, but the parser can't detect the
-// error until it reads past the blank lines to the semicolon on line 9.
+// Missing right-hand operand is on line 7, but the parser can't detect the
+// error until it reads past the blank lines to the semicolon on line 10.
+
 main: function integer () = {
 	x: integer;
 	x = 1 +

@@ -1,0 +1,3 @@
+// Function parameters may be of any type except auto or void.
+
+vfunc: function void (void);

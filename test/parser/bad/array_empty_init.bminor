@@ -1,0 +1,8 @@
+// Q2.6: Can an array initializer by empty?
+// A: No - An initializer must either match the length of the array, or be
+//    omitted. It cannot be empty. (It also avoids the case of an empty
+//    initializer {} begin confused with an empty statement block {}.
+//
+// ref: https://dthain.github.io/compilers-fa25/bminor
+
+x: array [5] integer = {};
