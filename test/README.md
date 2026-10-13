@@ -19,12 +19,14 @@ test/
 
 Each case must have the expected exit status. If its matching file exists under `expected/`, the program output must match exactly. `make clean` removes generated `out/` directories.
 
-Scanner examples from the compiler book remain separate under `test/scanner/book_tests/` and can be run with:
-```sh
-./test/scanner/book_tests/run_all_tests.sh
-```
-
 Individual tests may be passed directly to the compiler:
 ```sh
 ./bminor -scan test/scanner/good/keywords.bminor
+```
+
+Examples from the compiler book reside in a separate `book_tests/` directory in the project root and can be run with:
+```sh
+cd book_tests
+chmod +rwx run-tests.sh
+./run-tests.sh ../bminor <-scan|-parse|etc...> ./
 ```
