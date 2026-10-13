@@ -1,10 +1,12 @@
 %{
 
-#include "parser_diag.h"
+#include "bminor_parser.h"
 #include <stdio.h>
 #include <stdlib.h>
 
 static int err_count = 0;
+
+struct decl *parser_result = NULL;
 
 int yylex(void);
 int yyerror(const char *msg);
@@ -79,7 +81,7 @@ struct node {
 %token TOKEN_PRINT "print"
 
 %%
-program     : expr ';'
+program     : expr ';'                  { parser_result = $1; }
             ;
 
 opt_list    : %empty                     { $$ = NULL; }
