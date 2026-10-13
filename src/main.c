@@ -90,6 +90,7 @@ int main(int argc, char *argv[]) {
         return EXIT_COMPILE_ERROR;
       }
       decl_print(parser_result, 0);
+      printf("\n");
       break;
     case STAGE_RESOLVE:
     case STAGE_TYPECHECK:

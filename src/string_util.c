@@ -85,6 +85,9 @@ size_t string_encode(const char *in, char *out, size_t out_size) {
   return (size_t)(out - start + 1);
 }
 
+// NOTE: Static internal buffer - e.g.
+// printf("%s %s", char_decode(a,'\''), char_decode(b,'\''))
+// prints the same character twice.
 const char* char_decode(const char in, const char quote) {
   static char buf[6] = ""; // Enough for '\0xHH' + Null Terminator
 
