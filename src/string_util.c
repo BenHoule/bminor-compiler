@@ -73,7 +73,7 @@ size_t string_encode(const char *in, char *out, size_t out_size) {
 
     // 128-255 are undefined + no nulls in strings
     constexpr uint8_t DEL = 127;
-    if (byte == 0 ||  DEL < byte) return ERR_INVALID_CHAR;
+    if (byte == 0 || DEL < byte) return ERR_INVALID_CHAR;
 
     *out = (char)byte;
     out++;
@@ -83,6 +83,41 @@ size_t string_encode(const char *in, char *out, size_t out_size) {
 
   *out = '\0';
   return (size_t)(out - start + 1);
+}
+
+const char* char_decode(const char in, const char quote) {
+  static char buf[6] = ""; // Enough for '\0xHH' + Null Terminator
+
+  // NOTE: Since " and \ are ASCII 34 and 92, respectively, there is no
+  // convenient way to filter them out of the printable character check.
+  if (isprint(in)) {
+    if (in == quote || in == '\\') {
+      buf[0] = '\\';
+      buf[1] = in;
+      buf[2] = '\0';  // Null-terminate the escape sequence
+    } else {
+      buf[0] = in;
+      buf[1] = '\0';  // Null-terminate the printable character
+    }
+    return buf;
+  }
+
+  buf[0] = '\\';
+  switch (in) {
+    case '\a': buf[1] = 'a'; buf[2] = '\0'; break;
+    case '\b': buf[1] = 'b'; buf[2] = '\0'; break;
+    case 0x1B: buf[1] = 'e'; buf[2] = '\0'; break;  // NOTE: '\e' not supported by MSVC - using 0x1B for portability
+    case '\f': buf[1] = 'f'; buf[2] = '\0'; break;
+    case '\n': buf[1] = 'n'; buf[2] = '\0'; break;
+    case '\r': buf[1] = 'r'; buf[2] = '\0'; break;
+    case '\t': buf[1] = 't'; buf[2] = '\0'; break;
+    case '\v': buf[1] = 'v'; buf[2] = '\0'; break;
+    default:
+      buf[1] = '0';
+      buf[2] = 'x';
+      byte_to_hexstr(&buf[3], (uint8_t)in);
+  }
+  return buf;
 }
 
 // Maps byte values -> chars (with escaping)
@@ -97,45 +132,15 @@ size_t string_decode(const char *in, char *out, size_t out_size) {
   out_size--;
 
   while (*in) {
-    constexpr size_t MIN_REQ_SPACE = 3; // Char + Closing quote + '\0'
-    if (out_size < MIN_REQ_SPACE) return ERR_TOO_LONG;  // Overflow
+    const char *next = char_decode(*in, '\"');
+    if (*next == '\0') return ERR_INVALID_CHAR;
 
-    // NOTE: Since " and \ are ASCII 34 and 92, respectively, there is no
-    // convenient way to filter them out of the printable character check.
-    if (isprint(*in)) {
-      if (*in == '\"' || *in == '\\') {
-        if (out_size < MIN_REQ_SPACE + 1) return ERR_TOO_LONG;  // Overflow
-        const char buf[2] = {'\\', *in};
-        memcpy(out, buf, 2);
-        out += 2;
-        out_size -= 2;
-      } else {
-        *out = *in;
-        out++;
-        out_size--;
-      }
-      in++;
-      continue;
-    }
+    const size_t REQ_SPACE = strlen(next) + 3;  // Char + Closing quote + '\0'
+    if(REQ_SPACE > out_size) return ERR_TOO_LONG;  // Overflow
 
-    switch (*in) {
-      case '\a': memcpy(out, "\\a", 2); break;
-      case '\b': memcpy(out, "\\b", 2); break;
-      case 0x1B: memcpy(out, "\\e", 2); break;  // NOTE: '\e' not supported by MSVC - using 0x1B for portability
-      case '\f': memcpy(out, "\\f", 2); break;
-      case '\n': memcpy(out, "\\n", 2); break;
-      case '\r': memcpy(out, "\\r", 2); break;
-      case '\t': memcpy(out, "\\t", 2); break;
-      case '\v': memcpy(out, "\\v", 2); break;
-      default:
-        if (out_size < MIN_REQ_SPACE + 4) return ERR_TOO_LONG;  // Overflow
-        memcpy(out, "\\0x", 3);
-        byte_to_hexstr(out + 3, *in);
-        out += 3;
-        out_size -= 3;
-    }
-    out += 2;
-    out_size -= 2;
+    memcpy(out, next, strlen(next));
+    out += strlen(next);
+    out_size -= strlen(next);
     in++;
   }
 

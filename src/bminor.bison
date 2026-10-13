@@ -114,7 +114,7 @@ init_list : init                                { $$ = expr_create(EXPR_ARG, $1,
           ;
 
 /* ------- BLOCKS ------- */
-block           : '{' block_item_list '}'       { $$ = $2; }
+block           : '{' block_item_list '}'       { $$ = stmt_create_block($2); }
                 ;
 
 block_item_list : block_item block_item_list    { $1->next = $2; $$ = $1; }
@@ -160,7 +160,7 @@ simple_type     : atomic_type
                 ;
 
 atomic_type     : TOKEN_BOOLEAN       { $$ = type_create_boolean(); }
-                | TOKEN_CHAR          { $$ = type_create_character(); }
+                | TOKEN_CHAR          { $$ = type_create_char(); }
                 | TOKEN_DOUBLE        { $$ = type_create_double(); }
                 | TOKEN_INTEGER       { $$ = type_create_integer(); }
                 | TOKEN_STRING        { $$ = type_create_string(); }
@@ -181,7 +181,7 @@ unmatched_stmt  : TOKEN_IF '(' expr ')' stmt                                    
                 | TOKEN_FOR '(' opt_expr ';' opt_expr ';' opt_expr ')' unmatched_stmt    { $$ = stmt_create_for($3, $5, $7, $9); }
                 ;
 
-simple_stmt     : block                         { $$ = stmt_create_block($1); }
+simple_stmt     : block
                 | expr ';'                      { $$ = stmt_create_expr($1); }
                 | TOKEN_RETURN ';'              { $$ = stmt_create_return(NULL); }
                 | TOKEN_RETURN expr ';'         { $$ = stmt_create_return($2); }

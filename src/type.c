@@ -1,5 +1,6 @@
 #include "type.h"
 #include "param_list.h"
+#include "expr.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,8 +25,8 @@ struct type * type_create_void() {
 struct type * type_create_boolean() {
   return type_create(TYPE_BOOLEAN, NULL, NULL, NULL);
 }
-struct type * type_create_character() {
-  return type_create(TYPE_CHARACTER, NULL, NULL, NULL);
+struct type * type_create_char() {
+  return type_create(TYPE_CHAR, NULL, NULL, NULL);
 }
 struct type * type_create_integer() {
   return type_create(TYPE_INTEGER, NULL, NULL, NULL);
@@ -52,49 +53,55 @@ struct type * type_create_auto() {
 // Print a type in a human-readable format.
 void type_print( struct type *t ) {
   if (!t) {
-    fprintf(stderr, "NULL_TYPE");
+    printf("NULL_TYPE");
+    return;
   }
   switch (t->kind) {
     case TYPE_VOID:
-      fprintf(stderr, "void");
+      printf("void");
       break;
     case TYPE_BOOLEAN:
-      fprintf(stderr, "boolean");
+      printf("boolean");
       break;
-    case TYPE_CHARACTER:
-      fprintf(stderr, "character");
+    case TYPE_CHAR:
+      printf("char");
       break;
     case TYPE_INTEGER:
-      fprintf(stderr, "integer");
+      printf("integer");
       break;
     case TYPE_DOUBLE:
-      fprintf(stderr, "double");
+      printf("double");
       break;
     case TYPE_STRING:
-      fprintf(stderr, "string");
+      printf("string");
       break;
     case TYPE_ARRAY:
-      fprintf(stderr, "array[");
+      printf("array [");
+      if (t->size) expr_print(t->size);
+      printf("] ");
       type_print(t->subtype);
-      fprintf(stderr, "]");
       break;
     case TYPE_CARRAY:
-      fprintf(stderr, "carray[");
+      printf("carray [");
+      if (t->size) expr_print(t->size);
+      printf("] ");
       type_print(t->subtype);
-      fprintf(stderr, "]");
       break;
     case TYPE_FUNCTION:
-      fprintf(stderr, "function ");
+      printf("function ");
       type_print(t->subtype);
-      fprintf(stderr, " ( ");
-      param_list_print(t->params);
-      fprintf(stderr, " )");
+      printf(" (");
+      if (t->params) {
+        param_list_print(t->params);
+        printf(" ");
+      }
+      printf(")");
       break;
     case TYPE_AUTO:
-      fprintf(stderr, "auto");
+      printf("auto");
       break;
     default:
-      fprintf(stderr, "UNKNOWN_TYPE");
+      printf("UNKNOWN_TYPE");
       break;
   }
 }

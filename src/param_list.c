@@ -1,4 +1,5 @@
 #include "param_list.h"
+#include "type.h"
 
 
 #include <stdio.h>
@@ -20,6 +21,14 @@ struct param_list * param_list_create( char *name, struct type *type, struct par
 
 // Print a parameter list node in a human-readable format.
 void param_list_print( struct param_list *a ) {
-  (void)a;
-  return;
+  if (!a) {
+    printf("NULL");
+    return;
+  }
+  printf("%s: ", a->name);
+  type_print(a->type);
+  if (a->next) {
+    printf(", ");
+    param_list_print(a->next);
+  }
 }

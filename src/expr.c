@@ -1,4 +1,5 @@
 #include "expr.h"
+#include "string_util.h"
 
 #include <stdint.h>
 #include <stdio.h>
@@ -64,158 +65,189 @@ struct expr * expr_create_true() {
 // Print the expression `e` in a human-readable format
 void expr_print( struct expr *e ) {
   if (!e) {
-    fprintf(stderr, "(NULL_EXPR)");
+    printf("(NULL_EXPR)");
     return;
   }
-
-  if (e->kind == EXPR_INIT) {
-    fprintf(stderr, "{");
-    expr_print(e->left);
-    if (e->right) {
-      fprintf(stderr, ", ");
-      expr_print(e->right);
-    }
-    fprintf(stderr, "}");
-    return;
-  }
-
-  fprintf(stderr, "(");
   switch (e->kind) {
     case EXPR_ADD:
+      printf("(");
       expr_print(e->left);
-      fprintf(stderr, " + ");
+      printf(" + ");
       expr_print(e->right);
+      printf(")");
       break;
     case EXPR_SUB:
+      printf("(");
       expr_print(e->left);
-      fprintf(stderr, " - ");
+      printf(" - ");
       expr_print(e->right);
+      printf(")");
       break;
     case EXPR_MUL:
+      printf("(");
       expr_print(e->left);
-      fprintf(stderr, " * ");
+      printf(" * ");
       expr_print(e->right);
+      printf(")");
       break;
     case EXPR_DIV:
+      printf("(");
       expr_print(e->left);
-      fprintf(stderr, " / ");
+      printf(" / ");
       expr_print(e->right);
+      printf(")");
       break;
     case EXPR_MOD:
+      printf("(");
       expr_print(e->left);
-      fprintf(stderr, " %% ");
+      printf(" %% ");
       expr_print(e->right);
+      printf(")");
+      break;
+    case EXPR_POW:
+      printf("(");
+      expr_print(e->left);
+      printf(" ^ ");
+      expr_print(e->right);
+      printf(")");
       break;
     case EXPR_NEG:
-      fprintf(stderr, "-");
+      printf("(-");
       expr_print(e->left);
+      printf(")");
       break;
     case EXPR_INC:
+      printf("(");
       expr_print(e->left);
-      fprintf(stderr, "++");
+      printf("++)");
       break;
     case EXPR_DEC:
+      printf("(");
       expr_print(e->left);
-      fprintf(stderr, "--");
+      printf("--)");
       break;
     case EXPR_LEN:
-      fprintf(stderr, "#");
+      printf("(#");
       expr_print(e->left);
+      printf(")");
       break;
     case EXPR_LT:
+      printf("(");
       expr_print(e->left);
-      fprintf(stderr, " < ");
+      printf(" < ");
       expr_print(e->right);
+      printf(")");
       break;
     case EXPR_GT:
+      printf("(");
       expr_print(e->left);
-      fprintf(stderr, " > ");
+      printf(" > ");
       expr_print(e->right);
+      printf(")");
       break;
     case EXPR_LE:
+      printf("(");
       expr_print(e->left);
-      fprintf(stderr, " <= ");
+      printf(" <= ");
       expr_print(e->right);
+      printf(")");
       break;
     case EXPR_GE:
+      printf("(");
       expr_print(e->left);
-      fprintf(stderr, " >= ");
+      printf(" >= ");
       expr_print(e->right);
+      printf(")");
       break;
     case EXPR_EQ:
+      printf("(");
       expr_print(e->left);
-      fprintf(stderr, " == ");
+      printf(" == ");
       expr_print(e->right);
+      printf(")");
       break;
     case EXPR_NE:
+      printf("(");
       expr_print(e->left);
-      fprintf(stderr, " != ");
+      printf(" != ");
       expr_print(e->right);
+      printf(")");
       break;
     case EXPR_AND:
+      printf("(");
       expr_print(e->left);
-      fprintf(stderr, " && ");
+      printf(" && ");
       expr_print(e->right);
+      printf(")");
       break;
     case EXPR_OR:
+      printf("(");
       expr_print(e->left);
-      fprintf(stderr, " || ");
+      printf(" || ");
       expr_print(e->right);
+      printf(")");
       break;
     case EXPR_NOT:
-      fprintf(stderr, "!");
+      printf("(!");
       expr_print(e->left);
+      printf(")");
       break;
     case EXPR_ASGN:
+      printf("(");
       expr_print(e->left);
-      fprintf(stderr, " = ");
+      printf(" = ");
       expr_print(e->right);
+      printf(")");
       break;
     case EXPR_IDX:
       expr_print(e->left);
-      fprintf(stderr, "[");
+      printf("[");
       expr_print(e->right);
-      fprintf(stderr, "]");
+      printf("]");
       break;
     case EXPR_CALL:
       expr_print(e->left);
-      fprintf(stderr, "(");
+      printf("(");
       expr_print(e->right);
-      fprintf(stderr, ")");
-      break;
-    case EXPR_POW:
-      expr_print(e->left);
-      fprintf(stderr, " ^ ");
-      expr_print(e->right);
+      printf(")");
       break;
     case EXPR_ARG:
       expr_print(e->left);
       if (e->right) {
-        fprintf(stderr, ", ");
+        printf(", ");
         expr_print(e->right);
       }
       break;
+    case EXPR_INIT:
+      printf("{");
+      expr_print(e->left);
+      if (e->right) {
+        printf(", ");
+        expr_print(e->right);
+      }
+      printf("}");
+      break;
     case EXPR_INT:
-      fprintf(stderr, "%" PRId64, e->int_literal);
+      printf("%" PRId64, e->int_literal);
       break;
     case EXPR_DOUBLE:
-      fprintf(stderr, "%f", e->double_literal);
+      printf("%.17g", e->double_literal);
       break;
     case EXPR_BOOL:
-      fprintf(stderr, "%s", e->bool_literal ? "true" : "false");
+      printf("%s", e->bool_literal ? "true" : "false");
       break;
     case EXPR_CHAR:
-      fprintf(stderr, "'%c'", e->char_literal);
+      const char* decoded_char = char_decode(e->char_literal, '\'');
+      printf("'%s'", decoded_char);
       break;
     case EXPR_STR:
-      fprintf(stderr, "\"%s\"", e->string_literal);
+      static char decoded_str[1278] = "";  // 255(max string length) * 5 + 3
+      string_decode(e->string_literal, decoded_str, sizeof(decoded_str));
+      printf("%s", decoded_str);
       break;
     case EXPR_NAME:
-      fprintf(stderr, "%s", e->identifier.name);
+      printf("%s", e->identifier.name);
       break;
-    default:
-      fprintf(stderr, "UNKNOWN");
-      break;
+    default: printf("UNKNOWN");
   }
-  fprintf(stderr, ")");
 }

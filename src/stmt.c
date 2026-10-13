@@ -84,52 +84,74 @@ struct stmt * stmt_create_for( struct expr *init_expr, struct expr *cond_expr, s
 
 // Print a statement with the given indentation level.
 void stmt_print( struct stmt *s, int indent ) {
+  if (!s) {
+    printf("NULL_STMT");
+    return;
+  }
 
   switch (s->kind) {
     case STMT_DECL:
+      decl_print(s->decl, indent);
       break;
     case STMT_EXPR:
+      expr_print(s->expr);
+      printf(";");
       break;
     case STMT_IF_ELSE:
-      fprintf(stderr, "If (");
+      printf("if (");
       expr_print(s->cond_expr);
-      fprintf(stderr, ") {\n");
-      stmt_print(s->body, indent + 1);
-      fprintf(stderr, "}");
+      printf(") ");
+      if (s->body->kind != STMT_BLOCK) stmt_print(s->body, indent);
+      else stmt_print(s->body, indent);
       if (s->else_body) {
-        fprintf(stderr, " else {\n");
-        stmt_print(s->else_body, indent + 1);
-        fprintf(stderr, "}");
+        printf(" else ");
+        if (s->else_body->kind != STMT_BLOCK) stmt_print(s->else_body, indent);
+        else stmt_print(s->else_body, indent);
       }
       break;
     case STMT_FOR:
-      fprintf(stderr, "For (");
-      expr_print(s->init_expr);
-      fprintf(stderr, "; ");
-      expr_print(s->cond_expr);
-      fprintf(stderr, "; ");
-      expr_print(s->loop_expr);
-      fprintf(stderr, ") {\n");
-      stmt_print(s->body, indent + 1);
-      fprintf(stderr, "}");
+      printf("for (");
+      if (s->init_expr) expr_print(s->init_expr);
+      printf(";");
+      if (s->cond_expr) {
+        printf(" ");
+        expr_print(s->cond_expr);
+      }
+      printf(";");
+      if (s->loop_expr) {
+        printf(" ");
+        expr_print(s->loop_expr);
+      }
+      printf(") ");
+      if (s->body->kind != STMT_BLOCK) stmt_print(s->body, indent);
+      else stmt_print(s->body, indent);
       break;
     case STMT_PRINT:
-      fprintf(stderr, "Print ");
-      expr_print(s->expr);
-      fprintf(stderr, "\n");
+      printf("print");
+      if (s->expr) {
+        printf(" ");
+        expr_print(s->expr);
+      }
+      printf(";");
       break;
     case STMT_RETURN:
-      fprintf(stderr, "Return ");
-      expr_print(s->expr);
-      fprintf(stderr, "\n");
+      printf("return");
+      if (s->expr) {
+        printf(" ");
+        expr_print(s->expr);
+      }
+      printf(";");
       break;
     case STMT_BLOCK:
-      fprintf(stderr, "{\n");
-      stmt_print(s->block, indent + 1);
-      fprintf(stderr, "}\n");
+      indent++;
+      printf("{\n%*s", indent * 2, "");
+      stmt_print(s->block, indent);
+      indent--;
+      printf("\n%*s}", indent * 2, "");
       break;
   }
-  (void)s;
-  (void)indent;
-  return;
+  if (s->next) {
+    printf("\n%*s", indent * 2, "");
+    stmt_print(s->next, indent);
+  }
 }

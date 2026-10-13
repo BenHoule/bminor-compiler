@@ -142,7 +142,7 @@ IDENTIFIER  {L}{A}*
 
                       constexpr size_t STRING_MAX = 255;
                       char encoded_str[STRING_MAX + 1] = {0};
-                      switch (string_encode(yytext, encoded_str, STRING_MAX + 1)) {
+                      switch (string_encode(yytext, encoded_str, sizeof(encoded_str))) {
                         case ERR_INVALID_CHAR:
                           scanner_error("String literal contains character outside of ASCII range [1-127]");
                           break;

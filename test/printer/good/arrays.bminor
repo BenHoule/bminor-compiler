@@ -1,0 +1,11 @@
+flat: array [3] integer = {1, 2, 3};
+nested: array [2] array [2] integer = {{1, 2}, {3, 4}};
+strs: array [2] string = {"a", "b"};
+chars: carray [2] char = {'x', 'y'};
+
+main: function integer () = {
+	local: array [2] boolean = {true, false};
+	print local[0];
+	print #flat;
+	return 0;
+}

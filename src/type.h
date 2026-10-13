@@ -6,7 +6,7 @@ struct expr;
 typedef enum {
 	TYPE_VOID,
 	TYPE_BOOLEAN,
-	TYPE_CHARACTER,
+	TYPE_CHAR,
 	TYPE_INTEGER,
   TYPE_DOUBLE,
 	TYPE_STRING,
@@ -27,7 +27,7 @@ struct type * type_create( type_t kind, struct type *subtype, struct param_list 
 
 struct type * type_create_void();
 struct type * type_create_boolean();
-struct type * type_create_character();
+struct type * type_create_char();
 struct type * type_create_integer();
 struct type * type_create_double();
 struct type * type_create_string();

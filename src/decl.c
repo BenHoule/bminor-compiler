@@ -1,4 +1,5 @@
 #include "decl.h"
+#include "type.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -21,7 +22,24 @@ struct decl * decl_create( char *name, struct type *type, struct expr *value, st
 
 // Print the declaration `d` with the given indentation level.
 void decl_print( struct decl *d, int indent ) {
-  (void)d;
-  (void)indent;
-  return;
+  if (!d) {
+    printf("NULL_DECL");
+    return;
+  }
+
+  printf("%s: ", d->name);
+  type_print(d->type);
+  if (d->value) {  // Var initialization
+    printf(" = ");
+    expr_print(d->value);
+  } else if (d->code) {  // Function initialization
+    printf(" = ");
+    stmt_print(d->code, indent);
+    return;
+  }
+  printf(";");
+  if (d->next) {
+    printf("\n%*s", indent * 2, "");
+    decl_print(d->next, indent);
+  }
 }

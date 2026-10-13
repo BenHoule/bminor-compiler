@@ -73,10 +73,10 @@ $(BUILD_DIR)/scanner_unit_tests: $(TEST_DIR)/scanner/unit_tests.c $(BUILD_DIR)/s
 	$(CC) $(CFLAGS) -o $@ $^
 
 # Test and valgrind targets
-test: $(BIN) #$(BUILD_DIR)/scanner_unit_tests
+test: $(BIN)
 	@$(TEST_DIR)/runtests.sh
 	@$(TEST_DIR)/scanner/book_tests/run_all_tests.sh
-#	@$(BUILD_DIR)/scanner_unit_tests
+	@$(TEST_DIR)/printer/roundtrip.sh
 
 valgrind: $(BIN)
 	@BMINOR_VALGRIND=1 $(TEST_DIR)/runtests.sh

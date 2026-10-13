@@ -1,0 +1,10 @@
+v1: integer;
+v2: double;
+v3: boolean;
+v4: char;
+v5: string;
+v6: auto = 1;
+a1: array [3] integer;
+a2: array [2] array [3] double;
+a3: carray [4] char;
+a4: array [2 + 1] string;
