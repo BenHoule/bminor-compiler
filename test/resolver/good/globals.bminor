@@ -1,0 +1,6 @@
+x: integer = 5;
+y: string = "hello";
+
+main: function integer () = {
+	return x;
+}

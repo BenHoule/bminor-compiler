@@ -1,0 +1,16 @@
+total: integer = 0;
+
+main: function integer () = {
+	i: integer;
+	acc: integer = 0;
+	for (i = 0; i < 10; i++) {
+		acc = acc + i;
+	}
+	if (acc > total) {
+		best: integer = acc;
+		print best;
+	} else {
+		print total;
+	}
+	return acc;
+}

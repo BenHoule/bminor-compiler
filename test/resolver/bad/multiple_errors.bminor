@@ -1,0 +1,6 @@
+main: function integer () = {
+	a: integer = first_bad;
+	b: integer = second_bad;
+	c: integer = third_bad;
+	return 0;
+}

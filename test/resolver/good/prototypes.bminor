@@ -1,0 +1,11 @@
+puts: function void (s: string);
+later: function integer (n: integer);
+
+main: function integer () = {
+	puts("hello");
+	return later(1);
+}
+
+later: function integer (n: integer) = {
+	return n;
+}

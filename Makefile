@@ -77,6 +77,7 @@ $(BUILD_DIR)/scanner_unit_tests: $(TEST_DIR)/scanner/unit_tests.c $(BUILD_DIR)/s
 test: $(BIN)
 	@$(TEST_DIR)/runtests.sh
 	@$(TEST_DIR)/printer/roundtrip.sh
+	@$(TEST_DIR)/resolver/positions.sh -resolve
 	@$(BOOK_DIR)/run-tests.sh $(ROOT_DIR)/bminor -scan $(BOOK_DIR)/scanner
 	@$(BOOK_DIR)/run-tests.sh $(ROOT_DIR)/bminor -parse $(BOOK_DIR)/parser
 	@$(BOOK_DIR)/run-tests.sh $(ROOT_DIR)/bminor -print $(BOOK_DIR)/printer

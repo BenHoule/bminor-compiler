@@ -1,0 +1,6 @@
+empty_body: function void () = {}
+
+empty_block: function integer () = {
+	{}
+	return 0;
+}

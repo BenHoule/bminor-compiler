@@ -1,0 +1,7 @@
+f: function integer (n: integer) = {
+	return n;
+}
+
+main: function integer () = {
+	return n;
+}

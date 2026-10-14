@@ -1,0 +1,6 @@
+main: function integer () = {
+	p: integer = 1;
+	q: integer = 2;
+	r: integer = 3;
+	return p + q + r;
+}

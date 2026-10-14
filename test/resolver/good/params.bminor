@@ -1,0 +1,11 @@
+add: function integer (a: integer, b: integer) = {
+	return a + b;
+}
+
+noparams: function integer () = {
+	return 0;
+}
+
+arrparam: function integer (v: array [] integer, n: integer) = {
+	return v[n];
+}

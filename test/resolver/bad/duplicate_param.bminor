@@ -1,0 +1,3 @@
+f: function integer (a: integer, a: integer) = {
+	return a;
+}
