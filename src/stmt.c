@@ -1,7 +1,9 @@
 #include "stmt.h"
 #include "decl.h"
 #include "expr.h"
+#include "scope.h"
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -154,4 +156,39 @@ void stmt_print( struct stmt *s, int indent ) {
     printf("\n%*s", indent * 2, "");
     stmt_print(s->next, indent);
   }
+}
+
+void stmt_resolve( struct stmt *s ) {
+  assert(s != NULL);
+  switch (s->kind) {
+    case STMT_DECL:
+      decl_resolve(s->decl);
+      break;
+    case STMT_EXPR:
+      expr_resolve(s->expr);
+      break;
+    case STMT_IF_ELSE:
+      expr_resolve(s->cond_expr);
+      stmt_resolve(s->body);
+      if (s->else_body) stmt_resolve(s->else_body);
+      break;
+    case STMT_FOR:
+      if (s->init_expr) expr_resolve(s->init_expr);
+      if (s->cond_expr) expr_resolve(s->cond_expr);
+      if (s->loop_expr) expr_resolve(s->loop_expr);
+      stmt_resolve(s->body);
+      break;
+    case STMT_PRINT:
+      if (s->expr) expr_resolve(s->expr);
+      break;
+    case STMT_RETURN:
+      if (s->expr) expr_resolve(s->expr);
+      break;
+    case STMT_BLOCK:
+      scope_enter();
+      stmt_resolve(s->block);
+      scope_exit();
+      break;
+  }
+  if (s->next) stmt_resolve(s->next);
 }

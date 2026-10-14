@@ -1,8 +1,5 @@
 #pragma once
 
-struct param_list;
-struct expr;
-
 typedef enum {
 	TYPE_VOID,
 	TYPE_BOOLEAN,
@@ -15,6 +12,9 @@ typedef enum {
 	TYPE_FUNCTION,
   TYPE_AUTO
 } type_t;
+
+struct param_list;
+struct expr;
 
 struct type {
 	type_t kind;
@@ -36,4 +36,4 @@ struct type * type_create_carray(struct type *subtype, struct expr *size);
 struct type * type_create_function(struct type *subtype, struct param_list *params);
 struct type * type_create_auto();
 
-void          type_print( struct type *t );
+void type_print( struct type *t );

@@ -1,6 +1,8 @@
 #include "expr.h"
+#include "scope.h"
 #include "string_util.h"
 
+#include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -250,4 +252,17 @@ void expr_print( struct expr *e ) {
       break;
     default: printf("UNKNOWN");
   }
+}
+
+void expr_resolve( struct expr *e ) {
+  assert(e != NULL);
+
+  //TODO: Add line/col of expression to error message (use yyerror?)
+  if (e->kind == EXPR_NAME && (e->identifier.symbol =
+      scope_lookup(e->identifier.name)) == NULL) {
+    fprintf(stderr, "Error: Undefined symbol '%s'\n", e->identifier.name);
+    exit(EXIT_FAILURE);
+  }
+  if (e->left) expr_resolve(e->left);
+  if (e->right) expr_resolve(e->right);
 }

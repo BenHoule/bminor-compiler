@@ -1,12 +1,12 @@
 #pragma once
 
-struct type;
-
 typedef enum {
-	SYMBOL_LOCAL,
-	SYMBOL_PARAM,
-	SYMBOL_GLOBAL
+	SYMBOL_LOCAL,    // `which` = stack slot index
+	SYMBOL_PARAM,    // `which` = parameter index
+	SYMBOL_GLOBAL    // `which` = unused
 } symbol_t;
+
+struct type;
 
 struct symbol {
 	symbol_t kind;

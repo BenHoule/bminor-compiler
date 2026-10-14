@@ -1,9 +1,6 @@
 
 #pragma once
 
-struct decl;
-struct expr;
-
 typedef enum {
   STMT_DECL,
   STMT_EXPR,
@@ -13,6 +10,9 @@ typedef enum {
   STMT_RETURN,
   STMT_BLOCK
 } stmt_t;
+
+struct decl;
+struct expr;
 
 struct stmt {
   stmt_t kind;
@@ -54,4 +54,6 @@ struct stmt * stmt_create_decl(struct decl *decl, struct stmt *next);
 struct stmt * stmt_create_block( struct stmt *block );
 struct stmt * stmt_create_if_else( struct expr *cond_expr, struct stmt *body, struct stmt *else_body );
 struct stmt * stmt_create_for( struct expr *init_expr, struct expr *cond_expr, struct expr *loop_expr, struct stmt *body );
+
 void stmt_print( struct stmt *s, int indent );
+void stmt_resolve( struct stmt *s );

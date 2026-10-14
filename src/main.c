@@ -81,7 +81,7 @@ int main(int argc, char *argv[]) {
       }
       break;
     case STAGE_PARSE:
-      yyparse(); // Parsing logic would go here
+      yyparse();
       break;
     case STAGE_PRINT:
       yyparse();
@@ -93,6 +93,13 @@ int main(int argc, char *argv[]) {
       printf("\n");
       break;
     case STAGE_RESOLVE:
+      yyparse();
+      if (parser_error_count() > 0) {
+        fclose(input_file);
+        return EXIT_COMPILE_ERROR;
+      }
+      decl_resolve(parser_result);
+      break;
     case STAGE_TYPECHECK:
     case STAGE_CODEGEN:
       fprintf(stderr, "bminor: stage not implemented (%s)\n", argv[1]);

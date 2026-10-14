@@ -72,3 +72,4 @@ struct expr * expr_create_true();
 
 
 void expr_print( struct expr *e );
+void expr_resolve( struct expr *e );
