@@ -51,31 +51,31 @@ void decl_print( struct decl *d, int indent ) {
 }
 
 void decl_resolve( struct decl *d ) {
-  assert(d != NULL);
-  static int stack_index = 0;
+  int stack_index = 0;
 
-  //TODO: Add line/col of declaration to error message (use yyerror?)
-  if (scope_lookup_local(d->name)) {
-    fprintf(stderr,
-      "Symbol '%s' already declared in the current scope\n",
-      d->name
-    );
-    exit(EXIT_FAILURE);
+  while (d) {
+    //TODO: Add line/col of declaration to error message (use yyerror?)
+    if (scope_lookup_local(d->name)) {
+      fprintf(stderr,
+        "Symbol '%s' already declared in the current scope\n",
+        d->name
+      );
+      exit(EXIT_FAILURE);
+    }
+
+    symbol_t kind = (d->code) ? SYMBOL_LOCAL : SYMBOL_GLOBAL;
+    d->symbol = symbol_create(kind, d->type, d->name);
+    if (kind == SYMBOL_LOCAL) d->symbol->which = stack_index++;
+    scope_bind(d->name, d->symbol);
+
+    if (d->value) expr_resolve(d->value);
+    else if (d->code) {
+      scope_enter();
+      param_list_resolve(d->type->params);
+      stmt_resolve(d->code);
+      scope_exit();
+    }
+
+    d = d->next;
   }
-
-  symbol_t kind = (d->code) ? SYMBOL_LOCAL : SYMBOL_GLOBAL;
-  d->symbol = symbol_create(kind, d->type, d->name);
-  if (kind == SYMBOL_LOCAL) d->symbol->which = stack_index++;
-  scope_bind(d->name, d->symbol);
-
-  if (d->value) expr_resolve(d->value);
-  else if (d->code) {
-    scope_enter();
-    param_list_resolve(d->type->params);
-    stmt_resolve(d->code);
-    scope_exit();
-  }
-
-  if (d->next) decl_resolve(d->next);
-  else stack_index = 0;
 }

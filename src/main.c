@@ -2,6 +2,7 @@
 #include "bminor.tab.h"
 #include "bminor_parser.h"
 #include "decl.h"
+#include "scope.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -98,7 +99,9 @@ int main(int argc, char *argv[]) {
         fclose(input_file);
         return EXIT_COMPILE_ERROR;
       }
+      scope_enter();
       decl_resolve(parser_result);
+      scope_exit();
       break;
     case STAGE_TYPECHECK:
     case STAGE_CODEGEN:

@@ -64,6 +64,13 @@ struct expr * expr_create_true() {
   return e;
 }
 
+static void expr_print_binop( struct expr *e, const char *op) {
+  printf("(");
+  expr_print(e->left);
+  printf(" %s ", op);
+  expr_print(e->right);
+  printf(")");
+}
 // Print the expression `e` in a human-readable format
 void expr_print( struct expr *e ) {
   if (!e) {
@@ -71,136 +78,41 @@ void expr_print( struct expr *e ) {
     return;
   }
   switch (e->kind) {
-    case EXPR_ADD:
-      printf("(");
-      expr_print(e->left);
-      printf(" + ");
-      expr_print(e->right);
-      printf(")");
-      break;
-    case EXPR_SUB:
-      printf("(");
-      expr_print(e->left);
-      printf(" - ");
-      expr_print(e->right);
-      printf(")");
-      break;
-    case EXPR_MUL:
-      printf("(");
-      expr_print(e->left);
-      printf(" * ");
-      expr_print(e->right);
-      printf(")");
-      break;
-    case EXPR_DIV:
-      printf("(");
-      expr_print(e->left);
-      printf(" / ");
-      expr_print(e->right);
-      printf(")");
-      break;
-    case EXPR_MOD:
-      printf("(");
-      expr_print(e->left);
-      printf(" %% ");
-      expr_print(e->right);
-      printf(")");
-      break;
-    case EXPR_POW:
-      printf("(");
-      expr_print(e->left);
-      printf(" ^ ");
-      expr_print(e->right);
-      printf(")");
-      break;
+    case EXPR_ADD: expr_print_binop(e, "+" ); break;
+    case EXPR_SUB: expr_print_binop(e, "-" ); break;
+    case EXPR_MUL: expr_print_binop(e, "*" ); break;
+    case EXPR_DIV: expr_print_binop(e, "/" ); break;
+    case EXPR_MOD: expr_print_binop(e, "%%"); break;
+    case EXPR_POW: expr_print_binop(e, "^" ); break;
     case EXPR_NEG:
-      printf("(-");
+      printf("-");
       expr_print(e->left);
-      printf(")");
       break;
     case EXPR_INC:
-      printf("(");
       expr_print(e->left);
-      printf("++)");
+      printf("++");
       break;
     case EXPR_DEC:
-      printf("(");
       expr_print(e->left);
-      printf("--)");
+      printf("--");
       break;
     case EXPR_LEN:
-      printf("(#");
+      printf("#");
       expr_print(e->left);
-      printf(")");
       break;
-    case EXPR_LT:
-      printf("(");
-      expr_print(e->left);
-      printf(" < ");
-      expr_print(e->right);
-      printf(")");
-      break;
-    case EXPR_GT:
-      printf("(");
-      expr_print(e->left);
-      printf(" > ");
-      expr_print(e->right);
-      printf(")");
-      break;
-    case EXPR_LE:
-      printf("(");
-      expr_print(e->left);
-      printf(" <= ");
-      expr_print(e->right);
-      printf(")");
-      break;
-    case EXPR_GE:
-      printf("(");
-      expr_print(e->left);
-      printf(" >= ");
-      expr_print(e->right);
-      printf(")");
-      break;
-    case EXPR_EQ:
-      printf("(");
-      expr_print(e->left);
-      printf(" == ");
-      expr_print(e->right);
-      printf(")");
-      break;
-    case EXPR_NE:
-      printf("(");
-      expr_print(e->left);
-      printf(" != ");
-      expr_print(e->right);
-      printf(")");
-      break;
-    case EXPR_AND:
-      printf("(");
-      expr_print(e->left);
-      printf(" && ");
-      expr_print(e->right);
-      printf(")");
-      break;
-    case EXPR_OR:
-      printf("(");
-      expr_print(e->left);
-      printf(" || ");
-      expr_print(e->right);
-      printf(")");
-      break;
+    case EXPR_LT: expr_print_binop(e, "<" ); break;
+    case EXPR_GT: expr_print_binop(e, ">" ); break;
+    case EXPR_GE: expr_print_binop(e, ">="); break;
+    case EXPR_LE: expr_print_binop(e, "<="); break;
+    case EXPR_EQ: expr_print_binop(e, "=="); break;
+    case EXPR_NE: expr_print_binop(e, "!="); break;
+    case EXPR_AND:expr_print_binop(e, "&&"); break;
+    case EXPR_OR: expr_print_binop(e, "||"); break;
     case EXPR_NOT:
-      printf("(!");
+      printf("!");
       expr_print(e->left);
-      printf(")");
       break;
-    case EXPR_ASGN:
-      printf("(");
-      expr_print(e->left);
-      printf(" = ");
-      expr_print(e->right);
-      printf(")");
-      break;
+    case EXPR_ASGN: expr_print_binop(e, "="); break;
     case EXPR_IDX:
       expr_print(e->left);
       printf("[");
@@ -229,40 +141,51 @@ void expr_print( struct expr *e ) {
       }
       printf("}");
       break;
-    case EXPR_INT:
-      printf("%" PRId64, e->int_literal);
-      break;
-    case EXPR_DOUBLE:
-      printf("%.17g", e->double_literal);
-      break;
-    case EXPR_BOOL:
-      printf("%s", e->bool_literal ? "true" : "false");
-      break;
-    case EXPR_CHAR:
-      const char* decoded_char = char_decode(e->char_literal, '\'');
-      printf("'%s'", decoded_char);
-      break;
+    case EXPR_INT:    printf("%" PRId64, e->int_literal); break;
+    case EXPR_DOUBLE: printf("%.17g", e->double_literal); break;
+    case EXPR_BOOL:   printf("%s", e->bool_literal ? "true" : "false"); break;
+    case EXPR_CHAR:   printf("'%s'", char_decode(e->char_literal, '\'')); break;
     case EXPR_STR:
       static char decoded_str[1278] = "";  // 255(max string length) * 5 + 3
       string_decode(e->string_literal, decoded_str, sizeof(decoded_str));
       printf("%s", decoded_str);
       break;
-    case EXPR_NAME:
-      printf("%s", e->identifier.name);
-      break;
+    case EXPR_NAME: printf("%s", e->identifier.name); break;
     default: printf("UNKNOWN");
   }
 }
 
+// Morris Preorder Traversal -- Time: O(N), Space: O(1)
+// NOTE: Messing with AST like this may cause race conditions
+// TODO: Implement stack-based traversal (thread-safe)
 void expr_resolve( struct expr *e ) {
-  assert(e != NULL);
+  while (e) {
+    if (!e->left) {
+      if (e->kind == EXPR_NAME && (e->identifier.symbol =
+          scope_lookup(e->identifier.name)) == NULL) {
+        //TODO: Add line/col of expression to error message (use yyerror?)
+        fprintf(stderr, "Error: Undefined symbol '%s'\n", e->identifier.name);
+      }
+      e = e->right;
+      continue;
+    }
 
-  //TODO: Add line/col of expression to error message (use yyerror?)
-  if (e->kind == EXPR_NAME && (e->identifier.symbol =
-      scope_lookup(e->identifier.name)) == NULL) {
-    fprintf(stderr, "Error: Undefined symbol '%s'\n", e->identifier.name);
-    exit(EXIT_FAILURE);
+    // Find Inorder predecessor of current node
+    struct expr *pre = e->left;
+    while (pre->right && pre->right != e) {
+      pre = pre->right;
+    }
+    if (pre->right == NULL) {
+      if (e->kind == EXPR_NAME && (e->identifier.symbol =
+          scope_lookup(e->identifier.name)) == NULL) {
+        //TODO: Add line/col of expression to error message (use yyerror?)
+        fprintf(stderr, "Error: Undefined symbol '%s'\n", e->identifier.name);
+      }
+      pre->right = e;  // Link (until we return from left subtree)
+      e = e->left;
+    } else {
+      pre->right = NULL;  // Unlink (left subtree finished)
+      e = e->right;
+    }
   }
-  if (e->left) expr_resolve(e->left);
-  if (e->right) expr_resolve(e->right);
 }
