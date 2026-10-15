@@ -175,7 +175,7 @@ void stmt_resolve( struct stmt *s ) {
           continue;
         }
         if (s->else_body) {  // NOT guaranteed by grammar
-          if (s->else_body->next == s) scope_exit();
+          if (s->else_body->next == s);
           else {
             assert(s->else_body->next == NULL);  // Guaranteed by grammar
             s->else_body->next = s;
@@ -194,7 +194,8 @@ void stmt_resolve( struct stmt *s ) {
 
         // NOTE: Messing with the AST like this may cause race conditions
         if (s->body) {
-          if (s->body->next != s) {
+          if (s->body->next == s) scope_exit();
+          else {
             assert(s->body->next == NULL);  // Guaranteed by grammar
             s->body->next = s;
             s = s->body;
@@ -202,7 +203,6 @@ void stmt_resolve( struct stmt *s ) {
             continue;
           }
           s->body->next = NULL;
-          scope_exit();
         }
         break;
       case STMT_PRINT:  expr_resolve(s->expr ); break;
