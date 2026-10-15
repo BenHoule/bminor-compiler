@@ -35,21 +35,23 @@ void param_list_print( struct param_list *a ) {
   }
 }
 
+// TODO: Make iterative
 void param_list_resolve( struct param_list *a ) {
-  assert(a != NULL);
-  static int param_index = 0;
+  int param_index = 0;
 
-  //TODO: Add line/col of declaration to error message (use yyerror?)
-  if (scope_lookup_local(a->name)) {
-    fprintf(stderr,
-      "Symbol '%s' already declared in the current scope\n",
-      a->name
-    );
-    exit(EXIT_FAILURE);
-  }
-  a->symbol = symbol_create(SYMBOL_PARAM, a->type, a->name);
-  a->symbol->which = param_index++;
+  while(a) {
+    //TODO: Add line/col of declaration to error message (use yyerror?)
+    if (scope_lookup_local(a->name)) {
+      fprintf(stderr,
+        "Symbol '%s' already declared in the current scope\n",
+        a->name
+      );
+      exit(EXIT_FAILURE);
+    }
+    a->symbol = symbol_create(SYMBOL_PARAM, a->type, a->name);
+    a->symbol->which = param_index++;
+    scope_bind(a->name, a->symbol);
 
-  if (a->next) param_list_resolve(a->next);
-  else param_index = 0;
+    a = a->next;
+  };
 }

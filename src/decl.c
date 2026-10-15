@@ -50,32 +50,34 @@ void decl_print( struct decl *d, int indent ) {
   }
 }
 
-void decl_resolve( struct decl *d ) {
-  int stack_index = 0;
+static int local_count = 0;
 
+void decl_resolve( struct decl *d ) {
   while (d) {
     //TODO: Add line/col of declaration to error message (use yyerror?)
-    if (scope_lookup_local(d->name)) {
-      fprintf(stderr,
-        "Symbol '%s' already declared in the current scope\n",
-        d->name
-      );
-      exit(EXIT_FAILURE);
+    struct symbol * pre = scope_lookup_local(d->name);
+    if (pre) {
+      assert(pre->type);  // All names should have an associated type(?)
+      if (pre->type->kind != TYPE_FUNCTION || d->code == NULL) {
+        fprintf(stderr,
+          "Symbol '%s' already declared in the current scope\n",
+          d->name);
+      }
+      d->symbol = pre;  // Link to the pre-existing symbol
+    } else {
+      symbol_t kind = (scope_depth() > 1) ? SYMBOL_LOCAL : SYMBOL_GLOBAL;
+      d->symbol = symbol_create(kind, d->type, d->name);
+      if (kind == SYMBOL_LOCAL) d->symbol->which = local_count++;
+      scope_bind(d->name, d->symbol);
     }
-
-    symbol_t kind = (d->code) ? SYMBOL_LOCAL : SYMBOL_GLOBAL;
-    d->symbol = symbol_create(kind, d->type, d->name);
-    if (kind == SYMBOL_LOCAL) d->symbol->which = stack_index++;
-    scope_bind(d->name, d->symbol);
-
     if (d->value) expr_resolve(d->value);
     else if (d->code) {
+      local_count = 0;  // Reset for new function
       scope_enter();
       param_list_resolve(d->type->params);
       stmt_resolve(d->code);
       scope_exit();
     }
-
     d = d->next;
   }
 }
