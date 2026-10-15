@@ -159,28 +159,31 @@ void stmt_print( struct stmt *s, int indent ) {
 void stmt_resolve( struct stmt *s ) {
   while(s) {
     switch (s->kind) {
-      case STMT_DECL:    decl_resolve(s->decl); break;
-      case STMT_EXPR:    expr_resolve(s->expr); break;
+      case STMT_DECL:  decl_resolve(s->decl ); break;
+      case STMT_BLOCK:
+        scope_enter();
+        stmt_resolve(s->block);
+        scope_exit();
+        break;
+      case STMT_EXPR:
+      case STMT_PRINT:
+      case STMT_RETURN: expr_resolve(s->expr); break;
       case STMT_IF_ELSE:
         expr_resolve(s->cond_expr);
         assert(s->body);  // Guaranteed by the grammar
 
         // NOTE: Messing with the AST like this may cause race conditions
-        if (s->body->next == s) scope_exit();
-        else {
+        if (s->body->next != s) {
           assert(s->body->next == NULL);  // Guaranteed by grammar
           s->body->next = s;
           s = s->body;
-          scope_enter();
           continue;
         }
-        if (s->else_body) {  // NOT guaranteed by grammar
-          if (s->else_body->next == s);
-          else {
+        if (s->else_body) { // NOT guaranteed by grammar
+          if (s->else_body->next != s) {
             assert(s->else_body->next == NULL);  // Guaranteed by grammar
             s->else_body->next = s;
             s = s->else_body;
-            scope_enter();
             continue;
           }
           s->else_body->next = NULL;
@@ -205,9 +208,6 @@ void stmt_resolve( struct stmt *s ) {
           s->body->next = NULL;
         }
         break;
-      case STMT_PRINT:  expr_resolve(s->expr ); break;
-      case STMT_RETURN: expr_resolve(s->expr ); break;
-      case STMT_BLOCK:  stmt_resolve(s->block); break;
       default: unreachable();  // Tells compiler to omit bounds check before jump table
     }
     s = s->next;

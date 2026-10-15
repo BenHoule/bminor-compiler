@@ -75,7 +75,7 @@ void decl_resolve( struct decl *d ) {
       local_count = 0;  // Reset for new function
       scope_enter();
       param_list_resolve(d->type->params);
-      stmt_resolve(d->code);
+      stmt_resolve(d->code->block);
       scope_exit();
     }
     d = d->next;
