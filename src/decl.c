@@ -61,20 +61,25 @@ void decl_resolve( struct decl *d ) {
       d->symbol = pre;    // Link to pre-existing symbol
       assert(pre->type);  // All names should have an associated type(?)
 
-      if (pre->type->kind == TYPE_FUNCTION) {
-        //TODO: Check if function signatures match
-        if (d->code == NULL) {
-          resolver_error(
-            "Function '%s' already declared in the current scope", d->name);
-          return;
-        }
-        //TODO: Check if 'pre' was a declaration or definition (how?)
-      } else {
+      if (pre->type->kind != TYPE_FUNCTION) {
         resolver_error(
           "Variable '%s' already declared in the current scope", d->name);
-        return;
+        d = d->next;
+        continue;
       }
-    } else {
+
+      //TODO: Check if function signatures match
+
+      if (d->code == NULL) {
+        resolver_error(
+          "Function '%s' already declared in the current scope", d->name);
+        d = d->next;
+        continue;
+      }
+
+      //TODO: Check if 'pre' was declaration vs definition (how?)
+
+    } else {  // Create new symbol
       symbol_t kind = (scope_depth() > 1) ? SYMBOL_LOCAL : SYMBOL_GLOBAL;
       d->symbol = symbol_create(kind, d->type, d->name);
       d->symbol->which = (kind == SYMBOL_LOCAL) ? local_count++ : -1;
@@ -87,7 +92,7 @@ void decl_resolve( struct decl *d ) {
     }
     if (d->value) expr_resolve(d->value);
     else if (d->code) {
-      local_count = 0;  // Reset for new function
+      local_count = 0;  // Reset per function
       scope_enter();
       param_list_resolve(d->type->params);
       stmt_resolve(d->code->block);
