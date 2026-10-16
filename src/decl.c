@@ -1,10 +1,11 @@
 #include "decl.h"
-#include "param_list.h"
-#include "type.h"
 #include "expr.h"
+#include "param_list.h"
+#include "resolver.h"
 #include "stmt.h"
 #include "symbol.h"
 #include "scope.h"
+#include "type.h"
 
 #include <assert.h>
 #include <stdlib.h>
@@ -53,22 +54,36 @@ void decl_print( struct decl *d, int indent ) {
 static int local_count = 0;
 
 void decl_resolve( struct decl *d ) {
+  //TODO: Add line/col to error message (use yyerror?)
   while (d) {
-    //TODO: Add line/col of declaration to error message (use yyerror?)
     struct symbol * pre = scope_lookup_local(d->name);
     if (pre) {
+      d->symbol = pre;    // Link to pre-existing symbol
       assert(pre->type);  // All names should have an associated type(?)
-      if (pre->type->kind != TYPE_FUNCTION || d->code == NULL) {
-        fprintf(stderr,
-          "Symbol '%s' already declared in the current scope\n",
-          d->name);
+
+      if (pre->type->kind == TYPE_FUNCTION) {
+        //TODO: Check if function signatures match
+        if (d->code == NULL) {
+          resolver_error(
+            "Function '%s' already declared in the current scope", d->name);
+          return;
+        }
+        //TODO: Check if 'pre' was a declaration or definition (how?)
+      } else {
+        resolver_error(
+          "Variable '%s' already declared in the current scope", d->name);
+        return;
       }
-      d->symbol = pre;  // Link to the pre-existing symbol
     } else {
       symbol_t kind = (scope_depth() > 1) ? SYMBOL_LOCAL : SYMBOL_GLOBAL;
       d->symbol = symbol_create(kind, d->type, d->name);
-      if (kind == SYMBOL_LOCAL) d->symbol->which = local_count++;
-      scope_bind(d->name, d->symbol);
+      d->symbol->which = (kind == SYMBOL_LOCAL) ? local_count++ : -1;
+      if (!scope_bind(d->name, d->symbol)) {
+        resolver_error(
+          "Failed to bind '%s'", d->name);
+        return;
+      }
+      symbol_print_binding(d->symbol);
     }
     if (d->value) expr_resolve(d->value);
     else if (d->code) {

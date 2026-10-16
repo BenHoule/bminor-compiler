@@ -1,4 +1,5 @@
 #include "expr.h"
+#include "resolver.h"
 #include "scope.h"
 #include "string_util.h"
 
@@ -78,12 +79,12 @@ void expr_print( struct expr *e ) {
     return;
   }
   switch (e->kind) {
-    case EXPR_ADD: expr_print_binop(e, "+" ); break;
-    case EXPR_SUB: expr_print_binop(e, "-" ); break;
-    case EXPR_MUL: expr_print_binop(e, "*" ); break;
-    case EXPR_DIV: expr_print_binop(e, "/" ); break;
-    case EXPR_MOD: expr_print_binop(e, "%%"); break;
-    case EXPR_POW: expr_print_binop(e, "^" ); break;
+    case EXPR_ADD: expr_print_binop(e, "+"); break;
+    case EXPR_SUB: expr_print_binop(e, "-"); break;
+    case EXPR_MUL: expr_print_binop(e, "*"); break;
+    case EXPR_DIV: expr_print_binop(e, "/"); break;
+    case EXPR_MOD: expr_print_binop(e, "%"); break;
+    case EXPR_POW: expr_print_binop(e, "^"); break;
     case EXPR_NEG:
       printf("-");
       expr_print(e->left);
@@ -151,20 +152,25 @@ void expr_print( struct expr *e ) {
       printf("%s", decoded_str);
       break;
     case EXPR_NAME: printf("%s", e->identifier.name); break;
-    default: printf("UNKNOWN");
+    default: unreachable();
   }
 }
 
-// Morris Preorder Traversal -- Time: O(N), Space: O(1)
+// Returns True on success, False on failure
+static bool symbol_find_and_bind(struct expr *e) {
+    return e->kind == EXPR_NAME &&
+      !(e->identifier.symbol = scope_lookup(e->identifier.name));
+}
+
+// Morris Preorder Traversal - (Root-Left-Right) - Time: O(N), Space: O(1)
 // NOTE: Messing with AST like this may cause race conditions
 // TODO: Implement stack-based traversal (thread-safe)
 void expr_resolve( struct expr *e ) {
   while (e) {
     if (!e->left) {
-      if (e->kind == EXPR_NAME && (e->identifier.symbol =
-          scope_lookup(e->identifier.name)) == NULL) {
-        //TODO: Add line/col of expression to error message (use yyerror?)
-        fprintf(stderr, "Error: Undefined symbol '%s'\n", e->identifier.name);
+      if (symbol_find_and_bind(e)) {
+        //TODO: Add line/col to error message
+        resolver_error("Error: Undefined symbol '%s'", e->identifier.name);
       }
       e = e->right;
       continue;
@@ -175,17 +181,16 @@ void expr_resolve( struct expr *e ) {
     while (pre->right && pre->right != e) {
       pre = pre->right;
     }
-    if (pre->right == NULL) {
-      if (e->kind == EXPR_NAME && (e->identifier.symbol =
-          scope_lookup(e->identifier.name)) == NULL) {
-        //TODO: Add line/col of expression to error message (use yyerror?)
-        fprintf(stderr, "Error: Undefined symbol '%s'\n", e->identifier.name);
-      }
-      pre->right = e;  // Link (until we return from left subtree)
-      e = e->left;
-    } else {
-      pre->right = NULL;  // Unlink (left subtree finished)
+    if (pre->right != NULL) {
+      pre->right = NULL;  // Unlink (left subtree traversed)
       e = e->right;
+      continue;
     }
+    if (symbol_find_and_bind(e)) {
+      //TODO: Add line/col to error message
+      resolver_error("Error: Undefined symbol '%s'", e->identifier.name);
+    }
+    pre->right = e;  // Link (until we finish traversing left subtree)
+    e = e->left;
   }
 }

@@ -1,4 +1,5 @@
 #include "param_list.h"
+#include "resolver.h"
 #include "scope.h"
 #include "symbol.h"
 #include "type.h"
@@ -41,17 +42,19 @@ void param_list_resolve( struct param_list *a ) {
 
   while(a) {
     //TODO: Add line/col of declaration to error message (use yyerror?)
-    if (scope_lookup_local(a->name)) {
-      fprintf(stderr,
-        "Symbol '%s' already declared in the current scope\n",
-        a->name
+    if ((a->symbol = scope_lookup_local(a->name)) != NULL) {
+      resolver_error(
+        "Symbol '%s' already declared in the current scope", a->name
       );
-      exit(EXIT_FAILURE);
+      return;
     }
     a->symbol = symbol_create(SYMBOL_PARAM, a->type, a->name);
     a->symbol->which = param_index++;
-    scope_bind(a->name, a->symbol);
-
+    if (!scope_bind(a->name, a->symbol)) {
+      resolver_error("Failed to bind '%s'", a->name);
+      return;
+    }
+    symbol_print_binding(a->symbol);
     a = a->next;
   };
 }
