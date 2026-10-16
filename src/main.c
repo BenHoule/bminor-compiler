@@ -2,6 +2,7 @@
 #include "bminor.tab.h"
 #include "bminor_parser.h"
 #include "decl.h"
+#include "resolver.h"
 #include "scope.h"
 
 #include <stdio.h>
@@ -80,13 +81,16 @@ int main(int argc, char *argv[]) {
           free(yylval.sval);
         }
       }
+      if (scanner_error_count()) return EXIT_COMPILE_ERROR;
       break;
     case STAGE_PARSE:
-      yyparse();
+      if (yyparse() || scanner_error_count() || parser_error_count()) {
+        fclose(input_file);
+        return EXIT_COMPILE_ERROR;
+      }
       break;
     case STAGE_PRINT:
-      yyparse();
-      if (parser_error_count() > 0) {
+      if (yyparse() || scanner_error_count() || parser_error_count()) {
         fclose(input_file);
         return EXIT_COMPILE_ERROR;
       }
@@ -94,8 +98,8 @@ int main(int argc, char *argv[]) {
       printf("\n");
       break;
     case STAGE_RESOLVE:
-      yyparse();
-      if (parser_error_count() > 0) {
+      if (yyparse() || scanner_error_count() || parser_error_count() ||
+          resolver_error_count()) {
         fclose(input_file);
         return EXIT_COMPILE_ERROR;
       }
@@ -116,6 +120,6 @@ int main(int argc, char *argv[]) {
   }
   fclose(input_file);
 
-  unsigned int total_err = scanner_error_count() + parser_error_count();
-  return total_err > 0 ? EXIT_COMPILE_ERROR : EXIT_SUCCESS;
+  return scanner_error_count() + parser_error_count() +
+    resolver_error_count() != 0 ? EXIT_COMPILE_ERROR : EXIT_SUCCESS;
 }

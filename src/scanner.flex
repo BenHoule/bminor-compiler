@@ -31,7 +31,7 @@ static int col = 1;
   yylloc.last_line   = line; \
   yylloc.last_column = col - 1;
 
-static int error_count = 0;
+static unsigned int err_count = 0;
 static YYLTYPE block = {0, 0, 0, 0};
 
 static void vprint_error(const YYLTYPE *const loc, const char *fmt, va_list args);
@@ -223,11 +223,11 @@ IDENTIFIER  {L}{A}*
 %%
   /* HELPERS */
 unsigned int scanner_error_count(void) {
-  return error_count;
+  return err_count;
 }
 
 static void vprint_error(const YYLTYPE *const loc, const char *fmt, va_list args) {
-  error_count++;
+  err_count++;
   fprintf(stderr, "line %d, col %d: ", loc->first_line, loc->first_column);
   vfprintf(stderr, fmt, args);
   fprintf(stderr, "\n");

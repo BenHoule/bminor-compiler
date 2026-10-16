@@ -10,7 +10,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-static int err_count = 0;
+static unsigned int err_count = 0;
 struct decl *parser_result = NULL;
 
 int yylex(void);

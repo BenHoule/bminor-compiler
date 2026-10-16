@@ -100,8 +100,6 @@ void type_print( struct type *t ) {
     case TYPE_AUTO:
       printf("auto");
       break;
-    default:
-      printf("UNKNOWN_TYPE");
-      break;
+    default: unreachable();
   }
 }
