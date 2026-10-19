@@ -36,4 +36,7 @@ struct type * type_create_carray(struct type *subtype, struct expr *size);
 struct type * type_create_function(struct type *subtype, struct param_list *params);
 struct type * type_create_auto();
 
+bool type_equals(struct type *a, struct type *b);
+
 void type_print( struct type *t );
+void type_resolve(struct type *t);

@@ -53,51 +53,83 @@ void decl_print( struct decl *d, int indent ) {
 
 static int local_count = 0;
 
+static void decl_resolve_var(struct decl *d) {
+  assert(d); assert(d->type);  // Everything has a type
+
+  // Resolving initializer before binding var prevents self-reference.
+  expr_resolve(d->value);
+  type_resolve(d->type);
+
+  //TODO: Add line/col to error messages
+  if (scope_lookup_local(d->name)) {
+    resolver_error(
+      "Variable '%s' already declared in current scope", d->name);
+    return;
+  }
+
+  symbol_t kind = (scope_depth() > 1) ? SYMBOL_LOCAL : SYMBOL_GLOBAL;
+  d->symbol = symbol_create(kind, d->type, d->name);
+  d->symbol->which = (kind == SYMBOL_LOCAL) ? local_count++ : -1;
+  if (!scope_bind(d->name, d->symbol)) {
+    resolver_error(
+      "Failed to bind '%s'", d->name);
+    return;
+  }
+  symbol_print_binding(d->symbol);
+}
+
+static void decl_resolve_func(struct decl *d) {
+  assert(d); assert(d->type); assert(d->type->kind == TYPE_FUNCTION);
+
+  //TODO: Add line/col to error messages
+  if (scope_depth() > 1) {
+    resolver_error(
+      "Function '%s' declared in a local scope (must be global)", d->name);
+    return;
+  }
+
+  struct symbol * pre = scope_lookup_local(d->name);
+  if (pre) {
+    // NOTE: Early returns prevent bodies of rejected function definitions
+    // from being resolved; Errors in a rejected body are unreported.
+    if (pre->type->kind != TYPE_FUNCTION) {
+      resolver_error(
+        "Function '%s' already declared (as a variable)", d->name);
+      return;
+    }
+    if (!type_equals(pre->type, d->type)) {
+      resolver_error(
+        "Function '%s' declared with different types", d->name);
+      return;
+    }
+    if (d->code && pre->is_defined) {
+      resolver_error("Function '%s' already defined", d->name);
+      return;
+    }
+    d->symbol = pre;
+  } else {
+    d->symbol = symbol_create(SYMBOL_GLOBAL, d->type, d->name);
+    if (!scope_bind(d->name, d->symbol)) {
+      resolver_error("Failed to bind '%s'", d->name);
+      return;
+    }
+    symbol_print_binding(d->symbol);
+  }
+
+  if (!d->code) return;
+
+  d->symbol->is_defined = true;  // Set before resolving so recursion works
+  local_count = 0;
+  scope_enter();
+  param_list_resolve(d->type->params);
+  stmt_resolve(d->code->block);
+  scope_exit();
+}
+
 void decl_resolve( struct decl *d ) {
-  //TODO: Add line/col to error message (use yyerror?)
   while (d) {
-    struct symbol * pre = scope_lookup_local(d->name);
-    if (pre) {
-      d->symbol = pre;    // Link to pre-existing symbol
-      assert(pre->type);  // All names should have an associated type(?)
-
-      if (pre->type->kind != TYPE_FUNCTION) {
-        resolver_error(
-          "Variable '%s' already declared in the current scope", d->name);
-        d = d->next;
-        continue;
-      }
-
-      //TODO: Check if function signatures match
-
-      if (d->code == NULL) {
-        resolver_error(
-          "Function '%s' already declared in the current scope", d->name);
-        d = d->next;
-        continue;
-      }
-
-      //TODO: Check if 'pre' was declaration vs definition (how?)
-
-    } else {  // Create new symbol
-      symbol_t kind = (scope_depth() > 1) ? SYMBOL_LOCAL : SYMBOL_GLOBAL;
-      d->symbol = symbol_create(kind, d->type, d->name);
-      d->symbol->which = (kind == SYMBOL_LOCAL) ? local_count++ : -1;
-      if (!scope_bind(d->name, d->symbol)) {
-        resolver_error(
-          "Failed to bind '%s'", d->name);
-        return;
-      }
-      symbol_print_binding(d->symbol);
-    }
-    if (d->value) expr_resolve(d->value);
-    else if (d->code) {
-      local_count = 0;  // Reset per function
-      scope_enter();
-      param_list_resolve(d->type->params);
-      stmt_resolve(d->code->block);
-      scope_exit();
-    }
+    if (d->type->kind == TYPE_FUNCTION) decl_resolve_func(d);
+    else decl_resolve_var(d);
     d = d->next;
   }
 }

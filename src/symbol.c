@@ -16,6 +16,7 @@ struct symbol * symbol_create( symbol_t kind, struct type *type, char *name ) {
   s->type = type;
   s->name = name;
   s->which = -1;
+  s->is_defined = false;
   return s;
 }
 

@@ -1,0 +1,9 @@
+n: integer = 3;
+a: array [3] integer;
+
+main: function integer () = {
+	m: integer = 4;
+	b: array [m] integer;
+	c: array [m] array [m + n] integer;
+	return 0;
+}

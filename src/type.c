@@ -50,6 +50,30 @@ struct type * type_create_auto() {
   return type_create(TYPE_AUTO, NULL, NULL, NULL);
 }
 
+//TODO: Handle 'auto' (currently treated as its own type)
+bool type_equals(struct type *a, struct type *b) {
+  if (a == b) return true;
+  if (!a || !b || a->kind != b->kind) return false;
+
+  switch (a->kind) {
+    case TYPE_ARRAY:
+    case TYPE_CARRAY:
+      return type_equals(a->subtype, b->subtype);
+    case TYPE_FUNCTION:
+    if (!type_equals(a->subtype, b->subtype)) return false;
+    const struct param_list *p = a->params;
+    const struct param_list *q = b->params;
+    while(p && q) {
+      if (!type_equals(p->type, q->type)) return false;
+      p = p->next;
+      q = q->next;
+      // NOTE: Param names are not compared (standard convention)
+    }
+    return p == NULL && q == NULL;
+    default: return true;
+  }
+}
+
 // Print a type in a human-readable format.
 void type_print( struct type *t ) {
   if (!t) {
@@ -101,5 +125,12 @@ void type_print( struct type *t ) {
       printf("auto");
       break;
     default: unreachable();
+  }
+}
+
+void type_resolve(struct type *t) {
+  while (t) {
+    expr_resolve(t->size);
+    t = t->subtype;
   }
 }

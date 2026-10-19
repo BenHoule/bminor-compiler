@@ -1,0 +1,8 @@
+main: function integer () = {
+	a: integer = 1;
+	inner: function integer () = {
+		return 2;
+	}
+	b: integer = 3;
+	return a + b;
+}

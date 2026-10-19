@@ -1,0 +1,5 @@
+f: integer;
+
+f: function integer () = {
+	return 0;
+}

@@ -1,0 +1,7 @@
+g: function void (s: string);
+g: function void (s: string);
+
+h: function integer () = {
+	return 0;
+}
+h: function integer ();

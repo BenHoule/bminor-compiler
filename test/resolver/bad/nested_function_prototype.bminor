@@ -1,0 +1,4 @@
+main: function integer () = {
+	helper: function integer (n: integer);
+	return 0;
+}

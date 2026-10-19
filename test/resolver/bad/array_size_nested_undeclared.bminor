@@ -1,0 +1,4 @@
+main: function integer () = {
+	a: array [2] array [missing] integer;
+	return 0;
+}

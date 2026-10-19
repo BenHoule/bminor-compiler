@@ -1,0 +1,5 @@
+f: function integer (a: integer, b: array [] char);
+
+f: function integer (a: integer, b: array [] string) = {
+	return a;
+}
