@@ -1,0 +1,4 @@
+f: function auto (b: boolean) = {
+	if (b) return 1;
+	return "one";
+}

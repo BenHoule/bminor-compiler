@@ -1,0 +1,6 @@
+main: function integer () = {
+	b: array [2] boolean = {true, false};
+	x: integer = 0;
+	x = b[0];
+	return 0;
+}

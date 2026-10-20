@@ -1,0 +1,5 @@
+main: function integer () = {
+	b: boolean = true;
+	print b * 2;
+	return 0;
+}

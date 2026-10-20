@@ -1,0 +1,6 @@
+main: function integer () = {
+	a: array [2] integer;
+	b: array [2] integer;
+	a = b;
+	return 0;
+}

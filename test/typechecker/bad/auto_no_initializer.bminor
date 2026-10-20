@@ -1,0 +1,4 @@
+main: function integer () = {
+	x: auto;
+	return 0;
+}

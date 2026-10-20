@@ -1,0 +1,22 @@
+add: function auto (x: integer, y: integer) = {
+	return x + y;
+}
+
+half: function auto (x: double) = {
+	return x / 2.0;
+}
+
+nothing: function auto () = {
+	print "side effect";
+}
+
+main: function integer () = {
+	s: auto = "hello";
+	t: auto = 1 < 2;
+	u: auto = 3;
+	r: integer = add(1, 2) + u;
+	h: double = half(4.0);
+	nothing();
+	if (t) print s;
+	return r;
+}

@@ -1,0 +1,4 @@
+main: function integer () = {
+	3 = 4;
+	return 0;
+}

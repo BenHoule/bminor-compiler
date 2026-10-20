@@ -1,0 +1,7 @@
+g1: integer = 42;
+g2: integer = -7;
+g3: double = 3.14;
+g4: boolean = true;
+g5: char = 'z';
+g6: string = "constant";
+g7: array [2] integer = {1, -2};

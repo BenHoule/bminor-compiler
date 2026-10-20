@@ -1,0 +1,5 @@
+main: function integer () = {
+	a: array [3] integer;
+	print a[true];
+	return 0;
+}

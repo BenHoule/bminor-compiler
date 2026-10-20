@@ -1,0 +1,6 @@
+writechar: function void (c: char);
+main: function integer () = {
+	a: integer = 65;
+	writechar(a);
+	return 0;
+}

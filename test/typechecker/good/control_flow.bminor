@@ -1,0 +1,9 @@
+main: function integer () = {
+	i: integer;
+	done: boolean = false;
+	if (done) print "done";
+	if (i == 0) print "zero"; else print "nonzero";
+	for (i = 0; i < 10; i++) print i;
+	for (;;) return 0;
+	return 0;
+}

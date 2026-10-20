@@ -81,6 +81,7 @@ test: $(BIN)
 	@$(BOOK_DIR)/run-tests.sh $(ROOT_DIR)/bminor -scan $(BOOK_DIR)/scanner
 	@$(BOOK_DIR)/run-tests.sh $(ROOT_DIR)/bminor -parse $(BOOK_DIR)/parser
 	@$(BOOK_DIR)/run-tests.sh $(ROOT_DIR)/bminor -print $(BOOK_DIR)/printer
+	@$(BOOK_DIR)/run-tests.sh $(ROOT_DIR)/bminor -typecheck $(BOOK_DIR)/typecheck
 
 valgrind: $(BIN)
 	@BMINOR_VALGRIND=1 $(TEST_DIR)/runtests.sh

@@ -1,0 +1,5 @@
+main: function integer () = {
+	c: carray [3] integer;
+	print #c;
+	return 0;
+}

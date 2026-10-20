@@ -1,0 +1,4 @@
+main: function integer () = {
+	5++;
+	return 0;
+}

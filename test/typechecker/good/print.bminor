@@ -1,0 +1,6 @@
+main: function integer () = {
+	print;
+	print 1, 2.5, true, 'c', "string";
+	print "The temperature is: ", 72, " degrees\n";
+	return 0;
+}

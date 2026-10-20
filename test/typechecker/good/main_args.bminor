@@ -1,0 +1,6 @@
+puts: function void (s: string);
+
+main: function integer (argc: integer, argv: carray [] string) = {
+	puts(argv[0]);
+	return argc;
+}

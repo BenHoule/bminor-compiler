@@ -1,0 +1,14 @@
+main: function integer () = {
+	a: integer;
+	b: integer;
+	c: char = 'q';
+	s: string = "hello";
+	f: boolean;
+	a = b = 3;
+	c = 'r';
+	s = "world";
+	f = a < b;
+	a++;
+	b--;
+	return a;
+}

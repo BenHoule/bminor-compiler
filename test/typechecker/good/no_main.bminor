@@ -1,0 +1,3 @@
+helper: function integer (x: integer) = {
+	return x + 1;
+}

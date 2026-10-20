@@ -1,0 +1,11 @@
+main: function integer () = {
+	i: integer = 1 + 2 * 3 - 4 / 2 % 3;
+	p: integer = 2 ^ 3;
+	d: double = 1.5 * 2.0 - 0.5 / 4.0;
+	n: integer = -i;
+	m: double = -d;
+	b: boolean = i < p && d >= m || !(i == p);
+	c: boolean = 'a' < 'b';
+	e: boolean = d != m;
+	return i;
+}

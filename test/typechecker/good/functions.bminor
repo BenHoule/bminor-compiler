@@ -1,0 +1,22 @@
+writechar: function void (c: char);
+square: function integer (x: integer);
+
+factorial: function integer (n: integer) = {
+	if (n <= 1) return 1;
+	return n * factorial(n - 1);
+}
+
+greet: function void (name: string) = {
+	print "hello ", name, "\n";
+	return;
+}
+
+square: function integer (x: integer) = {
+	return x ^ 2;
+}
+
+main: function integer () = {
+	writechar('A');
+	greet("world");
+	return factorial(5) + square(3);
+}

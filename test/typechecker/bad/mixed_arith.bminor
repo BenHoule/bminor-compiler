@@ -1,0 +1,6 @@
+main: function integer () = {
+	x: integer = 1;
+	d: double = 2.0;
+	print x + d;
+	return 0;
+}

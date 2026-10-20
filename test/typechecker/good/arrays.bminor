@@ -1,0 +1,21 @@
+a: array [3] integer = {1, 2, 3};
+grid: array [2] array [2] boolean = {{true, false}, {false, true}};
+c: carray [2] char = {'x', 'y'};
+
+sum: function integer (v: array [] integer) = {
+	total: integer = 0;
+	i: integer;
+	for (i = 0; i < #v; i++) {
+		total = total + v[i];
+	}
+	return total;
+}
+
+main: function integer () = {
+	local: array [4] double;
+	local[0] = 1.5;
+	x: integer = a[1] + sum(a);
+	ok: boolean = grid[0][1];
+	ch: char = c[1];
+	return x;
+}

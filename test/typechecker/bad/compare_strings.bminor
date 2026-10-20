@@ -1,0 +1,4 @@
+main: function integer () = {
+	if ("a" < "b") print "bad";
+	return 0;
+}

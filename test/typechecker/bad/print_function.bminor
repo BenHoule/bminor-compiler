@@ -1,0 +1,7 @@
+f: function integer () = {
+	return 1;
+}
+main: function integer () = {
+	print f;
+	return 0;
+}

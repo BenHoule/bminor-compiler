@@ -1,0 +1,5 @@
+main: function integer () = {
+	f: integer = 0;
+	if (f) print "bad";
+	return 0;
+}

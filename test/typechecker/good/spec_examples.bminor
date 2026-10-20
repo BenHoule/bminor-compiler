@@ -1,0 +1,7 @@
+main: function integer () = {
+	f: integer = 0;
+	c: char = 'a';
+	if (f == 0) print "ok";
+	if (c == 'a') print "ok";
+	return 0;
+}
