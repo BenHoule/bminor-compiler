@@ -2,6 +2,7 @@
 #include "param_list.h"
 #include "expr.h"
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -74,63 +75,39 @@ bool type_equals(struct type *a, struct type *b) {
   }
 }
 
+static void type_print_affix(const char* prefix, struct type *t, const char* suffix) {
+  if (prefix && *prefix != '\0') printf("%s", prefix);
+  type_print(t);
+  if (suffix && *suffix != '\0') printf("%s", suffix);
+}
+
 // Print a type in a human-readable format.
 void type_print( struct type *t ) {
-  if (!t) {
-    printf("NULL_TYPE");
-    return;
-  }
-  switch (t->kind) {
-    case TYPE_VOID:
-      printf("void");
-      break;
-    case TYPE_BOOLEAN:
-      printf("boolean");
-      break;
-    case TYPE_CHAR:
-      printf("char");
-      break;
-    case TYPE_INTEGER:
-      printf("integer");
-      break;
-    case TYPE_DOUBLE:
-      printf("double");
-      break;
-    case TYPE_STRING:
-      printf("string");
-      break;
-    case TYPE_ARRAY:
-      printf("array [");
-      if (t->size) expr_print(t->size);
-      printf("] ");
-      type_print(t->subtype);
-      break;
-    case TYPE_CARRAY:
-      printf("carray [");
-      if (t->size) expr_print(t->size);
-      printf("] ");
-      type_print(t->subtype);
-      break;
-    case TYPE_FUNCTION:
-      printf("function ");
-      type_print(t->subtype);
-      printf(" (");
-      if (t->params) {
+  for (; t; t = t->subtype) {
+    switch (t->kind) {
+      case TYPE_VOID:    printf("void"   ); break;
+      case TYPE_BOOLEAN: printf("boolean"); break;
+      case TYPE_CHAR:    printf("char"   ); break;
+      case TYPE_INTEGER: printf("integer"); break;
+      case TYPE_DOUBLE:  printf("double" ); break;
+      case TYPE_STRING:  printf("string" ); break;
+      case TYPE_AUTO:    printf("auto"   ); break;
+      case TYPE_CARRAY:  printf("c"); [[fallthrough]];
+      case TYPE_ARRAY:
+        assert(t->subtype);
+        expr_print_affix("array [", t->size, "] ");
+        type_print(t->subtype);
+        break;
+      case TYPE_FUNCTION:
+        assert(t->subtype);
+        type_print_affix("function ", t->subtype, " ");
         param_list_print(t->params);
-        printf(" ");
-      }
-      printf(")");
-      break;
-    case TYPE_AUTO:
-      printf("auto");
-      break;
-    default: unreachable();
+        break;
+      default: unreachable();
+    }
   }
 }
 
 void type_resolve(struct type *t) {
-  while (t) {
-    expr_resolve(t->size);
-    t = t->subtype;
-  }
+  for (;t; t = t->subtype) expr_resolve(t->size);
 }

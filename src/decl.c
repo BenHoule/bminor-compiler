@@ -29,25 +29,21 @@ struct decl * decl_create( char *name, struct type *type, struct expr *value, st
 
 // Print the declaration `d` with the given indentation level.
 void decl_print( struct decl *d, int indent ) {
-  if (!d) {
-    printf("NULL_DECL");
-    return;
-  }
-
-  printf("%s: ", d->name);
-  type_print(d->type);
-  if (d->value) {  // Var initialization
-    printf(" = ");
-    expr_print(d->value);
-  } else if (d->code) {  // Function initialization
-    printf(" = ");
-    stmt_print(d->code, indent);
-    return;
-  }
-  printf(";");
-  if (d->next) {
-    printf("\n%*s", indent * 2, "");
-    decl_print(d->next, indent);
+  for (; d; d = d->next) {
+    printf("%s: ", d->name);
+    type_print(d->type);
+    if (d->value) {  // Var
+      printf(" = ");
+      expr_print(d->value);
+    } else if (d->code) {  // Function
+      printf(" = ");
+      stmt_print(d->code, indent);
+      return;
+    }
+    printf(";");
+    if (d->next) {
+      printf("\n%*s", indent * 2, "");
+    }
   }
 }
 
@@ -127,9 +123,8 @@ static void decl_resolve_func(struct decl *d) {
 }
 
 void decl_resolve( struct decl *d ) {
-  while (d) {
+  for(; d; d = d->next) {
     if (d->type->kind == TYPE_FUNCTION) decl_resolve_func(d);
     else decl_resolve_var(d);
-    d = d->next;
   }
 }

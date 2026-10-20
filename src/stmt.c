@@ -87,84 +87,79 @@ struct stmt * stmt_create_for( struct expr *init_expr, struct expr *cond_expr, s
 
 // Print a statement with the given indentation level.
 void stmt_print( struct stmt *s, int indent ) {
-  if (!s) {
-    printf("NULL_STMT");
-    return;
-  }
+  for (; s; s = s->next) {
+    printf("%*s", indent * 2, "");
 
-  switch (s->kind) {
-    case STMT_DECL: decl_print(s->decl, indent); break;
-    case STMT_EXPR:
-      expr_print(s->expr);
-      printf(";");
-      break;
-    case STMT_IF_ELSE:
-      printf("if (");
-      expr_print(s->cond_expr);
-      printf(") ");
-      if (s->body->kind != STMT_BLOCK) stmt_print(s->body, indent);
-      else stmt_print(s->body, indent);
-      if (s->else_body) {
-        printf(" else ");
-        if (s->else_body->kind != STMT_BLOCK) stmt_print(s->else_body, indent);
-        else stmt_print(s->else_body, indent);
-      }
-      break;
-    case STMT_FOR:
-      printf("for (");
-      if (s->init_expr) expr_print(s->init_expr);
-      printf(";");
-      if (s->cond_expr) {
-        printf(" ");
+    switch (s->kind) {
+      case STMT_DECL: decl_print(s->decl, indent); break;
+      case STMT_EXPR: expr_print_affix("", s->expr, ";"); break;
+      case STMT_IF_ELSE:
+        printf("if (");
         expr_print(s->cond_expr);
-      }
-      printf(";");
-      if (s->loop_expr) {
-        printf(" ");
-        expr_print(s->loop_expr);
-      }
-      printf(") ");
-      if (s->body->kind != STMT_BLOCK) stmt_print(s->body, indent);
-      else stmt_print(s->body, indent);
-      break;
-    case STMT_PRINT:
-      printf("print");
-      if (s->expr) {
-        printf(" ");
-        expr_print(s->expr);
-      }
-      printf(";");
-      break;
-    case STMT_RETURN:
-      printf("return");
-      if (s->expr) {
-        printf(" ");
-        expr_print(s->expr);
-      }
-      printf(";");
-      break;
-    case STMT_BLOCK:
-      indent++;
-      printf("{\n%*s", indent * 2, "");
-      stmt_print(s->block, indent);
-      indent--;
-      printf("\n%*s}", indent * 2, "");
-      break;
-    default: unreachable();
-  }
-  if (s->next) {
-    printf("\n%*s", indent * 2, "");
-    stmt_print(s->next, indent);
+        printf(") ");
+        if (s->body->kind != STMT_BLOCK) stmt_print(s->body, indent);
+        else stmt_print(s->body, indent);
+        if (s->else_body) {
+          printf(" else ");
+          if (s->else_body->kind != STMT_BLOCK) stmt_print(s->else_body, indent);
+          else stmt_print(s->else_body, indent);
+        }
+        break;
+      case STMT_FOR:
+        printf("for (");
+        expr_print(s->init_expr);
+        printf(";");
+        if (s->cond_expr) {
+          printf(" ");
+          expr_print(s->cond_expr);
+        }
+        printf(";");
+        if (s->loop_expr) {
+          printf(" ");
+          expr_print(s->loop_expr);
+        }
+        printf(") ");
+        if (s->body->kind != STMT_BLOCK) stmt_print(s->body, indent);
+        else stmt_print(s->body, indent);
+        break;
+      case STMT_PRINT:
+        printf("print");
+        if (s->expr) {
+          printf(" ");
+          expr_print(s->expr);
+        }
+        printf(";");
+        break;
+      case STMT_RETURN:
+        printf("return");
+        if (s->expr) {
+          printf(" ");
+          expr_print(s->expr);
+        }
+        printf(";");
+        break;
+      case STMT_BLOCK:
+        indent++;
+        printf("{\n%*s", indent * 2, "");
+        stmt_print(s->block, indent);
+        indent--;
+        printf("\n%*s}", indent * 2, "");
+        break;
+      default: unreachable();
+    }
+    if (s->next) {
+      printf("\n%*s", indent * 2, "");
+    }
   }
 }
 
 void stmt_resolve( struct stmt *s ) {
-  while(s) {
+  for(; s; s = s->next) {
     switch (s->kind) {
-      case STMT_DECL: decl_resolve(s->decl); break;
       case STMT_EXPR:
       case STMT_PRINT:
       case STMT_RETURN: expr_resolve(s->expr); break;
+      case STMT_DECL: decl_resolve(s->decl); break;
       case STMT_BLOCK:
         scope_enter();
         stmt_resolve(s->block);
@@ -183,6 +178,5 @@ void stmt_resolve( struct stmt *s ) {
         break;
       default: unreachable();  // Tells compiler to omit bounds check before jump table
     }
-    s = s->next;
   }
 }

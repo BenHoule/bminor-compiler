@@ -24,23 +24,20 @@ struct param_list * param_list_create( char *name, struct type *type, struct par
 
 // Print a parameter list node in a human-readable format.
 void param_list_print( struct param_list *a ) {
-  if (!a) {
-    printf("NULL");
-    return;
+  printf("(");
+  for (; a; a = a->next) {
+    printf("%s: ", a->name);
+    type_print(a->type);
+    if (a->next) printf(", ");
   }
-  printf("%s: ", a->name);
-  type_print(a->type);
-  if (a->next) {
-    printf(", ");
-    param_list_print(a->next);
-  }
+  printf(")");
 }
 
 // TODO: Make iterative
 void param_list_resolve( struct param_list *a ) {
   int param_index = 0;
 
-  while(a) {
+  for(; a; a = a->next) {
     //TODO: Add line/col of declaration to error message (use yyerror?)
     if ((a->symbol = scope_lookup_local(a->name)) != NULL) {
       resolver_error(
@@ -55,6 +52,5 @@ void param_list_resolve( struct param_list *a ) {
       return;
     }
     symbol_print_binding(a->symbol);
-    a = a->next;
   };
 }

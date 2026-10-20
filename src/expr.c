@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <inttypes.h> // PRId64 and PRIu64 macros (for printing int64_t)
+#include <string.h>
 
 // Create a new expression node with the given kind and child expressions.
 struct expr * expr_create( expr_t kind, struct expr *left, struct expr *right ) {
@@ -65,6 +66,12 @@ struct expr * expr_create_true() {
   return e;
 }
 
+void expr_print_affix(const char* prefix, struct expr *e, const char* suffix) {
+  if (prefix && *prefix != '\0') printf("%s", prefix);
+  expr_print(e);
+  if (suffix && *suffix != '\0') printf("%s", suffix);
+}
+
 static void expr_print_binop( struct expr *e, const char *op) {
   printf("(");
   expr_print(e->left);
@@ -72,76 +79,33 @@ static void expr_print_binop( struct expr *e, const char *op) {
   expr_print(e->right);
   printf(")");
 }
+
 // Print the expression `e` in a human-readable format
 void expr_print( struct expr *e ) {
-  if (!e) {
-    printf("(NULL_EXPR)");
-    return;
-  }
+  if (!e) return;
+
   switch (e->kind) {
+    case EXPR_ASGN:expr_print_binop(e, "="); break;
     case EXPR_ADD: expr_print_binop(e, "+"); break;
     case EXPR_SUB: expr_print_binop(e, "-"); break;
     case EXPR_MUL: expr_print_binop(e, "*"); break;
     case EXPR_DIV: expr_print_binop(e, "/"); break;
     case EXPR_MOD: expr_print_binop(e, "%"); break;
     case EXPR_POW: expr_print_binop(e, "^"); break;
-    case EXPR_NEG:
-      printf("-");
-      expr_print(e->left);
-      break;
-    case EXPR_INC:
-      expr_print(e->left);
-      printf("++");
-      break;
-    case EXPR_DEC:
-      expr_print(e->left);
-      printf("--");
-      break;
-    case EXPR_LEN:
-      printf("#");
-      expr_print(e->left);
-      break;
-    case EXPR_LT: expr_print_binop(e, "<" ); break;
-    case EXPR_GT: expr_print_binop(e, ">" ); break;
-    case EXPR_GE: expr_print_binop(e, ">="); break;
-    case EXPR_LE: expr_print_binop(e, "<="); break;
-    case EXPR_EQ: expr_print_binop(e, "=="); break;
-    case EXPR_NE: expr_print_binop(e, "!="); break;
-    case EXPR_AND:expr_print_binop(e, "&&"); break;
-    case EXPR_OR: expr_print_binop(e, "||"); break;
-    case EXPR_NOT:
-      printf("!");
-      expr_print(e->left);
-      break;
-    case EXPR_ASGN: expr_print_binop(e, "="); break;
-    case EXPR_IDX:
-      expr_print(e->left);
-      printf("[");
-      expr_print(e->right);
-      printf("]");
-      break;
-    case EXPR_CALL:
-      expr_print(e->left);
-      printf("(");
-      expr_print(e->right);
-      printf(")");
-      break;
-    case EXPR_ARG:
-      expr_print(e->left);
-      if (e->right) {
-        printf(", ");
-        expr_print(e->right);
-      }
-      break;
-    case EXPR_INIT:
-      printf("{");
-      expr_print(e->left);
-      if (e->right) {
-        printf(", ");
-        expr_print(e->right);
-      }
-      printf("}");
-      break;
+    case EXPR_LT:  expr_print_binop(e, "<"); break;
+    case EXPR_GT:  expr_print_binop(e, ">"); break;
+    case EXPR_GE:  expr_print_binop(e, ">="); break;
+    case EXPR_LE:  expr_print_binop(e, "<="); break;
+    case EXPR_EQ:  expr_print_binop(e, "=="); break;
+    case EXPR_NE:  expr_print_binop(e, "!="); break;
+    case EXPR_OR:  expr_print_binop(e, "||"); break;
+    case EXPR_AND: expr_print_binop(e, "&&"); break;
+    case EXPR_NEG: expr_print_affix("-", e->left, ""); break;
+    case EXPR_LEN: expr_print_affix("#", e->left, ""); break;
+    case EXPR_NOT: expr_print_affix("!", e->left, ""); break;
+    case EXPR_INC: expr_print_affix("", e->left, "++"); break;
+    case EXPR_DEC: expr_print_affix("", e->left, "--"); break;
+    case EXPR_NAME:   printf("%s", e->identifier.name  ); break;
     case EXPR_INT:    printf("%" PRId64, e->int_literal); break;
     case EXPR_DOUBLE: printf("%.17g", e->double_literal); break;
     case EXPR_BOOL:   printf("%s", e->bool_literal ? "true" : "false"); break;
@@ -151,7 +115,26 @@ void expr_print( struct expr *e ) {
       string_decode(e->string_literal, decoded_str, sizeof(decoded_str));
       printf("%s", decoded_str);
       break;
-    case EXPR_NAME: printf("%s", e->identifier.name); break;
+    case EXPR_IDX:
+      expr_print(e->left);
+      expr_print_affix("[", e->right, "]");
+      break;
+    case EXPR_CALL:
+      expr_print(e->left);
+      expr_print_affix("(", e->right, ")");
+      break;
+    case EXPR_ARG:
+      expr_print(e->left);
+      if (e->right) printf(", ");
+      expr_print(e->right);
+      break;
+    case EXPR_INIT:
+      printf("{");
+      expr_print(e->left);
+      if (e->right) printf(", ");
+      expr_print(e->right);
+      printf("}");
+      break;
     default: unreachable();
   }
 }
