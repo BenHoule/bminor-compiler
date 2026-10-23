@@ -107,7 +107,7 @@ block_item      : decl
 func_type       : TOKEN_FUNCTION return_type '(' opt_param_list ')'
                 ;
 
-return_type     : atomic_type
+return_type     : primitive_type
                 | TOKEN_VOID
                 | TOKEN_AUTO
                 ;
@@ -123,7 +123,7 @@ param_list      : param
 param           : TOKEN_IDENTIFIER ':' param_type
                 ;
 
-param_type      : atomic_type         /* No lengths on array params */
+param_type      : primitive_type         /* No lengths on array params */
                 | TOKEN_ARRAY '[' ']' param_type
                 | TOKEN_CARRAY '[' ']' param_type
                 ;
@@ -132,12 +132,12 @@ var_type        : simple_type
                 | TOKEN_AUTO
                 ;
 
-simple_type     : atomic_type
+simple_type     : primitive_type
                 | TOKEN_ARRAY '[' expr ']' simple_type
                 | TOKEN_CARRAY '[' expr ']' simple_type
                 ;
 
-atomic_type     : TOKEN_BOOLEAN
+primitive_type  : TOKEN_BOOLEAN
                 | TOKEN_CHAR
                 | TOKEN_DOUBLE
                 | TOKEN_INTEGER

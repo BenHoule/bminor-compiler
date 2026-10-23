@@ -10,7 +10,7 @@ typedef enum {
 	TYPE_ARRAY,
   TYPE_CARRAY,
 	TYPE_FUNCTION,
-  TYPE_AUTO
+  TYPE_AUTO  // type_primitive() relies on TYPE_AUTO being last
 } type_t;
 
 struct param_list;
@@ -40,3 +40,6 @@ bool type_equals(struct type *a, struct type *b);
 
 void type_print( struct type *t );
 void type_resolve(struct type *t);
+
+bool type_is_primitive(const struct type *t);
+struct type * type_primitive(type_t kind);

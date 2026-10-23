@@ -41,7 +41,7 @@ int yyerror(const char *msg);
 %type <expr> init init_list expr expr_list opt_expr opt_expr_list
 %type <expr> or_expr and_expr cmp_expr add_expr mul_expr unary_expr len_expr
 %type <expr> pow_expr postfix_expr primary_expr
-%type <type> var_type simple_type atomic_type func_type return_type param_type
+%type <type> var_type simple_type primitive_type func_type return_type param_type
 %type <params> param opt_param_list param_list
 /* Associate non-terminals/tokens with union fields */
 
@@ -53,7 +53,7 @@ int yyerror(const char *msg);
 %token <ival> TOKEN_INTEGER_LITERAL "integer_literal"
 %token <sval> TOKEN_STRING_LITERAL "string_literal"
 
-/* ATOMIC TYPE TOKENS */
+/* PRIMITIVE TYPE TOKENS */
 %token TOKEN_BOOLEAN "boolean"
 %token TOKEN_CHAR "char"
 %token TOKEN_DOUBLE "double"
@@ -61,7 +61,7 @@ int yyerror(const char *msg);
 %token TOKEN_INTEGER "integer"
 %token TOKEN_STRING "string"
 
-/* NON-ATOMIC TYPE TOKENS */
+/* NON-PRIMITIVE TYPE TOKENS */
 %token TOKEN_ARRAY "array"
 %token TOKEN_AUTO "auto"
 %token TOKEN_CARRAY  "carray"
@@ -129,7 +129,7 @@ block_item      : decl                          { $$ = stmt_create_decl($1, NULL
 func_type       : TOKEN_FUNCTION return_type '(' opt_param_list ')'     { $$ = type_create_function($2, $4); }
                 ;
 
-return_type     : atomic_type
+return_type     : primitive_type
                 | TOKEN_VOID          { $$ = type_create_void(); }
                 | TOKEN_AUTO          { $$ = type_create_auto(); }
                 ;
@@ -145,7 +145,7 @@ param_list      : param
 param           : TOKEN_IDENTIFIER ':' param_type   { $$ = param_list_create($1, $3, NULL); }
                 ;
 
-param_type      : atomic_type         /* No lengths on array params */
+param_type      : primitive_type         /* No lengths on array params */
                 | TOKEN_ARRAY '[' ']' param_type    { $$ = type_create_array($4, NULL); }
                 | TOKEN_CARRAY '[' ']' param_type   { $$ = type_create_carray($4, NULL); }
                 ;
@@ -154,12 +154,12 @@ var_type        : simple_type
                 | TOKEN_AUTO        { $$ = type_create_auto(); }
                 ;
 
-simple_type     : atomic_type
+simple_type     : primitive_type
                 | TOKEN_ARRAY '[' expr ']' simple_type     { $$ = type_create_array($5, $3); }
                 | TOKEN_CARRAY '[' expr ']' simple_type    { $$ = type_create_carray($5, $3); }
                 ;
 
-atomic_type     : TOKEN_BOOLEAN       { $$ = type_create_boolean(); }
+primitive_type  : TOKEN_BOOLEAN       { $$ = type_create_boolean(); }
                 | TOKEN_CHAR          { $$ = type_create_char(); }
                 | TOKEN_DOUBLE        { $$ = type_create_double(); }
                 | TOKEN_INTEGER       { $$ = type_create_integer(); }

@@ -9,9 +9,9 @@ unsigned int resolver_error_count() {
 }
 
 void resolver_error(const char *fmt, ...) {
-  va_list args;
   err_count++;
-
+  fprintf(stderr, "resolver error: ");
+  va_list args;
   va_start(args, fmt);
   vfprintf(stderr, fmt, args);
   va_end(args);

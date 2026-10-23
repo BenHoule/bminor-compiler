@@ -1,6 +1,7 @@
 #include "type.h"
-#include "param_list.h"
 #include "expr.h"
+#include "param_list.h"
+#include "typecheck.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -49,6 +50,13 @@ struct type * type_create_function(struct type *subtype, struct param_list *para
 }
 struct type * type_create_auto() {
   return type_create(TYPE_AUTO, NULL, NULL, NULL);
+}
+
+struct type * type_primitive(type_t kind) {
+  // NOTE: Relies on TYPE_AUTO being the last type in the enum
+  static struct type primitives[TYPE_AUTO + 1] = {0};
+  primitives[kind].kind = kind;
+  return &primitives[kind];
 }
 
 //TODO: Handle 'auto' (currently treated as its own type)
@@ -110,4 +118,29 @@ void type_print( struct type *t ) {
 
 void type_resolve(struct type *t) {
   for (;t; t = t->subtype) expr_resolve(t->size);
+}
+
+bool type_is_primitive(const struct type *t) {
+  switch (t->kind) {
+    case TYPE_BOOLEAN:
+    case TYPE_CHAR:
+    case TYPE_INTEGER:
+    case TYPE_DOUBLE:
+    case TYPE_STRING:
+      return true;
+    default:
+      return false;
+  }
+}
+
+void type_typecheck(struct type *t) {
+  for (; t; t = t->subtype) {
+    if (!t->size) continue;
+    struct type *s = expr_typecheck(t->size);
+    if (s && s->kind != TYPE_INTEGER) {
+      typecheck_error("Array size must be an integer");
+    } else if (t->size->kind == EXPR_INT && t->size->int_literal <= 0) {
+      typecheck_error("Array size must be a positive integer");
+    }
+  }
 }

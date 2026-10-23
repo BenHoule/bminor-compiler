@@ -72,5 +72,10 @@ struct expr * expr_create_true();
 
 void expr_print( struct expr *e );
 void expr_print_affix(const char* prefix, struct expr *e, const char* suffix);
-
 void expr_resolve( struct expr *e );
+
+struct type;  // Forward declaration
+
+struct type * expr_typecheck( struct expr *e );
+void expr_typecheck_init( struct type *want, struct expr *val );
+bool expr_is_constant( const struct expr *e );

@@ -98,16 +98,23 @@ int main(int argc, char *argv[]) {
       printf("\n");
       break;
     case STAGE_RESOLVE:
-      if (yyparse() || scanner_error_count() || parser_error_count() ||
-          resolver_error_count()) {
+      if (yyparse() || scanner_error_count() || parser_error_count()) {
         fclose(input_file);
         return EXIT_COMPILE_ERROR;
       }
       scope_enter();
       decl_resolve(parser_result);
       scope_exit();
+      if (resolver_error_count()) return EXIT_COMPILE_ERROR;
       break;
     case STAGE_TYPECHECK:
+      if (yyparse() || scanner_error_count() || parser_error_count() ||
+          resolver_error_count()) {
+        fclose(input_file);
+        return EXIT_COMPILE_ERROR;
+      }
+      /* Typecheck here */
+      break;
     case STAGE_CODEGEN:
       fprintf(stderr, "bminor: stage not implemented (%s)\n", argv[1]);
       fclose(input_file);
@@ -120,6 +127,5 @@ int main(int argc, char *argv[]) {
   }
   fclose(input_file);
 
-  return scanner_error_count() + parser_error_count() +
-    resolver_error_count() != 0 ? EXIT_COMPILE_ERROR : EXIT_SUCCESS;
+  return EXIT_SUCCESS;
 }

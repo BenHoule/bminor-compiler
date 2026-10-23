@@ -1,7 +1,12 @@
 #include "expr.h"
+#include "param_list.h"
 #include "resolver.h"
 #include "scope.h"
 #include "string_util.h"
+#include "symbol.h"
+#include "type.h"
+#include "typecheck.h"
+
 
 #include <assert.h>
 #include <stdint.h>
@@ -175,5 +180,267 @@ void expr_resolve( struct expr *e ) {
     }
     pre->right = e;  // Link (until we finish traversing left subtree)
     e = e->left;
+  }
+}
+
+static const char * expr_op_name( expr_t kind ) {
+  switch (kind) {
+    case EXPR_ADD: return "+";   case EXPR_SUB: return "-";
+    case EXPR_MUL: return "*";   case EXPR_DIV: return "/";
+    case EXPR_MOD: return "%%";  case EXPR_POW: return "^";
+    case EXPR_NEG: return "-";   case EXPR_NOT: return "!";
+    case EXPR_INC: return "++";  case EXPR_DEC: return "--";
+    case EXPR_LEN: return "#";
+    case EXPR_LT:  return "<";   case EXPR_GT:  return ">";
+    case EXPR_LE:  return "<=";  case EXPR_GE:  return ">=";
+    case EXPR_EQ:  return "==";  case EXPR_NE:  return "!=";
+    case EXPR_AND: return "&&";  case EXPR_OR:  return "||";
+    case EXPR_ASGN: return "=";
+    default: return "?";
+  }
+}
+
+static bool expr_is_lvalue(const struct expr *e) {
+  if (!e) return false;
+  return e->kind == EXPR_IDX ||
+         e->kind == EXPR_NAME && e->identifier.symbol &&
+         e->identifier.symbol->type->kind != TYPE_FUNCTION;  // This is gross: fix later
+}
+
+static struct type * expr_typecheck_binary(struct expr *e, bool allow_non_numeric) {
+  if (!e) return NULL;
+  struct type *l = expr_typecheck(e->left);
+  struct type *r = expr_typecheck(e->right);
+  if (!l || !r) return NULL;
+  if (!type_equals(l, r)) {
+    typecheck_error("'%s' requires matching operand types"
+                    "(no implicit conversion)",
+                    expr_op_name(e->kind));
+    return NULL;
+  }
+  switch (l->kind) {
+    case TYPE_INTEGER: break;
+    case TYPE_DOUBLE: if (e->kind == EXPR_MOD) {  // Matches C/C++ [requires fmod()]
+        typecheck_error("%% cannot operate on double operands");
+        return NULL;
+      }  // NOTE: Could check type on code generation & use fmod() for doubles
+      break;
+
+    case TYPE_VOID:
+    case TYPE_ARRAY:
+    case TYPE_CARRAY:
+    case TYPE_FUNCTION:
+      typecheck_error("'%s' cannot operate on non-primitive types",
+                      expr_op_name(e->kind));
+      return NULL;
+
+    default:
+      if (allow_non_numeric) break;
+      typecheck_error("'%s' requires numeric operands",
+                      expr_op_name(e->kind));
+      return NULL;
+  }
+
+  return (e->kind <= EXPR_POW) ? l : type_primitive(TYPE_BOOLEAN);
+}
+
+static struct type * expr_typecheck_logical(struct expr *e) {
+  if (!e) return NULL;
+  struct type *l = expr_typecheck(e->left);
+  struct type *r = expr_typecheck(e->right);
+  if (!l || !r) return NULL;
+  if (l->kind != TYPE_BOOLEAN || r->kind != TYPE_BOOLEAN) {
+    typecheck_error("logical operator '%s' requires boolean operands",
+                    expr_op_name(e->kind));
+    return NULL;
+  }
+  return type_primitive(TYPE_BOOLEAN);
+}
+
+static struct type * expr_typecheck_call(struct expr *e) {
+  if (!e) return NULL;
+  struct type *t = expr_typecheck(e->left);
+  if (!t || t->kind != TYPE_FUNCTION) {
+    typecheck_error("call requires a function");
+    return t ? t->subtype : NULL;
+  }
+  const struct param_list *param = t->params;
+  int index = 1;
+  for (struct expr *arg = e->right; arg; arg = arg->right, index++) {
+    if (!param) {
+      typecheck_error("too many arguments in function call");
+      return t->subtype;
+    }
+
+    struct type *arg_type = expr_typecheck(arg);
+    if (!type_equals(arg_type, param->type))
+      typecheck_error("argument %d has incorrect type", index);
+
+    param = param->next;
+  }
+  if (param) typecheck_error("too few arguments in function call");
+  return t->subtype;
+}
+
+
+// Returns NULL when `e` contains an error that has already been reported
+struct type * expr_typecheck(struct expr *e) {
+  if (!e) return NULL;
+  switch (e->kind) {
+    case EXPR_ADD:
+    case EXPR_SUB:
+    case EXPR_MUL:
+    case EXPR_DIV:
+    case EXPR_MOD:
+    case EXPR_POW:
+    case EXPR_LT:
+    case EXPR_GT:
+    case EXPR_LE:
+    case EXPR_GE: return expr_typecheck_binary(e, false);
+
+    case EXPR_EQ:
+    case EXPR_NE: return expr_typecheck_binary(e, true);
+
+    case EXPR_AND:
+    case EXPR_OR: return expr_typecheck_logical(e);
+
+    case EXPR_NOT: {
+      struct type *t = expr_typecheck(e->left);
+      if (t && t->kind != TYPE_BOOLEAN) {
+        typecheck_error("logical NOT ('!') requires a boolean operand");
+        return NULL;
+      }
+      return t;
+    }
+    case EXPR_NEG: {
+      struct type *t = expr_typecheck(e->left);
+      if (t && t->kind != TYPE_INTEGER && t->kind != TYPE_DOUBLE) {
+        typecheck_error("negation ('-') requires an integer or double operand");
+        return NULL;
+      }
+      return t;
+    }
+    case EXPR_INC:
+    case EXPR_DEC: {
+      struct type *t = expr_typecheck(e->left);
+      if (!t) return NULL;
+      if (!expr_is_lvalue(e->left)) {
+        typecheck_error("'%s' requires an lvalue", expr_op_name(e->kind));
+        return NULL;
+      }
+      if (t->kind != TYPE_INTEGER) {
+        typecheck_error("'%s' requires an integer", expr_op_name(e->kind));
+        return NULL;
+      }
+      return t;
+    }
+    case EXPR_LEN: {
+      struct type *t = expr_typecheck(e->left);
+      if (t && t->kind != TYPE_ARRAY) {
+        typecheck_error("length operator ('#') requires an array");
+        return NULL;
+      }
+      return t ? type_primitive(TYPE_INTEGER) : NULL;
+    }
+    case EXPR_ASGN: {
+      struct type *l = expr_typecheck(e->left);
+      struct type *r = expr_typecheck(e->right);
+      if (!l || !r) return NULL;
+      if (!expr_is_lvalue(e->left)) {
+        typecheck_error("left side of '=' is not assignable");
+        return NULL;
+      }
+      if (!type_is_primitive(l)) {
+        typecheck_error("left side of '=' must be a primitive type");
+        return NULL;
+      }
+      if (!type_equals(l, r)) {
+        typecheck_error("types must match for assignment");
+        return NULL;
+      }
+      return l;
+    }
+    case EXPR_IDX: {
+      struct type *a = expr_typecheck(e->left);
+      struct type *i = expr_typecheck(e->right);
+      if (!a || !i) return NULL;
+      if (a->kind != TYPE_ARRAY) {
+        typecheck_error("indexing requires an array");
+        return NULL;
+      }
+      if (i->kind != TYPE_INTEGER) {
+        typecheck_error("array index must be an integer");
+        return NULL;
+      }
+      return a->subtype;
+
+    }
+    case EXPR_CALL: return expr_typecheck_call(e);
+
+    case EXPR_ARG:
+    case EXPR_INIT:
+      typecheck_error("list is not valid in this context");
+      return NULL;
+
+    case EXPR_INT:    return type_primitive(TYPE_INTEGER);
+    case EXPR_BOOL:   return type_primitive(TYPE_BOOLEAN);
+    case EXPR_CHAR:   return type_primitive(TYPE_CHAR);
+    case EXPR_STR:    return type_primitive(TYPE_STRING);
+    case EXPR_DOUBLE: return type_primitive(TYPE_DOUBLE);
+    case EXPR_NAME:   return e->identifier.symbol->type;
+  }
+  unreachable();
+}
+
+void expr_typecheck_init(struct type *want, struct expr *val) {
+  bool is_array = want->kind == TYPE_ARRAY || want->kind == TYPE_CARRAY;
+
+  if (val->kind != EXPR_INIT) {
+    if (is_array) {
+      typecheck_error("array must be initialized with `{...}`");
+      return;
+    }
+    struct type *got = expr_typecheck(val);
+    if (got && !type_equals(want, got)) {
+      typecheck_error("array initialized with incorrect type");
+    }
+    return;
+  }
+  if ((!is_array)) {
+    typecheck_error("non-array type cannot be initialized with `{...}`");
+    return;
+  }
+
+  // uint64_t since it is the type used by ints (which determine array sizes)
+  uint64_t count = 0;
+  for (const struct expr *a = val->left; a; a = a->right) {
+    expr_typecheck_init(want->subtype, a->left);
+    count++;
+  }
+  if (want->size && want->size->kind == EXPR_INT &&
+      want->size->int_literal != count) {
+    typecheck_error("array of size %" PRIu64 " given %" PRIu64 " initializers",
+                    want->size->int_literal, count);
+  }
+}
+
+bool expr_is_constant(const struct expr *e) {
+  if (!e) return false;
+  switch (e->kind) {
+    case EXPR_INT:
+    case EXPR_BOOL:
+    case EXPR_CHAR:
+    case EXPR_STR:
+    case EXPR_DOUBLE:
+      return true;
+    case EXPR_NEG:
+      return e->left->kind == EXPR_INT || e->left->kind == EXPR_BOOL;
+    case EXPR_INIT:
+      for (const struct expr *a = e->left; a; a = a->right) {
+        if (!expr_is_constant(a->left)) return false;
+      }
+      return true;
+    default:
+      return false;
   }
 }
