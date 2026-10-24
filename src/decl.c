@@ -6,10 +6,12 @@
 #include "symbol.h"
 #include "scope.h"
 #include "type.h"
+#include "typecheck.h"
 
 #include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 // Create a new declaration node with the given properties.
 struct decl * decl_create( char *name, struct type *type, struct expr *value, struct stmt *code, struct decl *next ) {
@@ -126,5 +128,52 @@ void decl_resolve( struct decl *d ) {
   for(; d; d = d->next) {
     if (d->type->kind == TYPE_FUNCTION) decl_resolve_func(d);
     else decl_resolve_var(d);
+  }
+}
+
+static void decl_typecheck_variable(struct decl *d) {
+  type_typecheck(d->type);
+  if (d->value && d->symbol->kind == SYMBOL_GLOBAL && !expr_is_constant(d->value)) {
+    typecheck_error("Global variable '%s' initializer must be constant", d->name);
+    return;
+  }
+
+  if (d->type->kind == TYPE_AUTO) {
+    if (!d->value || d->value->kind == EXPR_INIT) {
+      typecheck_error("Cannot infer type for '%s'", d->name);
+      return;
+    }
+
+    struct type *t = expr_typecheck(d->value);
+    if (!type_is_primitive(t)) {
+        typecheck_error("Cannot infer type for '%s' (non-primitive)", d->name);
+        return;
+    }
+
+    d->type = d->symbol->type = t;
+    return;
+  }
+  if (d->value) expr_typecheck_init(d->type, d->value);
+}
+
+static void decl_typecheck_function(struct decl *d) {
+  struct type *ftype = d->symbol->type;
+  if (d->code) {
+    stmt_typecheck(d->code->block, ftype);
+    if (ftype->subtype->kind == TYPE_AUTO) {
+      ftype->subtype = type_primitive(TYPE_VOID);
+    }
+    d->type->subtype = ftype->subtype;
+  }
+
+  if (strcmp(d->name, "main") == 0 && ftype->subtype->kind != TYPE_INTEGER) {
+    typecheck_error("'main' must return an integer");
+  }
+}
+
+void decl_typecheck( struct decl *d ) {
+  for (; d; d = d->next) {
+    if (d->type->kind == TYPE_FUNCTION) decl_typecheck_function(d);
+    else decl_typecheck_variable(d);
   }
 }

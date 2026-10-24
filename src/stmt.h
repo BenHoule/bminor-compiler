@@ -57,3 +57,7 @@ struct stmt * stmt_create_for( struct expr *init_expr, struct expr *cond_expr, s
 
 void stmt_print( struct stmt *s, int indent );
 void stmt_resolve( struct stmt *s );
+
+struct type;
+
+void stmt_typecheck( struct stmt *s, struct type *ftype );

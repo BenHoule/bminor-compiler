@@ -3,6 +3,8 @@
 #include "expr.h"
 #include "resolver.h"
 #include "scope.h"
+#include "type.h"
+#include "typecheck.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -177,6 +179,57 @@ void stmt_resolve( struct stmt *s ) {
         stmt_resolve(s->body);
         break;
       default: unreachable();  // Tells compiler to omit bounds check before jump table
+    }
+  }
+}
+
+static void stmt_expect_boolean(struct expr *e, const char *context) {
+  struct type *t = expr_typecheck(e);
+  if (t && t->kind != TYPE_BOOLEAN) {
+    typecheck_error("'%s' requires a boolean expression", context);
+  }
+}
+
+static void stmt_typecheck_return(struct stmt *s, struct type *ftype) {
+  if (!s || !ftype) return;
+  struct type *t = s->expr ? expr_typecheck(s->expr) : type_primitive(TYPE_VOID);
+  if (!t) return;
+  if (ftype->subtype->kind == TYPE_AUTO) {
+    ftype->subtype = t;  // First return determines the type
+    return;
+  }
+  if (!type_equals(t, ftype->subtype)) {
+    typecheck_error("return type does not match function type");
+  }
+}
+
+void stmt_typecheck( struct stmt *s, struct type *ftype ) {
+  for (; s; s = s->next) {
+    switch (s->kind) {
+      case STMT_DECL: decl_typecheck(s->decl); break;
+      case STMT_EXPR: expr_typecheck(s->expr); break;
+      case STMT_BLOCK: stmt_typecheck(s->block, ftype); break;
+      case STMT_RETURN: stmt_typecheck_return(s, ftype); break;
+      case STMT_PRINT:
+        for (struct expr *a = s->expr; a; a = a->right) {
+          struct type *t = expr_typecheck(a->left);
+          if (t && !type_is_primitive(t)) {
+            typecheck_error("'print' requires primitive type");
+          }
+        }
+        break;
+      case STMT_IF_ELSE:
+        stmt_expect_boolean(s->cond_expr, "if");
+        stmt_typecheck(s->body, ftype);
+        stmt_typecheck(s->else_body, ftype);
+        break;
+      case STMT_FOR:
+        expr_typecheck(s->init_expr);
+        if (s->cond_expr) stmt_expect_boolean(s->cond_expr, "for");
+        expr_typecheck(s->loop_expr);
+        stmt_typecheck(s->body, ftype);
+        break;
+      default: unreachable();
     }
   }
 }

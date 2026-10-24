@@ -203,8 +203,9 @@ static const char * expr_op_name( expr_t kind ) {
 static bool expr_is_lvalue(const struct expr *e) {
   if (!e) return false;
   return e->kind == EXPR_IDX ||
-         e->kind == EXPR_NAME && e->identifier.symbol &&
-         e->identifier.symbol->type->kind != TYPE_FUNCTION;  // This is gross: fix later
+        (e->kind == EXPR_NAME && e->identifier.symbol &&
+         e->identifier.symbol->type->kind != TYPE_FUNCTION &&
+         e->identifier.symbol->type->kind != TYPE_VOID);  // This is gross: fix later
 }
 
 static struct type * expr_typecheck_binary(struct expr *e, bool allow_non_numeric) {
@@ -220,10 +221,11 @@ static struct type * expr_typecheck_binary(struct expr *e, bool allow_non_numeri
   }
   switch (l->kind) {
     case TYPE_INTEGER: break;
-    case TYPE_DOUBLE: if (e->kind == EXPR_MOD) {  // Matches C/C++ [requires fmod()]
-        typecheck_error("%% cannot operate on double operands");
+    case TYPE_DOUBLE: if (e->kind == EXPR_MOD || e->kind == EXPR_POW) {  // Matches C/C++
+        typecheck_error("%s cannot operate on double operands",
+                        expr_op_name(e->kind));
         return NULL;
-      }  // NOTE: Could check type on code generation & use fmod() for doubles
+      }  // NOTE: Could check type on code generation & use fmod()/pow() for doubles
       break;
 
     case TYPE_VOID:
@@ -272,8 +274,8 @@ static struct type * expr_typecheck_call(struct expr *e) {
       return t->subtype;
     }
 
-    struct type *arg_type = expr_typecheck(arg);
-    if (!type_equals(arg_type, param->type))
+    struct type *arg_type = expr_typecheck(arg->left);
+    if (arg_type && !type_equals(arg_type, param->type))
       typecheck_error("argument %d has incorrect type", index);
 
     param = param->next;
@@ -350,10 +352,6 @@ struct type * expr_typecheck(struct expr *e) {
         typecheck_error("left side of '=' is not assignable");
         return NULL;
       }
-      if (!type_is_primitive(l)) {
-        typecheck_error("left side of '=' must be a primitive type");
-        return NULL;
-      }
       if (!type_equals(l, r)) {
         typecheck_error("types must match for assignment");
         return NULL;
@@ -361,19 +359,19 @@ struct type * expr_typecheck(struct expr *e) {
       return l;
     }
     case EXPR_IDX: {
-      struct type *a = expr_typecheck(e->left);
-      struct type *i = expr_typecheck(e->right);
-      if (!a || !i) return NULL;
-      if (a->kind != TYPE_ARRAY) {
+      struct type *arr = expr_typecheck(e->left);
+      struct type *init = expr_typecheck(e->right);
+      if (!arr || !init) return NULL;
+      if (arr->kind != TYPE_ARRAY && arr->kind != TYPE_CARRAY) {
         typecheck_error("indexing requires an array");
         return NULL;
       }
-      if (i->kind != TYPE_INTEGER) {
+      if (init->kind != TYPE_INTEGER) {
         typecheck_error("array index must be an integer");
         return NULL;
       }
-      return a->subtype;
-
+      type_typecheck(arr->subtype);
+      return arr->subtype;
     }
     case EXPR_CALL: return expr_typecheck_call(e);
 
@@ -411,15 +409,15 @@ void expr_typecheck_init(struct type *want, struct expr *val) {
     return;
   }
 
-  // uint64_t since it is the type used by ints (which determine array sizes)
-  uint64_t count = 0;
+  // int64_t since it is the type used by ints (which determine array sizes)
+  int64_t count = 0;
   for (const struct expr *a = val->left; a; a = a->right) {
     expr_typecheck_init(want->subtype, a->left);
     count++;
   }
   if (want->size && want->size->kind == EXPR_INT &&
       want->size->int_literal != count) {
-    typecheck_error("array of size %" PRIu64 " given %" PRIu64 " initializers",
+    typecheck_error("array of size %" PRId64 " given %" PRId64 " initializers",
                     want->size->int_literal, count);
   }
 }

@@ -3,7 +3,7 @@
 x: integer = 5;
 y: integer = 10;
 
-main: function void () =
+main: function integer () =
 {
 	x: integer = 5;
 	y: integer = 10;
@@ -16,6 +16,7 @@ main: function void () =
 		}
 		y = x + y;
 	}
+  return 0;
 }
-	
+
 

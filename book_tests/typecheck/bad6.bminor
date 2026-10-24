@@ -4,9 +4,10 @@ test1: function integer (a:integer, b:integer);
 test2: function boolean (a:integer, b:integer);
 test3: function string (a:integer);
 
-main: function void () =
+main: function integer () =
 {
 	str: string = "hi";
+  return 0;
 }
 
 /* Parameter type differs from prototype. */
@@ -19,7 +20,7 @@ test3: function string (a:boolean) =
 /* Return type differs from prototype. */
 
 test2: function integer (a:integer, b:integer) =
-{ 
+{
 	return a + b;
 }
 

@@ -19,8 +19,16 @@ test3: function char (a:integer)=
 	}
 }
 
-main:function void ()=
+main:function integer ()=
 {
 	print test1(10,20), test2(30,40), test3(10), "\n";
+  return 0;
 }
+
+// DEPRECATED - main is supposed to return an integer (?)
+//
+// main:function void ()=
+// {
+// 	print test1(10,20), test2(30,40), test3(10), "\n";
+// }
 

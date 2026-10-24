@@ -91,28 +91,26 @@ static void type_print_affix(const char* prefix, struct type *t, const char* suf
 
 // Print a type in a human-readable format.
 void type_print( struct type *t ) {
-  for (; t; t = t->subtype) {
-    switch (t->kind) {
-      case TYPE_VOID:    printf("void"   ); break;
-      case TYPE_BOOLEAN: printf("boolean"); break;
-      case TYPE_CHAR:    printf("char"   ); break;
-      case TYPE_INTEGER: printf("integer"); break;
-      case TYPE_DOUBLE:  printf("double" ); break;
-      case TYPE_STRING:  printf("string" ); break;
-      case TYPE_AUTO:    printf("auto"   ); break;
-      case TYPE_CARRAY:  printf("c"); [[fallthrough]];
-      case TYPE_ARRAY:
-        assert(t->subtype);
-        expr_print_affix("array [", t->size, "] ");
-        type_print(t->subtype);
-        break;
-      case TYPE_FUNCTION:
-        assert(t->subtype);
-        type_print_affix("function ", t->subtype, " ");
-        param_list_print(t->params);
-        break;
-      default: unreachable();
-    }
+  switch (t->kind) {
+    case TYPE_VOID:    printf("void"   ); break;
+    case TYPE_BOOLEAN: printf("boolean"); break;
+    case TYPE_CHAR:    printf("char"   ); break;
+    case TYPE_INTEGER: printf("integer"); break;
+    case TYPE_DOUBLE:  printf("double" ); break;
+    case TYPE_STRING:  printf("string" ); break;
+    case TYPE_AUTO:    printf("auto"   ); break;
+    case TYPE_CARRAY:  printf("c"); [[fallthrough]];
+    case TYPE_ARRAY:
+      assert(t->subtype);
+      expr_print_affix("array [", t->size, "] ");
+      type_print(t->subtype);
+      break;
+    case TYPE_FUNCTION:
+      assert(t->subtype);
+      type_print_affix("function ", t->subtype, " ");
+      param_list_print(t->params);
+      break;
+    default: unreachable();
   }
 }
 
@@ -121,6 +119,7 @@ void type_resolve(struct type *t) {
 }
 
 bool type_is_primitive(const struct type *t) {
+  if (!t) return false;
   switch (t->kind) {
     case TYPE_BOOLEAN:
     case TYPE_CHAR:
@@ -132,7 +131,6 @@ bool type_is_primitive(const struct type *t) {
       return false;
   }
 }
-
 void type_typecheck(struct type *t) {
   for (; t; t = t->subtype) {
     if (!t->size) continue;

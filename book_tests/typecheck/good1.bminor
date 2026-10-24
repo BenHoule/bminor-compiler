@@ -3,9 +3,10 @@
 x: integer = 5;
 y: integer = 10;
 
-main: function void ()=
+main: function integer () =
 {
 	x: integer = y * 10 + 15 - 4;
+  return 0;
 }
-	
+
 

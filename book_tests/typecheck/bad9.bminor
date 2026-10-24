@@ -2,9 +2,10 @@
 
 x:array [5] integer = {1,2,3,4,5};
 
-main: function void () =
+main: function integer () =
 {
 	x[true] = intFxn();
+  return 0;
 }
 
 intFxn: function integer ()=

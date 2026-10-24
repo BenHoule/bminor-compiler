@@ -2,12 +2,13 @@
 
 y:integer = 10;
 
-main: function void () =
+main: function integer () =
 {
 	if(y > 5 && 'a' || true)
 	{
 		print "ok";
 	}
+  return 0;
 }
-	
+
 

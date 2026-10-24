@@ -43,3 +43,4 @@ void type_resolve(struct type *t);
 
 bool type_is_primitive(const struct type *t);
 struct type * type_primitive(type_t kind);
+void type_typecheck(struct type *t);

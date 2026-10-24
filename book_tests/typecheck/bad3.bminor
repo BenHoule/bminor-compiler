@@ -2,19 +2,20 @@
 
 y: integer = 10;
 
-main: function void ()=
+main: function integer ()=
 {
 	y: integer = 10;
 	{
-		
+
 		y: integer = 10;
 		{
-			
+
 			x: integer = 5;
 			y: integer = 10;
 		}
 		y = x + y;
 	}
+  return 0;
 }
-	
+
 

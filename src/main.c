@@ -4,6 +4,7 @@
 #include "decl.h"
 #include "resolver.h"
 #include "scope.h"
+#include "typecheck.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -83,12 +84,14 @@ int main(int argc, char *argv[]) {
       }
       if (scanner_error_count()) return EXIT_COMPILE_ERROR;
       break;
+
     case STAGE_PARSE:
       if (yyparse() || scanner_error_count() || parser_error_count()) {
         fclose(input_file);
         return EXIT_COMPILE_ERROR;
       }
       break;
+
     case STAGE_PRINT:
       if (yyparse() || scanner_error_count() || parser_error_count()) {
         fclose(input_file);
@@ -97,6 +100,7 @@ int main(int argc, char *argv[]) {
       decl_print(parser_result, 0);
       printf("\n");
       break;
+
     case STAGE_RESOLVE:
       if (yyparse() || scanner_error_count() || parser_error_count()) {
         fclose(input_file);
@@ -107,18 +111,27 @@ int main(int argc, char *argv[]) {
       scope_exit();
       if (resolver_error_count()) return EXIT_COMPILE_ERROR;
       break;
+
     case STAGE_TYPECHECK:
-      if (yyparse() || scanner_error_count() || parser_error_count() ||
-          resolver_error_count()) {
+      if (yyparse() || scanner_error_count() || parser_error_count()) {
         fclose(input_file);
         return EXIT_COMPILE_ERROR;
       }
-      /* Typecheck here */
+      scope_enter();
+      decl_resolve(parser_result);
+      scope_exit();
+      if (resolver_error_count()) return EXIT_COMPILE_ERROR;
+      // NOTE: Skipping typecheck after resolver errors is simpler than guarding
+      // every name lookup for unresolved identifiers.
+      decl_typecheck(parser_result);
+      if (typecheck_error_count()) return EXIT_COMPILE_ERROR;
       break;
+
     case STAGE_CODEGEN:
       fprintf(stderr, "bminor: stage not implemented (%s)\n", argv[1]);
       fclose(input_file);
       return EXIT_COMPILE_ERROR;
+
     default:
       fprintf(stderr, "bminor: invalid flag (%s)\n", argv[1]);
       print_usage(argv[0]);
