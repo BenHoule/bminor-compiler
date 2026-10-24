@@ -158,7 +158,7 @@ void expr_resolve( struct expr *e ) {
     if (!e->left) {
       if (symbol_find_and_bind(e)) {
         //TODO: Add line/col to error message
-        resolver_error("Error: Undefined symbol '%s'", e->identifier.name);
+        resolver_error("Undefined symbol '%s'", e->identifier.name);
       }
       e = e->right;
       continue;
@@ -176,7 +176,7 @@ void expr_resolve( struct expr *e ) {
     }
     if (symbol_find_and_bind(e)) {
       //TODO: Add line/col to error message
-      resolver_error("Error: Undefined symbol '%s'", e->identifier.name);
+      resolver_error("Undefined symbol '%s'", e->identifier.name);
     }
     pre->right = e;  // Link (until we finish traversing left subtree)
     e = e->left;
@@ -214,7 +214,7 @@ static struct type * expr_typecheck_binary(struct expr *e, bool allow_non_numeri
   struct type *r = expr_typecheck(e->right);
   if (!l || !r) return NULL;
   if (!type_equals(l, r)) {
-    typecheck_error("'%s' requires matching operand types"
+    typecheck_error("'%s' requires matching operand types "
                     "(no implicit conversion)",
                     expr_op_name(e->kind));
     return NULL;

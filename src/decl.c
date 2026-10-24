@@ -34,15 +34,16 @@ void decl_print( struct decl *d, int indent ) {
   for (; d; d = d->next) {
     printf("%s: ", d->name);
     type_print(d->type);
-    if (d->value) {  // Var
+
+    if (d->value) {  // Var initializer
       printf(" = ");
       expr_print(d->value);
-    } else if (d->code) {  // Function
+      printf(";");
+    } else if (d->code) {  // Function definition
       printf(" = ");
       stmt_print(d->code, indent);
-      return;
-    }
-    printf(";");
+    } else printf(";");  // Declaration
+
     if (d->next) {
       printf("\n%*s", indent * 2, "");
     }
@@ -145,6 +146,7 @@ static void decl_typecheck_variable(struct decl *d) {
     }
 
     struct type *t = expr_typecheck(d->value);
+    if (!t) return; // Avoid double-reporting invalid expression
     if (!type_is_primitive(t)) {
         typecheck_error("Cannot infer type for '%s' (non-primitive)", d->name);
         return;
