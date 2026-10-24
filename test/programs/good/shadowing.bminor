@@ -1,0 +1,13 @@
+x: integer = 1;
+
+main: function integer () = {
+	print x, " ";
+	x: integer = 2;
+	print x, " ";
+	{
+		x: integer = 3;
+		print x, " ";
+	}
+	print x, "\n";
+	return 0;
+}

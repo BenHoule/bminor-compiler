@@ -1,0 +1,13 @@
+counter: integer = 10;
+label: string = "count=";
+
+bump: function void (by: integer) = {
+	counter = counter + by;
+}
+
+main: function integer () = {
+	bump(5);
+	bump(-3);
+	print label, counter, "\n";
+	return 0;
+}

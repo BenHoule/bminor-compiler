@@ -1,0 +1,21 @@
+calls: integer = 0;
+
+yes: function boolean () = {
+	calls++;
+	return true;
+}
+
+no: function boolean () = {
+	calls++;
+	return false;
+}
+
+main: function integer () = {
+	if (no() && yes()) print "wrong";
+	print calls, " ";
+	if (yes() || no()) print "ok ";
+	print calls, " ";
+	if (yes() && no()) print "wrong";
+	print calls, "\n";
+	return 0;
+}

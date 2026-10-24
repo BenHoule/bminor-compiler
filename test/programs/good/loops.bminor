@@ -1,0 +1,17 @@
+main: function integer () = {
+	i: integer;
+	j: integer;
+	sum: integer = 0;
+	for (i = 1; i <= 100; i++) sum = sum + i;
+	print sum, "\n";
+	count: integer = 0;
+	for (i = 0; i < 5; i++) {
+		for (j = 0; j < i; j++) {
+			count++;
+		}
+	}
+	print count, "\n";
+	for (i = 3; i > 0; i--) print i, " ";
+	print "\n";
+	return 0;
+}

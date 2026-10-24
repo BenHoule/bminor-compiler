@@ -1,0 +1,14 @@
+factorial: function integer (n: integer) = {
+	if (n <= 1) return 1;
+	return n * factorial(n - 1);
+}
+
+fib: function integer (n: integer) = {
+	if (n < 2) return n;
+	return fib(n - 1) + fib(n - 2);
+}
+
+main: function integer () = {
+	print factorial(10), " ", fib(15), " ", factorial(20), "\n";
+	return 0;
+}

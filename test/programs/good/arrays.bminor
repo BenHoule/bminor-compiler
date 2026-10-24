@@ -1,0 +1,21 @@
+squares: array [5] integer = {0, 1, 4, 9, 16};
+grid: array [2] array [3] integer = {{1, 2, 3}, {4, 5, 6}};
+
+sum: function integer (a: array [] integer) = {
+	total: integer = 0;
+	i: integer;
+	for (i = 0; i < #a; i++) total = total + a[i];
+	return total;
+}
+
+main: function integer () = {
+	local: array [3] integer;
+	local[0] = 10;
+	local[1] = 20;
+	local[2] = local[0] + local[1];
+	print sum(squares), " ", sum(local), " ", #squares, "\n";
+	print grid[1][2], " ", grid[0][1] + grid[1][0], "\n";
+	squares[4] = 100;
+	print squares[4], "\n";
+	return 0;
+}

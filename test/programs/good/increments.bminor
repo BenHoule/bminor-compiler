@@ -1,0 +1,11 @@
+main: function integer () = {
+	x: integer = 5;
+	y: integer = x++;
+	z: integer = x--;
+	print x, " ", y, " ", z, "\n";
+	a: integer;
+	b: integer;
+	a = b = 7;
+	print a, " ", b, "\n";
+	return 0;
+}

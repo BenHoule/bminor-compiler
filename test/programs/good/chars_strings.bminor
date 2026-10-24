@@ -1,0 +1,8 @@
+main: function integer () = {
+	c: char = 'A';
+	s: string = "tab:\there";
+	print c, '\n', s, "\n";
+	print "quote:\" backslash:\\ hex:\0x41", "\n";
+	print c == 'A', "\n";
+	return 0;
+}

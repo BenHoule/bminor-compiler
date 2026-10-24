@@ -1,0 +1,13 @@
+test: function void (a: boolean, b: boolean) = {
+	if (a) if (b) print "ab "; else print "a-not-b ";
+	print "| ";
+}
+
+main: function integer () = {
+	test(true, true);
+	test(true, false);
+	test(false, true);
+	test(false, false);
+	print "\n";
+	return 0;
+}
