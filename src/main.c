@@ -90,6 +90,7 @@ int main(int argc, char *argv[]) {
         fclose(input_file);
         return EXIT_COMPILE_ERROR;
       }
+      printf("parse successful\n");  // For assignment - remove later
       break;
 
     case STAGE_PRINT:
