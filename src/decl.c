@@ -123,6 +123,7 @@ static void decl_resolve_func(struct decl *d) {
   param_list_resolve(d->type->params);
   stmt_resolve(d->code->block);
   scope_exit();
+  d->symbol->frame_locals = local_count;
 }
 
 void decl_resolve( struct decl *d ) {

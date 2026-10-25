@@ -106,6 +106,7 @@ int main(int argc, char *argv[]) {
         fclose(input_file);
         return EXIT_COMPILE_ERROR;
       }
+      resolver_trace = true;
       scope_enter();
       decl_resolve(parser_result);
       scope_exit();

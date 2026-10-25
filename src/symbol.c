@@ -1,3 +1,4 @@
+#include "resolver.h"
 #include "symbol.h"
 
 #include <assert.h>
@@ -17,11 +18,12 @@ struct symbol * symbol_create( symbol_t kind, struct type *type, char *name ) {
   s->name = name;
   s->which = -1;
   s->is_defined = false;
+  s->frame_locals = 0;
   return s;
 }
 
 void symbol_print_binding(const struct symbol *s) {
-  if (!s) return;
+  if (!s || !resolver_trace) return;
   const char *kind;
   switch (s->kind) {
     case SYMBOL_LOCAL:  kind = "local"; break;

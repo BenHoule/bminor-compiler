@@ -14,6 +14,7 @@ struct symbol {
   char *name;
   int which;
   bool is_defined;  // Functions only
+  int frame_locals;  // Functions only: # of local slots
 };
 
 struct symbol * symbol_create( symbol_t kind, struct type *type, char *name );

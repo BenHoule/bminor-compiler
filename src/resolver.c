@@ -4,6 +4,8 @@
 
 static unsigned int err_count = 0;
 
+bool resolver_trace = false;
+
 unsigned int resolver_error_count() {
   return err_count;
 }
