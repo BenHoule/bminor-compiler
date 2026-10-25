@@ -1,2 +1,2 @@
-line 1, col 1: Unterminated char
+scan error: [line 1, col 1] Unterminated char
 char_literal

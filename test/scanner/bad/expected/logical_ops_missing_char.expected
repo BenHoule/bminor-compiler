@@ -1,7 +1,7 @@
 if
 (
 identifier
-line 2, col 7: Unrecognized token '|' (0x7C)
+scan error: [line 2, col 7] Unrecognized token '|' (0x7C)
 identifier
 )
 {
@@ -12,7 +12,7 @@ string_literal
 if
 (
 identifier
-line 6, col 7: Unrecognized token '&' (0x26)
+scan error: [line 6, col 7] Unrecognized token '&' (0x26)
 identifier
 )
 {

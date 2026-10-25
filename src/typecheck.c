@@ -10,6 +10,7 @@ unsigned int typecheck_error_count() {
 }
 
 void typecheck_error(const char *fmt, ...) {
+  //TODO: add line/col to error message
   error_count++;
   fprintf(stderr, "type error: ");
   va_list args;

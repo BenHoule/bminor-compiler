@@ -228,7 +228,7 @@ unsigned int scanner_error_count(void) {
 
 static void vprint_error(const YYLTYPE *const loc, const char *fmt, va_list args) {
   err_count++;
-  fprintf(stderr, "line %d, col %d: ", loc->first_line, loc->first_column);
+  fprintf(stderr, "scan error: [line %d, col %d] ", loc->first_line, loc->first_column);
   vfprintf(stderr, fmt, args);
   fprintf(stderr, "\n");
 }

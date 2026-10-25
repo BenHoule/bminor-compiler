@@ -1,1 +1,1 @@
-line 3, col 3: Unterminated block comment
+scan error: [line 3, col 3] Unterminated block comment

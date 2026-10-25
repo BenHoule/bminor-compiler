@@ -1,2 +1,2 @@
-line 1, col 1: Identifier too long (MAX=255)
+scan error: [line 1, col 1] Identifier too long (MAX=255)
 identifier

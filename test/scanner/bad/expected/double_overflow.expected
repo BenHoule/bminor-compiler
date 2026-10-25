@@ -1,2 +1,2 @@
-line 1, col 1: Double literal out of range [+-1.8e-308, +-1.8e308]
+scan error: [line 1, col 1] Double literal out of range [+-1.8e-308, +-1.8e308]
 double_literal

@@ -271,7 +271,7 @@ unsigned int parser_error_count(void) {
 
 int yyerror(const char *msg) {
   err_count++;
-  fprintf(stderr, "line %d, col %d: %s\n",
+  fprintf(stderr, "parse error: [line %d, col %d] %s\n",
           yylloc.first_line, yylloc.first_column, msg);
   return 0;
 }

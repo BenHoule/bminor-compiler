@@ -1,2 +1,2 @@
-line 1, col 1: Unrecognized token '$' (0x24)
+scan error: [line 1, col 1] Unrecognized token '$' (0x24)
 identifier
