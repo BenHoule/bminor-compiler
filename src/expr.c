@@ -121,19 +121,23 @@ void expr_print( struct expr *e ) {
       string_decode(e->string_literal, decoded_str, sizeof(decoded_str));
       printf("%s", decoded_str);
       break;
+
     case EXPR_IDX:
       expr_print(e->left);
       expr_print_affix("[", e->right, "]");
       break;
+
     case EXPR_CALL:
       expr_print(e->left);
       expr_print_affix("(", e->right, ")");
       break;
+
     case EXPR_ARG:
       expr_print(e->left);
       if (e->right) printf(", ");
       expr_print(e->right);
       break;
+
     case EXPR_INIT:
       printf("{");
       expr_print(e->left);
@@ -141,14 +145,15 @@ void expr_print( struct expr *e ) {
       expr_print(e->right);
       printf("}");
       break;
+
     default: unreachable();
   }
 }
 
 // Returns True on success, False on failure
 static bool symbol_find_and_bind(struct expr *e) {
-    return e->kind == EXPR_NAME &&
-      !(e->identifier.symbol = scope_lookup(e->identifier.name));
+    return e->kind != EXPR_NAME ||
+      (e->identifier.symbol = scope_lookup(e->identifier.name));
 }
 
 // Morris Preorder Traversal - (Root-Left-Right) - Time: O(N), Space: O(1)
@@ -157,28 +162,31 @@ static bool symbol_find_and_bind(struct expr *e) {
 void expr_resolve( struct expr *e ) {
   while (e) {
     if (!e->left) {
-      if (symbol_find_and_bind(e)) {
+      if (!symbol_find_and_bind(e)) {
         //TODO: Add line/col to error message
-        resolver_error("Undefined symbol '%s'", e->identifier.name);
+        resolver_error("Undefined identifier '%s'", e->identifier.name);
       }
       e = e->right;
       continue;
     }
 
-    // Find Inorder predecessor of current node
+    // Find Inorder predecessor of current node (rightmost node in left subtree)
     struct expr *pre = e->left;
     while (pre->right && pre->right != e) {
       pre = pre->right;
     }
-    if (pre->right != NULL) {
-      pre->right = NULL;  // Unlink (left subtree traversed)
+
+    if (pre->right != NULL) {  // Implies pre->right == e
+      pre->right = NULL;       // Unlink (finished traversing left subtree)
       e = e->right;
-      continue;
+      continue;                // Avoid double reporting for the same node
     }
-    if (symbol_find_and_bind(e)) {
+
+    if (!symbol_find_and_bind(e)) {
       //TODO: Add line/col to error message
-      resolver_error("Undefined symbol '%s'", e->identifier.name);
+      resolver_error("Undefined identifier '%s'", e->identifier.name);
     }
+
     pre->right = e;  // Link (until we finish traversing left subtree)
     e = e->left;
   }
@@ -191,12 +199,11 @@ static const char * expr_op_name( expr_t kind ) {
     case EXPR_MOD: return "%%";  case EXPR_POW: return "^";
     case EXPR_NEG: return "-";   case EXPR_NOT: return "!";
     case EXPR_INC: return "++";  case EXPR_DEC: return "--";
-    case EXPR_LEN: return "#";
-    case EXPR_LT:  return "<";   case EXPR_GT:  return ">";
-    case EXPR_LE:  return "<=";  case EXPR_GE:  return ">=";
-    case EXPR_EQ:  return "==";  case EXPR_NE:  return "!=";
-    case EXPR_AND: return "&&";  case EXPR_OR:  return "||";
-    case EXPR_ASGN: return "=";
+    case EXPR_LEN: return "#";   case EXPR_LT:  return "<";
+    case EXPR_GT:  return ">";   case EXPR_LE:  return "<=";
+    case EXPR_GE:  return ">=";  case EXPR_EQ:  return "==";
+    case EXPR_NE:  return "!=";  case EXPR_AND: return "&&";
+    case EXPR_OR:  return "||";  case EXPR_ASGN: return "=";
     default: return "?";
   }
 }
@@ -211,6 +218,7 @@ static bool expr_is_lvalue(const struct expr *e) {
 
 static struct type * expr_typecheck_binary(struct expr *e, bool allow_non_numeric) {
   if (!e) return NULL;
+
   struct type *l = expr_typecheck(e->left);
   struct type *r = expr_typecheck(e->right);
   if (!l || !r) return NULL;
@@ -220,19 +228,18 @@ static struct type * expr_typecheck_binary(struct expr *e, bool allow_non_numeri
                     expr_op_name(e->kind));
     return NULL;
   }
+
   switch (l->kind) {
     case TYPE_INTEGER: break;
-    case TYPE_DOUBLE: if (e->kind == EXPR_MOD || e->kind == EXPR_POW) {  // Matches C/C++
+    case TYPE_DOUBLE:
+      if (e->kind == EXPR_MOD || e->kind == EXPR_POW) {  // Matches C/C++
         typecheck_error("%s cannot operate on double operands",
                         expr_op_name(e->kind));
         return NULL;
       }  // NOTE: Could check type on code generation & use fmod()/pow() for doubles
       break;
 
-    case TYPE_VOID:
-    case TYPE_ARRAY:
-    case TYPE_CARRAY:
-    case TYPE_FUNCTION:
+    case TYPE_VOID: case TYPE_ARRAY: case TYPE_CARRAY: case TYPE_FUNCTION:
       typecheck_error("'%s' cannot operate on non-primitive types",
                       expr_op_name(e->kind));
       return NULL;
@@ -249,10 +256,11 @@ static struct type * expr_typecheck_binary(struct expr *e, bool allow_non_numeri
 
 static struct type * expr_typecheck_logical(struct expr *e) {
   if (!e) return NULL;
-  struct type *l = expr_typecheck(e->left);
+
+  e->type = expr_typecheck(e->left);
   struct type *r = expr_typecheck(e->right);
-  if (!l || !r) return NULL;
-  if (l->kind != TYPE_BOOLEAN || r->kind != TYPE_BOOLEAN) {
+  if (!e->type || !r) return NULL;  // Avoid double-reporting
+  if (e->type->kind != TYPE_BOOLEAN || r->kind != TYPE_BOOLEAN) {
     typecheck_error("logical operator '%s' requires boolean operands",
                     expr_op_name(e->kind));
     return NULL;
@@ -262,13 +270,17 @@ static struct type * expr_typecheck_logical(struct expr *e) {
 
 static struct type * expr_typecheck_call(struct expr *e) {
   if (!e) return NULL;
+
   struct type *t = expr_typecheck(e->left);
-  if (!t || t->kind != TYPE_FUNCTION) {
+  if (!t) return NULL;  // Avoid double-reporting
+  if (t->kind != TYPE_FUNCTION) {
     typecheck_error("call requires a function");
     return t ? t->subtype : NULL;
   }
-  const struct param_list *param = t->params;
+
   int index = 1;
+  const struct param_list *param = t->params;
+
   for (struct expr *arg = e->right; arg; arg = arg->right, index++) {
     if (!param) {
       typecheck_error("too many arguments in function call");
@@ -281,6 +293,7 @@ static struct type * expr_typecheck_call(struct expr *e) {
 
     param = param->next;
   }
+
   if (param) typecheck_error("too few arguments in function call");
   return t->subtype;
 }
@@ -289,6 +302,7 @@ static struct type * expr_typecheck_call(struct expr *e) {
 // Returns NULL when `e` contains an error that has already been reported
 struct type * expr_typecheck(struct expr *e) {
   if (!e) return NULL;
+
   switch (e->kind) {
     case EXPR_ADD: case EXPR_SUB: case EXPR_MUL: case EXPR_DIV: case EXPR_MOD:
     case EXPR_POW: case EXPR_LT:  case EXPR_GT:  case EXPR_LE:  case EXPR_GE:
@@ -403,12 +417,15 @@ void expr_typecheck_init(struct type *want, struct expr *val) {
       typecheck_error("array must be initialized with `{...}`");
       return;
     }
+
     struct type *got = expr_typecheck(val);
     if (got && !type_equals(want, got)) {
       typecheck_error("array initialized with incorrect type");
     }
+
     return;
   }
+
   if ((!is_array)) {
     typecheck_error("non-array type cannot be initialized with `{...}`");
     return;
@@ -420,6 +437,7 @@ void expr_typecheck_init(struct type *want, struct expr *val) {
     expr_typecheck_init(want->subtype, a->left);
     count++;
   }
+
   if (want->size && want->size->kind == EXPR_INT &&
       want->size->int_literal != count) {
     typecheck_error("array of size %" PRId64 " given %" PRId64 " initializers",
@@ -430,20 +448,19 @@ void expr_typecheck_init(struct type *want, struct expr *val) {
 bool expr_is_constant(const struct expr *e) {
   if (!e) return false;
   switch (e->kind) {
-    case EXPR_INT:
-    case EXPR_BOOL:
-    case EXPR_CHAR:
-    case EXPR_STR:
+    case EXPR_INT: case EXPR_BOOL: case EXPR_CHAR: case EXPR_STR:
     case EXPR_DOUBLE:
       return true;
+
     case EXPR_NEG:
       return e->left->kind == EXPR_INT || e->left->kind == EXPR_BOOL;
+
     case EXPR_INIT:
-      for (const struct expr *a = e->left; a; a = a->right) {
+      for (const struct expr *a = e->left; a; a = a->right)
         if (!expr_is_constant(a->left)) return false;
-      }
+
       return true;
-    default:
-      return false;
+
+    default: return false;
   }
 }
