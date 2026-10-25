@@ -37,12 +37,14 @@ typedef enum {
 } expr_t;
 
 struct symbol;  // Forward declaration
+struct type;
 
 struct expr {
-	/* used by all kinds of exprs */
+	/* used by all exprs */
 	expr_t kind;
 	struct expr *left;
 	struct expr *right;
+  struct type *type;  // set by expr_typecheck()
 
   /* union minimizes memory footprint by overlapping mutually exclusive fields */
   union {
@@ -73,8 +75,6 @@ struct expr * expr_create_true();
 void expr_print( struct expr *e );
 void expr_print_affix(const char* prefix, struct expr *e, const char* suffix);
 void expr_resolve( struct expr *e );
-
-struct type;  // Forward declaration
 
 struct type * expr_typecheck( struct expr *e );
 void expr_typecheck_init( struct type *want, struct expr *val );

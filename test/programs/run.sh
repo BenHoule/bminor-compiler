@@ -7,8 +7,8 @@
 #   expected/<name>.status     expected exit status (optional, default 0)
 #
 # Unlike the per-stage suites, these fixtures are independent of how the
-# compiler is built, so the same files check the IR interpreter (Phase 7),
-# the native code generator (Phase 8), and every optimization (Phase 9).
+# compiler is built, so the same files check the IR interpreter,
+# the native code generator, and every optimization.
 #
 # Env:
 #   BMINOR_BIN=path       compiler to test (default ./bminor)
