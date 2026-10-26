@@ -134,10 +134,13 @@ bool type_is_primitive(const struct type *t) {
 void type_typecheck(struct type *t) {
   for (; t; t = t->subtype) {
     if (!t->size) continue;
+
     struct type *s = expr_typecheck(t->size);
     if (s && s->kind != TYPE_INTEGER) {
       typecheck_error("Array size must be an integer");
-    } else if (t->size->kind == EXPR_INT && t->size->int_literal <= 0) {
+    } else if (t->size->kind == EXPR_NEG || t->size->int_literal <= 0) {
+      // NOTE: Above check blocks [-(-1)]
+      // TODO: Evaluate constant expressions to handle negative literals correctly
       typecheck_error("Array size must be a positive integer");
     }
   }

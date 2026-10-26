@@ -15,5 +15,7 @@ main: function integer () = {
 	}
 	print;
 	print "a", 1, 'c';
+  print -(-x), (-x)^2;
+
 	return 0;
 }

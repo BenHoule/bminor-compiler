@@ -90,6 +90,7 @@ static void expr_print_binop( struct expr *e, const char *op) {
 void expr_print( struct expr *e ) {
   if (!e) return;
 
+  //TODO: Make precedence-aware (only use '()' when precedence <= parent's)
   switch (e->kind) {
     case EXPR_ASGN:expr_print_binop(e, "="); break;
     case EXPR_ADD: expr_print_binop(e, "+"); break;
@@ -106,14 +107,14 @@ void expr_print( struct expr *e ) {
     case EXPR_NE:  expr_print_binop(e, "!="); break;
     case EXPR_OR:  expr_print_binop(e, "||"); break;
     case EXPR_AND: expr_print_binop(e, "&&"); break;
-    case EXPR_NEG: expr_print_affix("-", e->left, ""); break;
-    case EXPR_LEN: expr_print_affix("#", e->left, ""); break;
-    case EXPR_NOT: expr_print_affix("!", e->left, ""); break;
-    case EXPR_INC: expr_print_affix("", e->left, "++"); break;
-    case EXPR_DEC: expr_print_affix("", e->left, "--"); break;
+    case EXPR_NEG: expr_print_affix("(-", e->left, ")"); break;
+    case EXPR_LEN: expr_print_affix("(#", e->left, ")"); break;
+    case EXPR_NOT: expr_print_affix("(!", e->left, ")"); break;
+    case EXPR_INC: expr_print_affix("((", e->left, ")++)"); break;
+    case EXPR_DEC: expr_print_affix("((", e->left, ")--)"); break;
     case EXPR_NAME:   printf("%s", e->identifier.name  ); break;
     case EXPR_INT:    printf("%" PRId64, e->int_literal); break;
-    case EXPR_DOUBLE: printf("%.17g", e->double_literal); break;
+    case EXPR_DOUBLE: printf("%#.17g", e->double_literal); break;
     case EXPR_BOOL:   printf("%s", e->bool_literal ? "true" : "false"); break;
     case EXPR_CHAR:   printf("'%s'", char_decode(e->char_literal, '\'')); break;
     case EXPR_STR:
@@ -453,7 +454,7 @@ bool expr_is_constant(const struct expr *e) {
       return true;
 
     case EXPR_NEG:
-      return e->left->kind == EXPR_INT || e->left->kind == EXPR_BOOL;
+      return e->left->kind == EXPR_INT || e->left->kind == EXPR_DOUBLE;
 
     case EXPR_INIT:
       for (const struct expr *a = e->left; a; a = a->right)

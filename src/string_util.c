@@ -138,7 +138,7 @@ size_t string_decode(const char *in, char *out, size_t out_size) {
     const char *next = char_decode(*in, '\"');
     if (*next == '\0') return ERR_INVALID_CHAR;
 
-    const size_t REQ_SPACE = strlen(next) + 3;  // Char + Closing quote + '\0'
+    const size_t REQ_SPACE = strlen(next) + 2;  // Char + Closing quote + '\0'
     if(REQ_SPACE > out_size) return ERR_TOO_LONG;  // Overflow
 
     memcpy(out, next, strlen(next));

@@ -66,6 +66,9 @@ void hash_table_clear(struct hash_table *h)
 	for(i = 0; i < h->bucket_count; i++) {
 		h->buckets[i] = 0;
 	}
+
+  h->size = 0;
+  // TODO: Reset iterator state(?)
 }
 
 

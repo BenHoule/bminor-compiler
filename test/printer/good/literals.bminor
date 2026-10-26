@@ -4,6 +4,7 @@ i3: integer = 0b1011;
 d1: double = 3.14;
 d2: double = 5.67e1;
 d3: double = 89e-2;
+d4: double = 1.0;
 b1: boolean = true;
 b2: boolean = false;
 c1: char = 'a';
