@@ -27,7 +27,9 @@ static stage_t stage_from_flag(const char *user_flag) {
     stage_t stage;
   } flag_table[] = {
     {"-scan",      STAGE_SCAN},
+    {"--scan",     STAGE_SCAN},
     {"-parse",     STAGE_PARSE},
+    {"--parse",    STAGE_PARSE},
     {"-print",     STAGE_PRINT},
     {"-resolve",   STAGE_RESOLVE},
     {"-typecheck", STAGE_TYPECHECK},
@@ -67,6 +69,9 @@ int main(int argc, char *argv[]) {
     perror(err_msg);
     return EXIT_COMPILE_ERROR;
   }
+  if (stage == STAGE_PARSE) {
+    scanner_set_error_prefix("scan error: ");
+  }
   scanner_open(input_file);
 
   switch (stage) {
@@ -81,7 +86,10 @@ int main(int argc, char *argv[]) {
       }
       break;
     case STAGE_PARSE:
-      yyparse(); // Parsing logic would go here
+      yyparse();
+      if (scanner_error_count() == 0 && parser_error_count() == 0) {
+        printf("parse successful\n");
+      }
       break;
     case STAGE_PRINT:
       yyparse();

@@ -33,6 +33,7 @@ static int col = 1;
 
 static int error_count = 0;
 static YYLTYPE block = {0, 0, 0, 0};
+static const char *error_prefix = "";
 
 static void vprint_error(const YYLTYPE *const loc, const char *fmt, va_list args);
 
@@ -228,7 +229,8 @@ unsigned int scanner_error_count(void) {
 
 static void vprint_error(const YYLTYPE *const loc, const char *fmt, va_list args) {
   error_count++;
-  fprintf(stderr, "line %d, col %d: ", loc->first_line, loc->first_column);
+  fprintf(stderr, "%sline %d, col %d: ",
+          error_prefix, loc->first_line, loc->first_column);
   vfprintf(stderr, fmt, args);
   fprintf(stderr, "\n");
 }
@@ -263,6 +265,10 @@ static void send_double_to_yylval() {
 
 void scanner_open(FILE *file) {
   yyrestart(file);
+}
+
+void scanner_set_error_prefix(const char *prefix) {
+  error_prefix = prefix ? prefix : "";
 }
 
 int scanner_next_token(void) {
