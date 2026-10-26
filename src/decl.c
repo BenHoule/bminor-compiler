@@ -13,8 +13,8 @@
 #include <stdio.h>
 #include <string.h>
 
-// Create a new declaration node with the given properties.
-struct decl * decl_create( char *name, struct type *type, struct expr *value, struct stmt *code, struct decl *next ) {
+struct decl * decl_create(char *name, struct type *type, struct expr *value,
+                          struct stmt *code, struct decl *next) {
   struct decl *d = (struct decl *)malloc(sizeof(struct decl));
   if (!d) {
     fprintf(stderr, "Failed to allocate memory for declaration\n");
@@ -29,8 +29,7 @@ struct decl * decl_create( char *name, struct type *type, struct expr *value, st
   return d;
 }
 
-// Print the declaration `d` with the given indentation level.
-void decl_print( struct decl *d, int indent ) {
+void decl_print(const struct decl *d, const int indent) {
   for (; d; d = d->next) {
     printf("%s: ", d->name);
     type_print(d->type);
@@ -52,13 +51,14 @@ void decl_print( struct decl *d, int indent ) {
 
 static int local_count = 0;
 
-static void decl_resolve_var(struct decl *d) {
+static void decl_resolve_var(struct decl *const d) {
   assert(d); assert(d->type);  // Everything has a type
 
   // Resolving initializer before binding var prevents self-reference.
   expr_resolve(d->value);
   type_resolve(d->type);
 
+  // Check if `d->name` is already bound.
   //TODO: Add line/col to error messages
   if (scope_lookup_local(d->name)) {
     resolver_error(
@@ -66,6 +66,7 @@ static void decl_resolve_var(struct decl *d) {
     return;
   }
 
+  // Create + bind new symbol to `d->name`
   symbol_t kind = (scope_depth() > 1) ? SYMBOL_LOCAL : SYMBOL_GLOBAL;
   d->symbol = symbol_create(kind, d->type, d->name);
   d->symbol->which = (kind == SYMBOL_LOCAL) ? local_count++ : -1;
@@ -74,10 +75,13 @@ static void decl_resolve_var(struct decl *d) {
       "Failed to bind '%s'", d->name);
     return;
   }
+
   symbol_print_binding(d->symbol);
 }
 
-static void decl_resolve_func(struct decl *d) {
+// NOTE: Early returns prevent bodies of rejected function definitions
+// from being resolved; Errors in a rejected body are unreported.
+static void decl_resolve_func(struct decl *const d) {
   assert(d); assert(d->type); assert(d->type->kind == TYPE_FUNCTION);
 
   //TODO: Add line/col to error messages
@@ -89,33 +93,36 @@ static void decl_resolve_func(struct decl *d) {
 
   struct symbol * pre = scope_lookup_local(d->name);
   if (pre) {
-    // NOTE: Early returns prevent bodies of rejected function definitions
-    // from being resolved; Errors in a rejected body are unreported.
+    // Existing symbol found: Check for conflicts
     if (pre->type->kind != TYPE_FUNCTION) {
       resolver_error(
         "Function '%s' already declared (as a variable)", d->name);
       return;
     }
+
     if (!type_equals(pre->type, d->type)) {
       resolver_error(
         "Function '%s' declared with different types", d->name);
       return;
     }
+
     if (d->code && pre->is_defined) {
       resolver_error("Function '%s' already defined", d->name);
       return;
     }
-    d->symbol = pre;
+    d->symbol = pre; // No conflicts: Reuse existing symbol
+
   } else {
+    // No existing symbol: Create new one for the function
     d->symbol = symbol_create(SYMBOL_GLOBAL, d->type, d->name);
     if (!scope_bind(d->name, d->symbol)) {
       resolver_error("Failed to bind '%s'", d->name);
       return;
     }
+
     symbol_print_binding(d->symbol);
   }
-
-  if (!d->code) return;
+  if (!d->code) return;  // Declaration (no body to resolve)
 
   d->symbol->is_defined = true;  // Set before resolving so recursion works
   local_count = 0;
@@ -133,7 +140,7 @@ void decl_resolve( struct decl *d ) {
   }
 }
 
-static void decl_typecheck_variable(struct decl *d) {
+static void decl_typecheck_variable(struct decl *const d) {
   type_typecheck(d->type);
   if (d->value && d->symbol->kind == SYMBOL_GLOBAL && !expr_is_constant(d->value)) {
     typecheck_error("Global variable '%s' initializer must be constant", d->name);
@@ -162,16 +169,17 @@ static void decl_typecheck_variable(struct decl *d) {
 static void decl_typecheck_function(struct decl *d) {
   struct type *ftype = d->symbol->type;
   if (d->code) {
+    // Function definition: Typecheck body and infer return type (if needed).
     stmt_typecheck(d->code->block, ftype);
     if (ftype->subtype->kind == TYPE_AUTO) {
       ftype->subtype = type_primitive(TYPE_VOID);
     }
+
     d->type->subtype = ftype->subtype;
   }
 
-  if (strcmp(d->name, "main") == 0 && ftype->subtype->kind != TYPE_INTEGER) {
+  if (strcmp(d->name, "main") == 0 && ftype->subtype->kind != TYPE_INTEGER)
     typecheck_error("'main' must return an integer");
-  }
 }
 
 void decl_typecheck( struct decl *d ) {

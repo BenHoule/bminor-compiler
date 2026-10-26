@@ -1,7 +1,6 @@
 #include "stmt.h"
 #include "decl.h"
 #include "expr.h"
-#include "resolver.h"
 #include "scope.h"
 #include "type.h"
 #include "typecheck.h"
@@ -88,7 +87,7 @@ struct stmt * stmt_create_for( struct expr *init_expr, struct expr *cond_expr, s
 }
 
 // Print a statement with the given indentation level.
-void stmt_print( struct stmt *s, int indent ) {
+void stmt_print( struct stmt *s, const int indent ) {
   for (; s; s = s->next) {
     printf("%*s", indent * 2, "");
 
@@ -141,10 +140,8 @@ void stmt_print( struct stmt *s, int indent ) {
         printf(";");
         break;
       case STMT_BLOCK:
-        indent++;
-        printf("{\n%*s", indent * 2, "");
-        stmt_print(s->block, indent);
-        indent--;
+        printf("{\n%*s", (indent + 1) * 2, "");
+        stmt_print(s->block, indent + 1);
         printf("\n%*s}", indent * 2, "");
         break;
       default: unreachable();

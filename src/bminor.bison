@@ -18,6 +18,7 @@ int yyerror(const char *msg);
 
 %}
 
+/* Set Bison parser options */
 %locations
 %define parse.error detailed
 %define parse.lac full
@@ -35,6 +36,8 @@ int yyerror(const char *msg);
   struct type *type;
   struct param_list *params;
 }
+
+/* Associate non-terminals/tokens with union fields */
 %type <decl> program decl_list decl
 %type <stmt> block block_item_list block_item
 %type <stmt> stmt matched_stmt unmatched_stmt simple_stmt
@@ -43,7 +46,6 @@ int yyerror(const char *msg);
 %type <expr> pow_expr postfix_expr primary_expr
 %type <type> var_type simple_type primitive_type func_type return_type param_type
 %type <params> param opt_param_list param_list
-/* Associate non-terminals/tokens with union fields */
 
 %token <sval> TOKEN_IDENTIFIER "identifier"
 
@@ -265,10 +267,13 @@ primary_expr  : '(' expr ')'            { $$ = $2; }
               ;
 
 %%
+
+/* External access to parser err_count variable */
 unsigned int parser_error_count(void) {
   return err_count;
 }
 
+/* Bison error handling */
 int yyerror(const char *msg) {
   err_count++;
   fprintf(stderr, "parse error: [line %d, col %d] %s\n",
@@ -276,10 +281,10 @@ int yyerror(const char *msg) {
   return 0;
 }
 
+/* Character tokens print as themselves; some aren't in the grammar yet,
+  * so YYTRANSLATE would map them to the "invalid token" symbol.
+  * Remove this check once all character tokens are included in the grammar. */
 const char *token_name(int token) {
-  /* Character tokens print as themselves; some aren't in the grammar yet,
-   * so YYTRANSLATE would map them to the "invalid token" symbol.
-   * Remove this check once all character tokens are included in the grammar. */
   if (0 < token && token < 256) {
     static char char_buf[2];
     char_buf[0] = (char)token;

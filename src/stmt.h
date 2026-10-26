@@ -1,4 +1,3 @@
-
 #pragma once
 
 typedef enum {
@@ -11,6 +10,7 @@ typedef enum {
   STMT_BLOCK
 } stmt_t;
 
+// Forward declarations
 struct decl;
 struct expr;
 
@@ -58,6 +58,6 @@ struct stmt * stmt_create_for( struct expr *init_expr, struct expr *cond_expr, s
 void stmt_print( struct stmt *s, int indent );
 void stmt_resolve( struct stmt *s );
 
+// Typechecking
 struct type;
-
 void stmt_typecheck( struct stmt *s, struct type *ftype );
