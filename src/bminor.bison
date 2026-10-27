@@ -123,7 +123,7 @@ block_item_list : block_item block_item_list    { $1->next = $2; $$ = $1; }
                 | %empty                        { $$ = NULL; }
                 ;
 
-block_item      : decl                          { $$ = stmt_create_decl($1, NULL); }
+block_item      : decl                          { $$ = stmt_create_decl($1); }
                 | stmt                          { $$ = $1; }
                 ;
 

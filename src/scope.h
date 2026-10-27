@@ -7,6 +7,8 @@ void scope_enter(void);
 
 /**
  * @brief Makes parent the current scope and frees the exited scope.
+ *
+ * @note Symbols allocated/bound in the exited scope are not freed
  */
 void scope_exit(void);
 

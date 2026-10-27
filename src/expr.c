@@ -261,8 +261,10 @@ static struct type *expr_typecheck_logical(struct expr *e) {
   struct type *r = expr_typecheck(e->right);
   if (!e->type || !r) return NULL;  // Avoid double-reporting
   if (e->type->kind != TYPE_BOOLEAN || r->kind != TYPE_BOOLEAN) {
-    typecheck_error("logical operator '%s' requires boolean operands",
-                    expr_op_name(e->kind));
+    typecheck_error(
+      "logical operator '%s' requires boolean operands",
+      expr_op_name(e->kind)
+    );
     return NULL;
   }
   return type_primitive(TYPE_BOOLEAN);
@@ -275,7 +277,14 @@ static struct type *expr_typecheck_call(struct expr *e) {
   if (!t) return NULL;  // Avoid double-reporting
   if (t->kind != TYPE_FUNCTION) {
     typecheck_error("call requires a function");
-    return t ? t->subtype : NULL;
+    return NULL;
+  }
+  if (t->subtype->kind == TYPE_AUTO) {
+    typecheck_error(
+      "cannot call a function before its return type is inferred; "
+      "use an explicit return type"
+    );
+    return NULL;
   }
 
   int index = 1;
