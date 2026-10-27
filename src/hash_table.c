@@ -27,7 +27,7 @@ struct hash_table *hash_table_create(int bucket_count, hash_func_t func)
 {
 	struct hash_table *h;
 
-	h = (struct hash_table *) malloc(sizeof(struct hash_table));
+	h = malloc(sizeof(struct hash_table));
 	if(!h)
 		return 0;
 
@@ -39,6 +39,8 @@ struct hash_table *hash_table_create(int bucket_count, hash_func_t func)
 	h->size = 0;
 	h->hash_func = func;
 	h->bucket_count = bucket_count;
+  h->ibucket = bucket_count;
+  h->ientry = 0;
 	h->buckets = (struct entry **) calloc(bucket_count, sizeof(struct entry *));
 	if(!h->buckets) {
 		free(h);
@@ -68,7 +70,8 @@ void hash_table_clear(struct hash_table *h)
 	}
 
   h->size = 0;
-  // TODO: Reset iterator state(?)
+  h->ibucket = h->bucket_count;
+  h->ientry = 0;
 }
 
 
@@ -164,7 +167,7 @@ int hash_table_insert(struct hash_table *h, const char *key, const void *value)
 		e = e->next;
 	}
 
-	e = (struct entry *) malloc(sizeof(struct entry));
+	e = malloc(sizeof(struct entry));
 	if(!e)
 		return 0;
 

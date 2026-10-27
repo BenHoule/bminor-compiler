@@ -13,9 +13,9 @@
 #include <stdio.h>
 #include <string.h>
 
-struct decl *decl_create(char *const name, struct type *const type, struct expr *const value,
-                          struct stmt *const code, struct decl *const next) {
-  struct decl *d = (struct decl *)malloc(sizeof(struct decl));
+struct decl *decl_create(char *name, struct type *type, struct expr *value,
+                          struct stmt *code, struct decl *next) {
+  struct decl *d = malloc(sizeof(struct decl));
   if (!d) {
     fprintf(stderr, "Failed to allocate memory for declaration\n");
     exit(EXIT_FAILURE);
@@ -28,6 +28,7 @@ struct decl *decl_create(char *const name, struct type *const type, struct expr 
   d->symbol = NULL;
   return d;
 }
+
 
 void decl_print(const struct decl *d, const int indent) {
   for (; d; d = d->next) {
@@ -49,9 +50,10 @@ void decl_print(const struct decl *d, const int indent) {
   }
 }
 
+
 static int local_count = 0;
 
-static void decl_resolve_var(struct decl *const d) {
+static void decl_resolve_var(struct decl *d) {
   assert(d); assert(d->type);  // Everything has a type
 
   // Resolving initializer before binding var prevents self-reference.
@@ -81,7 +83,7 @@ static void decl_resolve_var(struct decl *const d) {
 
 // NOTE: Early returns prevent bodies of rejected function definitions
 // from being resolved; Errors in a rejected body are unreported.
-static void decl_resolve_func(struct decl *const d) {
+static void decl_resolve_func(struct decl *d) {
   assert(d); assert(d->type); assert(d->type->kind == TYPE_FUNCTION);
 
   //TODO: Add line/col to error messages
@@ -133,19 +135,19 @@ static void decl_resolve_func(struct decl *const d) {
   d->symbol->frame_locals = local_count;
 }
 
-void decl_resolve( struct decl *d ) {
+void decl_resolve(struct decl *d) {
   for(; d; d = d->next) {
     if (d->type->kind == TYPE_FUNCTION) decl_resolve_func(d);
     else decl_resolve_var(d);
   }
 }
 
-static void decl_typecheck_variable(struct decl *const d) {
+
+static void decl_typecheck_variable(struct decl *d) {
+  unsigned int old_error_count = typecheck_error_count();
+
   type_typecheck(d->type);
-  if (d->value && d->symbol->kind == SYMBOL_GLOBAL && !expr_is_constant(d->value)) {
-    typecheck_error("Global variable '%s' initializer must be constant", d->name);
-    return;
-  }
+  if (typecheck_error_count() != old_error_count) return;
 
   if (d->type->kind == TYPE_AUTO) {
     if (!d->value || d->value->kind == EXPR_INIT) {
@@ -161,12 +163,19 @@ static void decl_typecheck_variable(struct decl *const d) {
     }
 
     d->type = d->symbol->type = t;
-    return;
+  } else if (d->value) expr_typecheck_init(d->type, d->value);
+
+  if (typecheck_error_count() != old_error_count) return;
+
+  if (d->value && d->symbol->kind == SYMBOL_GLOBAL) {
+    struct expr_constant value;
+    if (expr_status(d->value, &value) == EXPR_STAT_RUNTIME) {
+      typecheck_error("Global variable '%s' initializer must be constant", d->name);
+    }
   }
-  if (d->value) expr_typecheck_init(d->type, d->value);
 }
 
-static void decl_typecheck_function(struct decl *const d) {
+static void decl_typecheck_function(struct decl *d) {
   struct type *ftype = d->symbol->type;
   if (d->code) {
     // Function definition: Typecheck body and infer return type (if needed).
@@ -182,14 +191,15 @@ static void decl_typecheck_function(struct decl *const d) {
     typecheck_error("'main' must return an integer");
 }
 
-void decl_typecheck( struct decl *d ) {
-  for (struct decl *current = d; current; current = current->next) {
-    if (current->type->kind == TYPE_FUNCTION) decl_typecheck_function(d);
-    else decl_typecheck_variable(d);
+void decl_typecheck(struct decl *d) {
+  struct decl *current;
+  for (current = d; current; current = current->next) {
+    if (current->type->kind == TYPE_FUNCTION) decl_typecheck_function(current);
+    else decl_typecheck_variable(current);
   }
 
   // Second loop lets later definition resolve earlier prototype's return type
-  for (struct decl *current = d; current; current = current->next) {
+  for (current = d; current; current = current->next) {
     if (current->type->kind != TYPE_FUNCTION) continue;
 
     struct type *return_type = current->symbol->type->subtype;

@@ -30,8 +30,8 @@ struct decl {
  *
  * @return Pointer to the newly created declaration node.
  */
-struct decl *decl_create(char *const name, struct type *const type, struct expr *const value,
-                          struct stmt *const code, struct decl *const next);
+struct decl *decl_create(char *name, struct type *type, struct expr *value,
+                          struct stmt *code, struct decl *next);
 
 /**
  * @brief Prints the given declaration with the specified indentation level.
@@ -53,7 +53,7 @@ void decl_print(const struct decl *d, int indent);
  *
  * @warning Modifies AST, scopes/symbol tables, and `local_count` (static var).
  */
-void decl_resolve( struct decl *d );
+void decl_resolve(struct decl *d);
 
 /**
  * @brief Typechecks the given declaration list and reports type errors.
@@ -62,4 +62,4 @@ void decl_resolve( struct decl *d );
  *
  * @note Modifies AST.
  */
-void decl_typecheck( struct decl *d );
+void decl_typecheck(struct decl *d);

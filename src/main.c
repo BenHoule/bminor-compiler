@@ -90,7 +90,7 @@ int main(int argc, char *argv[]) {
         fclose(input_file);
         return EXIT_COMPILE_ERROR;
       }
-      printf("parse successful\n");  // For assignment - remove later
+      printf("parse successful\n");  // For assignment 2 - remove later
       break;
 
     case STAGE_PRINT:
@@ -122,14 +122,31 @@ int main(int argc, char *argv[]) {
       scope_enter();
       decl_resolve(parser_result);
       scope_exit();
-      if (resolver_error_count()) return EXIT_COMPILE_ERROR;
-      // NOTE: Skipping typecheck after resolver errors is simpler than guarding
+
+      // Skipping typecheck after resolver errors is simpler than guarding
       // every name lookup for unresolved identifiers.
+      if (resolver_error_count()) return EXIT_COMPILE_ERROR;
+
       decl_typecheck(parser_result);
       if (typecheck_error_count()) return EXIT_COMPILE_ERROR;
       break;
 
     case STAGE_CODEGEN:
+      if (yyparse() || scanner_error_count() || parser_error_count()) {
+        fclose(input_file);
+        return EXIT_COMPILE_ERROR;
+      }
+      scope_enter();
+      decl_resolve(parser_result);
+      scope_exit();
+
+      // No code generation if name-resolution/typechecking fails
+      if (resolver_error_count()) return EXIT_COMPILE_ERROR;
+
+      decl_typecheck(parser_result);
+      if (typecheck_error_count()) return EXIT_COMPILE_ERROR;
+
+      // Codegen goes here
       fprintf(stderr, "bminor: stage not implemented (%s)\n", argv[1]);
       fclose(input_file);
       return EXIT_COMPILE_ERROR;

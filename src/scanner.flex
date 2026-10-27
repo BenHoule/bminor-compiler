@@ -34,7 +34,7 @@ static int col = 1;
 static unsigned int err_count = 0;
 static YYLTYPE block = {0, 0, 0, 0};
 
-static void vprint_error(const YYLTYPE *const loc, const char *fmt, va_list args);
+static void vprint_error(const YYLTYPE *loc, const char *fmt, va_list args);
 
 /* Tells compiler to check printf-style format and arguments for scanner_error */
 [[gnu::format(printf, 2, 3)]]
@@ -226,14 +226,14 @@ unsigned int scanner_error_count(void) {
   return err_count;
 }
 
-static void vprint_error(const YYLTYPE *const loc, const char *fmt, va_list args) {
+static void vprint_error(const YYLTYPE *loc, const char *fmt, va_list args) {
   err_count++;
   fprintf(stderr, "scan error: [line %d, col %d] ", loc->first_line, loc->first_column);
   vfprintf(stderr, fmt, args);
   fprintf(stderr, "\n");
 }
 
-static void scanner_error_at(const YYLTYPE *const loc, const char *fmt, ...) {
+static void scanner_error_at(const YYLTYPE *loc, const char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
   vprint_error(loc, fmt, args);

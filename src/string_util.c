@@ -62,7 +62,7 @@ size_t string_encode(const char *in, char *out, size_t out_size) {
   assert(in != NULL);
   assert(out != NULL);  //TODO: add -DNDEBUG to makefile for non-debug builds
 
-  char *const start = out;
+  char *start = out;
   in++;  // Skip the opening double quote
 
   while (*in != '"') {
@@ -124,7 +124,7 @@ size_t string_decode(const char *in, char *out, size_t out_size) {
   assert(out != NULL);
   assert(out_size > 2);  //TODO: add -DNDEBUG to makefile for non-debug builds
 
-  char *const start = out;
+  char *start = out;
   *out = '"';
   out++;
   out_size--;

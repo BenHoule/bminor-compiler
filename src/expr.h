@@ -3,6 +3,10 @@
 #include <stddef.h>
 #include <stdint.h>
 
+// Forward declarations
+struct symbol;
+struct type;
+
 typedef enum {
 	EXPR_ADD,     // 'e + e'
 	EXPR_SUB,     // 'e - e'
@@ -36,18 +40,14 @@ typedef enum {
   EXPR_NAME     // 'x'
 } expr_t;
 
-// Forward declarations
-struct symbol;
-struct type;
-
 /**
  * @brief Represents an expression node in the abstract syntax tree.
  */
 struct expr {
 	// Used by all exprs
-	expr_t kind;
-	struct expr *left;
-	struct expr *right;
+  expr_t kind;
+  struct expr *left;
+  struct expr *right;
   struct type *type;  // set by expr_typecheck()
 
   union {
@@ -136,3 +136,25 @@ void expr_typecheck_init(struct type *want, struct expr *val);
  * constant expressions, false otherwise.
  */
 bool expr_is_constant(const struct expr *e);
+
+typedef enum {
+  EXPR_STAT_CONST,
+  EXPR_STAT_RUNTIME,
+  EXPR_STAT_ERROR
+} expr_status_t;
+
+struct expr_constant {
+  expr_t kind;
+  int64_t integer;
+  double real;
+};
+
+ /**
+ * @brief Evaluates literals, numeric arithmetic, and initializer lists.
+ *
+ * Requires successfully typechecked input. Does not modify the AST.
+ * Output is valid only on EXPR_STAT_CONST; numeric payloads are valid
+ * only for EXPR_INT and EXPR_DOUBLE. Other kinds indicate constant structure.
+ * EXPR_STAT_ERROR means a diagnostic has already been reported.
+ */
+expr_status_t expr_status(const struct expr *e, struct expr_constant *out);

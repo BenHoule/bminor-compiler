@@ -7,16 +7,16 @@
 #include "type.h"
 #include "typecheck.h"
 
-
 #include <assert.h>
+#include <inttypes.h> // PRId64 and PRIu64 macros (for printing int64_t)
+#include <math.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <inttypes.h> // PRId64 and PRIu64 macros (for printing int64_t)
 #include <string.h>
 
-struct expr *expr_create( expr_t kind, struct expr *left, struct expr *right ) {
-  struct expr *e = (struct expr *)malloc(sizeof(struct expr));
+struct expr *expr_create(expr_t kind, struct expr *left, struct expr *right) {
+  struct expr *e = malloc(sizeof(struct expr));
   if (!e) {
     fprintf(stderr, "Failed to allocate memory for expression\n");
     exit(EXIT_FAILURE);
@@ -28,54 +28,48 @@ struct expr *expr_create( expr_t kind, struct expr *left, struct expr *right ) {
   e->int_literal = 0;
   return e;
 }
-
-struct expr *expr_create_name( const char *const n ) {
+struct expr *expr_create_name(const char *n) {
   struct expr *e = expr_create( EXPR_NAME, NULL, NULL );
   e->name = n;
   e->symbol = NULL;
   return e;
 }
-struct expr *expr_create_integer_literal( int64_t i ) {
+struct expr *expr_create_integer_literal(int64_t i) {
   struct expr *e = expr_create( EXPR_INT, NULL, NULL );
   e->int_literal = i;
   return e;
 }
-struct expr *expr_create_double_literal( double d ) {
+struct expr *expr_create_double_literal(double d) {
   struct expr *e = expr_create( EXPR_DOUBLE, NULL, NULL );
   e->double_literal = d;
   return e;
 }
-struct expr *expr_create_boolean_literal( bool b ) {
+struct expr *expr_create_boolean_literal(bool b) {
   struct expr *e = expr_create( EXPR_BOOL, NULL, NULL );
   e->bool_literal = b;
   return e;
 }
-struct expr *expr_create_char_literal( char c ) {
+struct expr *expr_create_char_literal(char c) {
   struct expr *e = expr_create( EXPR_CHAR, NULL, NULL );
   e->char_literal = c;
   return e;
 }
-struct expr *expr_create_string_literal( const char *str ) {
+struct expr *expr_create_string_literal(const char *str) {
   struct expr *e = expr_create( EXPR_STR, NULL, NULL );
   e->string_literal = str;
   return e;
 }
-struct expr *expr_create_false() {
+struct expr *expr_create_false(void) {
   struct expr *e = expr_create( EXPR_BOOL, NULL, NULL );
   e->bool_literal = false;
   return e;
 }
-struct expr *expr_create_true() {
+struct expr *expr_create_true(void) {
   struct expr *e = expr_create( EXPR_BOOL, NULL, NULL );
   e->bool_literal = true;
   return e;
 }
 
-void expr_print_affix(const char *prefix, struct expr *e, const char *suffix) {
-  if (prefix && *prefix != '\0') printf("%s", prefix);
-  expr_print(e);
-  if (suffix && *suffix != '\0') printf("%s", suffix);
-}
 
 static void expr_print_binop( struct expr *e, const char *op) {
   printf("(");
@@ -85,8 +79,14 @@ static void expr_print_binop( struct expr *e, const char *op) {
   printf(")");
 }
 
+void expr_print_affix(const char *prefix, struct expr *e, const char *suffix) {
+  if (prefix && *prefix != '\0') printf("%s", prefix);
+  expr_print(e);
+  if (suffix && *suffix != '\0') printf("%s", suffix);
+}
+
 // Print the expression `e` in a human-readable format
-void expr_print( struct expr *e ) {
+void expr_print(struct expr *e) {
   if (!e) return;
 
   //TODO: Make precedence-aware (only use '()' when precedence <= parent's)
@@ -150,6 +150,7 @@ void expr_print( struct expr *e ) {
   }
 }
 
+
 // Returns True on success, False on failure
 static bool symbol_find_and_bind(struct expr *e) {
     return e->kind != EXPR_NAME ||
@@ -176,7 +177,8 @@ void expr_resolve( struct expr *e ) {
       pre = pre->right;
     }
 
-    if (pre->right != NULL) {  // Implies pre->right == e
+    if (pre->right != NULL) {
+      assert(pre->right == e);
       pre->right = NULL;       // Unlink (finished traversing left subtree)
       e = e->right;
       continue;                // Avoid double reporting for the same node
@@ -192,7 +194,7 @@ void expr_resolve( struct expr *e ) {
   }
 }
 
-static const char *expr_op_name( expr_t kind ) {
+static const char *expr_op_name(expr_t kind) {
   switch (kind) {
     case EXPR_ADD: return "+";   case EXPR_SUB: return "-";
     case EXPR_MUL: return "*";   case EXPR_DIV: return "/";
@@ -207,6 +209,7 @@ static const char *expr_op_name( expr_t kind ) {
     default: return "?";
   }
 }
+
 
 static bool expr_is_lvalue(const struct expr *e) {
   if (!e) return false;
@@ -447,10 +450,20 @@ void expr_typecheck_init(struct type *want, struct expr *val) {
     count++;
   }
 
-  if (want->size && want->size->kind == EXPR_INT &&
-      want->size->int_literal != count) {
-    typecheck_error("array of size %" PRId64 " given %" PRId64 " initializers",
-                    want->size->int_literal, count);
+  const bool want_size_is_valid = want->size
+                               && want->size->type
+                               && want->size->type->kind == TYPE_INTEGER;
+  if (want_size_is_valid) {
+    struct expr_constant size;
+    const bool size_is_known =
+      expr_status(want->size, &size) == EXPR_STAT_CONST;
+
+    if (size_is_known && size.integer != count) {
+      typecheck_error(
+        "array of size %" PRId64 " given %" PRId64 " initializers",
+        size.integer, count
+      );
+    }
   }
 }
 
@@ -472,4 +485,141 @@ bool expr_is_constant(const struct expr *e) {
 
     default: return false;
   }
+}
+
+static expr_status_t expr_status_error(const char *msg) {
+  typecheck_error(msg);
+  return EXPR_STAT_ERROR;
+}
+
+static expr_status_t expr_constant_integer(
+  expr_t kind, int64_t left, int64_t right, int64_t *out
+) {
+  bool overflow = false;
+  switch (kind) {
+    case EXPR_ADD: overflow = __builtin_add_overflow(left, right, out); break;
+    case EXPR_SUB: overflow = __builtin_sub_overflow(left, right, out); break;
+    case EXPR_MUL: overflow = __builtin_mul_overflow(left, right, out); break;
+    case EXPR_DIV: case EXPR_MOD:
+      if (right == 0)
+        return expr_status_error("division by zero in constant expression");
+
+      if (left == INT64_MIN && right == -1)
+        return expr_status_error("integer overflow in constant expression");
+
+      *out = kind == EXPR_DIV ? left / right : left % right;
+      break;
+
+    case EXPR_POW:
+      // Nonpositive exponents produce 1 (matches `integer_power()`)
+      *out = 1;
+      while (right > 0) {
+        if ((right & 1) && __builtin_mul_overflow(*out, left, out)) {
+          overflow = true;
+          break;
+        }
+        right /= 2;
+        if (right && __builtin_mul_overflow(left, left, &left)) {
+          overflow = true;
+          break;
+        }
+      }
+      break;
+
+    default: unreachable();
+  }
+
+  if (overflow)
+    return expr_status_error("integer overflow in constant expression");
+
+  return EXPR_STAT_CONST;
+}
+
+expr_status_t expr_status(const struct expr *e, struct expr_constant *out) {
+  assert(e); assert(out);
+
+  *out = (struct expr_constant){.kind = e->kind};
+
+  switch (e->kind) {
+    case EXPR_INT:
+      out->integer = e->int_literal;
+      return EXPR_STAT_CONST;
+
+    case EXPR_DOUBLE:
+      out->real = e->double_literal;
+      return EXPR_STAT_CONST;
+
+    case EXPR_BOOL: case EXPR_CHAR: case EXPR_STR:
+      return EXPR_STAT_CONST;
+
+    case EXPR_INIT:
+      for (const struct expr *a = e->left; a; a = a->right) {
+        struct expr_constant element;
+        expr_status_t status = expr_status(a->left, &element);
+        if (status != EXPR_STAT_CONST) return status;
+      }
+      return EXPR_STAT_CONST;
+
+    case EXPR_NEG: {
+      struct expr_constant operand;
+      expr_status_t status = expr_status(e->left, &operand);
+      if (status != EXPR_STAT_CONST) return status;
+      out->kind = operand.kind;
+      if (operand.kind == EXPR_INT) {
+        if (__builtin_sub_overflow((int64_t)0, operand.integer, &out->integer)) {
+          return expr_status_error(
+            "integer overflow in constant expression"
+          );
+        }
+      } else {
+        assert(operand.kind == EXPR_DOUBLE);
+        out->real = -operand.real;
+      }
+      return EXPR_STAT_CONST;
+    }
+
+    case EXPR_ADD: case EXPR_SUB: case EXPR_MUL:
+    case EXPR_DIV: case EXPR_MOD: case EXPR_POW:
+      break;
+
+    default: return EXPR_STAT_RUNTIME;
+  }
+
+  struct expr_constant left, right;
+  expr_status_t left_status = expr_status(e->left, &left);
+  expr_status_t right_status = expr_status(e->right, &right);
+
+  if (left_status == EXPR_STAT_ERROR || right_status == EXPR_STAT_ERROR)
+    return EXPR_STAT_ERROR;
+
+  if (left_status == EXPR_STAT_RUNTIME || right_status == EXPR_STAT_RUNTIME)
+    return EXPR_STAT_RUNTIME;
+
+  assert(left.kind == right.kind);
+  out->kind = left.kind;
+  if (left.kind == EXPR_INT) {
+    return expr_constant_integer(
+      e->kind, left.integer, right.integer, &out->integer
+    );
+  }
+
+  assert(left.kind == EXPR_DOUBLE);
+  switch (e->kind) {
+    case EXPR_ADD: out->real = left.real + right.real; break;
+    case EXPR_SUB: out->real = left.real - right.real; break;
+    case EXPR_MUL: out->real = left.real * right.real; break;
+    case EXPR_DIV:
+      if (right.real == 0.0) {
+        return expr_status_error("division by zero in constant expression");
+      }
+      out->real = left.real / right.real;
+      break;
+
+    default: unreachable();  // Doubles not supported for MOD/POW
+  }
+
+  if (!isfinite(out->real))
+    return expr_status_error("non-finite result in constant expression");
+
+  return EXPR_STAT_CONST;
 }

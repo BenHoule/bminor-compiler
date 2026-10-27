@@ -1,5 +1,9 @@
 #pragma once
 
+// Forward declarations
+struct param_list;
+struct expr;
+
 typedef enum {
 	TYPE_VOID,
 	TYPE_BOOLEAN,
@@ -12,10 +16,6 @@ typedef enum {
 	TYPE_FUNCTION,
   TYPE_AUTO  // type_primitive() relies on TYPE_AUTO being last
 } type_t;
-
-// Forward declarations
-struct param_list;
-struct expr;
 
 /**
  * @brief Represents a type node in the abstract syntax tree.

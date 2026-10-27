@@ -134,12 +134,18 @@ void type_typecheck(struct type *t) {
     if (!t->size) continue;
 
     struct type *s = expr_typecheck(t->size);
-    if (s && s->kind != TYPE_INTEGER) {
+    if (!s) continue; // Avoid double-reporting
+
+    if (s->kind != TYPE_INTEGER) {
       typecheck_error("Array size must be an integer");
-    } else if (t->size->kind == EXPR_NEG || t->size->int_literal <= 0) {
-      // Above check blocks [-(-1)] ^^^
-      // TODO: Evaluate const expressions to handle negative literals correctly
-      typecheck_error("Array size must be a positive integer");
+      continue;
     }
+
+    struct expr_constant size;
+    const bool size_is_known =
+      expr_status(t->size, &size) == EXPR_STAT_CONST;
+
+    if (size_is_known && size.integer <= 0)
+      typecheck_error("Array size must be a positive integer");
   }
 }

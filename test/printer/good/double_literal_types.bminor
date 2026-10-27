@@ -1,0 +1,6 @@
+whole: double = 1.0;
+zero: double = 0.0;
+negative_zero: double = -0.0;
+fraction: double = 0.1;
+small: double = 1.0e-100;
+large: double = 1.0e100;

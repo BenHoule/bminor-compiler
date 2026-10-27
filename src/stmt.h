@@ -1,5 +1,10 @@
 #pragma once
 
+// Forward declarations
+struct decl;
+struct expr;
+struct type;
+
 typedef enum {
   STMT_DECL,
   STMT_EXPR,
@@ -9,10 +14,6 @@ typedef enum {
   STMT_RETURN,
   STMT_BLOCK
 } stmt_t;
-
-// Forward declarations
-struct decl;
-struct expr;
 
 /**
  * @brief Represents a statement node in the abstract syntax tree.
@@ -127,8 +128,6 @@ void stmt_print(struct stmt *s, int indent);
  * @note Modifies AST and symbol tables.
  */
 void stmt_resolve(struct stmt *s);
-
-struct type;  // Forward declaration
 
 /**
  * @brief Typechecks the given statement against the specified type.

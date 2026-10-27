@@ -1,0 +1,13 @@
+sizes: function integer () = {
+	nested: array [-(-2)] integer = {1, 2};
+	computed: array [1 + 2 * 3] integer = {1, 2, 3, 4, 5, 6, 7};
+	powered: carray [2^3] integer = {1, 2, 3, 4, 5, 6, 7, 8};
+	divided: array [9 / 2] integer = {1, 2, 3, 4};
+	remainder: array [9 % 4] integer = {1};
+	right_power: array [2^1^2] integer = {1, 2};
+	left_power: array [(2^1)^2] integer = {1, 2, 3, 4};
+	negative_power: array [2^-1] integer = {1};
+	zero_power: array [0^0] integer = {1};
+	grid: array [1 + 1] array [6 / 3] integer = {{1, 2}, {3, 4}};
+	return 0;
+}

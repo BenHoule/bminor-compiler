@@ -14,7 +14,7 @@ struct scope *current_scope = NULL;
 static int current_depth = 0;
 
 void scope_enter() {
-  struct scope *new_scope = (struct scope *)malloc(sizeof(struct scope));
+  struct scope *new_scope = malloc(sizeof(struct scope));
   if (!new_scope) {
     fprintf(stderr, "Failed to allocate memory for new scope\n");
     exit(EXIT_FAILURE);

@@ -1,5 +1,8 @@
 #pragma once
 
+// Forward declarations
+struct symbol;
+
 /**
  * @brief Allocates a new scope on the heap and makes it the current scope.
  */
@@ -16,8 +19,6 @@ void scope_exit(void);
  * @return The current scope depth as an integer.
  */
 int scope_depth(void);
-
-struct symbol;  // Forward declaration
 
 /**
  * @brief Binds a name to a symbol in the innermost scope.

@@ -1,12 +1,13 @@
 #pragma once
 
+// Forward declarations
+struct type;
+
 typedef enum {
   SYMBOL_LOCAL,    // `which` = stack slot index
   SYMBOL_PARAM,    // `which` = parameter index
   SYMBOL_GLOBAL    // `which` = unused
 } symbol_t;
-
-struct type;  // Forward declaration
 
 /**
  * @brief Metadata representing an identifier.

@@ -1,0 +1,5 @@
+grouping: function integer (x: integer) = {
+    print (-(-x)), ((-x) ^ 2), (-(x ^ 2)), (2 ^ (3 ^ 2)), ((2 ^ 3) ^ 2);
+    print (!(!true)), (-(-(-x))), ((x)++), ((x)--);
+    return 0;
+}

@@ -19,6 +19,33 @@ test/
 
 Each case must have the expected exit status. If its matching file exists under `expected/`, the program output must match exactly. `make clean` removes generated `out/` directories.
 
+### Printer and constant-expression regressions
+
+The printer fixtures `unary_power_grouping.bminor` and
+`double_literal_types.bminor` have exact-output baselines. They distinguish
+`(-x)^2` from `-(x^2)`, left- from right-associated powers, nested unary
+operators, and integer-looking double literals. These baselines complement
+the idempotence checks in `printer/roundtrip.sh`: stable output alone does
+not prove that the original expression's meaning was preserved.
+
+The typechecker fixtures named `constant_*`, `computed_array_*`,
+`computed_initializer_count.bminor`, and `runtime_array_sizes.bminor`
+describe the intended arithmetic-constant behavior:
+
+- Integer `+`, `-`, `*`, `/`, `%`, `^`, and nested numeric negation are
+  evaluated without signed overflow. Double arithmetic supports `+`, `-`,
+  `*`, `/`, and negation.
+- Division by zero, integer overflow, and non-finite double results report
+  errors. Negative integer exponents and `0^0` produce `1`, matching the
+  existing `integer_power` runtime helper.
+- Known array sizes must be positive and match initializer counts.
+  Runtime-dependent integer sizes remain allowed; no compile-time
+  positivity or initializer-count claim is made for those sizes.
+- Names and calls are not arithmetic constants. This does not introduce
+  constant propagation, logical/comparison evaluation, or AST rewriting.
+
+Error baselines check the diagnostic so that rejecting every arithmetic expression as "nonconstant" cannot falsely pass them.
+
 Individual tests may be passed directly to the compiler:
 ```sh
 ./bminor -scan test/scanner/good/keywords.bminor

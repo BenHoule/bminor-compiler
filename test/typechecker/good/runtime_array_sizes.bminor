@@ -1,0 +1,6 @@
+sizes: function integer (n: integer) = {
+	direct: array [n] integer;
+	computed: array [n + 1] integer;
+	negated: array [-n] integer;
+	return 0;
+}
