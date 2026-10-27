@@ -1,16 +1,46 @@
 #pragma once
 
-void scope_enter();
-void scope_exit();
-int scope_depth();
+/**
+ * @brief Allocates a new scope on the heap and makes it the current scope.
+ */
+void scope_enter(void);
 
-struct symbol;
+/**
+ * @brief Makes parent the current scope and frees the exited scope.
+ */
+void scope_exit(void);
 
-/* Binds name -> symbol  (innermost scope) */
+/**
+ * @return The current scope depth as an integer.
+ */
+int scope_depth(void);
+
+struct symbol;  // Forward declaration
+
+/**
+ * @brief Binds a name to a symbol in the innermost scope.
+ *
+ * @param[in] name The name to bind.
+ * @param[in] symbol The symbol to associate with the name.
+ *
+ * @return 0 on success, non-zero on failure (e.g. redeclaration in same scope).
+ */
 int scope_bind(const char *name, struct symbol *symbol );
 
-/* Searches innermost -> outermost. NULL if not found */
-struct symbol * scope_lookup( const char *name );
+/**
+ * @brief Searches innermost -> outermost for the given name.
+ *
+ * @param[in] name The name to look up.
+ *
+ * @return Symbol associated with the name if found, NULL otherwise.
+ */
+struct symbol *scope_lookup( const char *name );
 
-/* Searches only innermost scope. Used for redeclaration checks */
-struct symbol * scope_lookup_local( const char *name );
+/**
+ * @brief Searches (only) innermost scope for the given name.
+ *
+ * @param[in] name The name to look up.
+ *
+ * @return Symbol associated with the name if found, NULL otherwise.
+ */
+struct symbol *scope_lookup_local( const char *name );

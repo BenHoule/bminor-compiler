@@ -15,8 +15,7 @@
 #include <inttypes.h> // PRId64 and PRIu64 macros (for printing int64_t)
 #include <string.h>
 
-// Create a new expression node with the given kind and child expressions.
-struct expr * expr_create( expr_t kind, struct expr *left, struct expr *right ) {
+struct expr *expr_create( expr_t kind, struct expr *left, struct expr *right ) {
   struct expr *e = (struct expr *)malloc(sizeof(struct expr));
   if (!e) {
     fprintf(stderr, "Failed to allocate memory for expression\n");
@@ -25,54 +24,54 @@ struct expr * expr_create( expr_t kind, struct expr *left, struct expr *right ) 
   e->kind = kind;
   e->left = left;
   e->right = right;
-  e->type = NULL;  // Initialize type to NULL
+  e->type = NULL;
   e->int_literal = 0;
   return e;
 }
 
-struct expr * expr_create_name( const char *n ) {
+struct expr *expr_create_name( const char *const n ) {
   struct expr *e = expr_create( EXPR_NAME, NULL, NULL );
-  e->identifier.name = n;
-  e->identifier.symbol = NULL;
+  e->name = n;
+  e->symbol = NULL;
   return e;
 }
-struct expr * expr_create_integer_literal( int64_t i ) {
+struct expr *expr_create_integer_literal( int64_t i ) {
   struct expr *e = expr_create( EXPR_INT, NULL, NULL );
   e->int_literal = i;
   return e;
 }
-struct expr * expr_create_double_literal( double d ) {
+struct expr *expr_create_double_literal( double d ) {
   struct expr *e = expr_create( EXPR_DOUBLE, NULL, NULL );
   e->double_literal = d;
   return e;
 }
-struct expr * expr_create_boolean_literal( bool b ) {
-  struct expr * e = expr_create( EXPR_BOOL, NULL, NULL );
+struct expr *expr_create_boolean_literal( bool b ) {
+  struct expr *e = expr_create( EXPR_BOOL, NULL, NULL );
   e->bool_literal = b;
   return e;
 }
-struct expr * expr_create_char_literal( char c ) {
+struct expr *expr_create_char_literal( char c ) {
   struct expr *e = expr_create( EXPR_CHAR, NULL, NULL );
   e->char_literal = c;
   return e;
 }
-struct expr * expr_create_string_literal( const char *str ) {
+struct expr *expr_create_string_literal( const char *str ) {
   struct expr *e = expr_create( EXPR_STR, NULL, NULL );
   e->string_literal = str;
   return e;
 }
-struct expr * expr_create_false() {
+struct expr *expr_create_false() {
   struct expr *e = expr_create( EXPR_BOOL, NULL, NULL );
   e->bool_literal = false;
   return e;
 }
-struct expr * expr_create_true() {
+struct expr *expr_create_true() {
   struct expr *e = expr_create( EXPR_BOOL, NULL, NULL );
   e->bool_literal = true;
   return e;
 }
 
-void expr_print_affix(const char* prefix, struct expr *e, const char* suffix) {
+void expr_print_affix(const char *prefix, struct expr *e, const char *suffix) {
   if (prefix && *prefix != '\0') printf("%s", prefix);
   expr_print(e);
   if (suffix && *suffix != '\0') printf("%s", suffix);
@@ -112,7 +111,7 @@ void expr_print( struct expr *e ) {
     case EXPR_NOT: expr_print_affix("(!", e->left, ")"); break;
     case EXPR_INC: expr_print_affix("((", e->left, ")++)"); break;
     case EXPR_DEC: expr_print_affix("((", e->left, ")--)"); break;
-    case EXPR_NAME:   printf("%s", e->identifier.name  ); break;
+    case EXPR_NAME:   printf("%s", e->name  ); break;
     case EXPR_INT:    printf("%" PRId64, e->int_literal); break;
     case EXPR_DOUBLE: printf("%#.17g", e->double_literal); break;
     case EXPR_BOOL:   printf("%s", e->bool_literal ? "true" : "false"); break;
@@ -154,7 +153,7 @@ void expr_print( struct expr *e ) {
 // Returns True on success, False on failure
 static bool symbol_find_and_bind(struct expr *e) {
     return e->kind != EXPR_NAME ||
-      (e->identifier.symbol = scope_lookup(e->identifier.name));
+      (e->symbol = scope_lookup(e->name));
 }
 
 // Morris Preorder Traversal - (Root-Left-Right) - Time: O(N), Space: O(1)
@@ -165,7 +164,7 @@ void expr_resolve( struct expr *e ) {
     if (!e->left) {
       if (!symbol_find_and_bind(e)) {
         //TODO: Add line/col to error message
-        resolver_error("Undefined identifier '%s'", e->identifier.name);
+        resolver_error("Undefined identifier '%s'", e->name);
       }
       e = e->right;
       continue;
@@ -185,7 +184,7 @@ void expr_resolve( struct expr *e ) {
 
     if (!symbol_find_and_bind(e)) {
       //TODO: Add line/col to error message
-      resolver_error("Undefined identifier '%s'", e->identifier.name);
+      resolver_error("Undefined identifier '%s'", e->name);
     }
 
     pre->right = e;  // Link (until we finish traversing left subtree)
@@ -193,7 +192,7 @@ void expr_resolve( struct expr *e ) {
   }
 }
 
-static const char * expr_op_name( expr_t kind ) {
+static const char *expr_op_name( expr_t kind ) {
   switch (kind) {
     case EXPR_ADD: return "+";   case EXPR_SUB: return "-";
     case EXPR_MUL: return "*";   case EXPR_DIV: return "/";
@@ -211,13 +210,13 @@ static const char * expr_op_name( expr_t kind ) {
 
 static bool expr_is_lvalue(const struct expr *e) {
   if (!e) return false;
-  return e->kind == EXPR_IDX ||
-        (e->kind == EXPR_NAME && e->identifier.symbol &&
-         e->identifier.symbol->type->kind != TYPE_FUNCTION &&
-         e->identifier.symbol->type->kind != TYPE_VOID);  // This is gross: fix later
+  const bool is_assignable = e->symbol && e->symbol->type->kind != TYPE_FUNCTION
+                             && e->symbol->type->kind != TYPE_VOID;
+
+  return e->kind == EXPR_IDX || (e->kind == EXPR_NAME && is_assignable);
 }
 
-static struct type * expr_typecheck_binary(struct expr *e, bool allow_non_numeric) {
+static struct type *expr_typecheck_binary(struct expr *e, bool allow_non_numeric) {
   if (!e) return NULL;
 
   struct type *l = expr_typecheck(e->left);
@@ -255,7 +254,7 @@ static struct type * expr_typecheck_binary(struct expr *e, bool allow_non_numeri
   return (e->kind <= EXPR_POW) ? l : type_primitive(TYPE_BOOLEAN);
 }
 
-static struct type * expr_typecheck_logical(struct expr *e) {
+static struct type *expr_typecheck_logical(struct expr *e) {
   if (!e) return NULL;
 
   e->type = expr_typecheck(e->left);
@@ -269,7 +268,7 @@ static struct type * expr_typecheck_logical(struct expr *e) {
   return type_primitive(TYPE_BOOLEAN);
 }
 
-static struct type * expr_typecheck_call(struct expr *e) {
+static struct type *expr_typecheck_call(struct expr *e) {
   if (!e) return NULL;
 
   struct type *t = expr_typecheck(e->left);
@@ -301,7 +300,7 @@ static struct type * expr_typecheck_call(struct expr *e) {
 
 
 // Returns NULL when `e` contains an error that has already been reported
-struct type * expr_typecheck(struct expr *e) {
+struct type *expr_typecheck(struct expr *e) {
   if (!e) return NULL;
 
   switch (e->kind) {
@@ -405,13 +404,13 @@ struct type * expr_typecheck(struct expr *e) {
     case EXPR_STR:    e->type = type_primitive(TYPE_STRING ); break;
     case EXPR_DOUBLE: e->type = type_primitive(TYPE_DOUBLE ); break;
 
-    case EXPR_NAME:   e->type = e->identifier.symbol->type; break;
+    case EXPR_NAME:   e->type = e->symbol->type; break;
   }
   return e->type;
 }
 
 void expr_typecheck_init(struct type *want, struct expr *val) {
-  bool is_array = want->kind == TYPE_ARRAY || want->kind == TYPE_CARRAY;
+  const bool is_array = want->kind == TYPE_ARRAY || want->kind == TYPE_CARRAY;
 
   if (val->kind != EXPR_INIT) {
     if (is_array) {

@@ -9,11 +9,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-// Create a new statement with the given properties.
-struct stmt * stmt_create_simple(
+struct stmt *stmt_create_simple(
   stmt_t kind,
-  struct expr *expr,
-  struct stmt *next
+  struct expr *expr
 ) {
   struct stmt *s = malloc(sizeof(struct stmt));
   if (!s) {
@@ -22,20 +20,20 @@ struct stmt * stmt_create_simple(
   }
   s->kind = kind;
   s->expr = expr;
-  s->next = next;
+  s->next = NULL;
   return s;
 }
-struct stmt * stmt_create_expr( struct expr *expr ) {
-  return stmt_create_simple(STMT_EXPR, expr, NULL);
+struct stmt *stmt_create_expr(struct expr *expr) {
+  return stmt_create_simple(STMT_EXPR, expr);
 }
-struct stmt * stmt_create_return( struct expr *expr ) {
-  return stmt_create_simple(STMT_RETURN, expr, NULL);
+struct stmt *stmt_create_return(struct expr *expr) {
+  return stmt_create_simple(STMT_RETURN, expr);
 }
-struct stmt * stmt_create_print( struct expr *expr ) {
-  return stmt_create_simple(STMT_PRINT, expr, NULL);
+struct stmt *stmt_create_print(struct expr *expr) {
+  return stmt_create_simple(STMT_PRINT, expr);
 }
 
-struct stmt * stmt_create_decl( struct decl *decl, struct stmt *next ) {
+struct stmt *stmt_create_decl(struct decl *decl) {
   struct stmt *s = malloc(sizeof(struct stmt));
   if (!s) {
     fprintf(stderr, "Failed to allocate memory for statement\n");
@@ -43,22 +41,22 @@ struct stmt * stmt_create_decl( struct decl *decl, struct stmt *next ) {
   }
   s->kind = STMT_DECL;
   s->decl = decl;
-  s->next = next;
+  s->next = NULL;
   return s;
 }
 
-struct stmt  * stmt_create_block( struct stmt *block ) {
+struct stmt *stmt_create_block(struct stmt *body) {
   struct stmt *s = malloc(sizeof(struct stmt));
   if (!s) {
     fprintf(stderr, "Failed to allocate memory for statement\n");
     exit(EXIT_FAILURE);
   }
   s->kind = STMT_BLOCK;
-  s->block = block;
+  s->block = body;
   s->next = NULL;
   return s;
 }
-struct stmt * stmt_create_if_else( struct expr *cond_expr, struct stmt *body, struct stmt *else_body ) {
+struct stmt *stmt_create_if_else(struct expr *cond_expr, struct stmt *body, struct stmt *else_body) {
   struct stmt *s = malloc(sizeof(struct stmt));
   if (!s) {
     fprintf(stderr, "Failed to allocate memory for statement\n");
@@ -71,7 +69,7 @@ struct stmt * stmt_create_if_else( struct expr *cond_expr, struct stmt *body, st
   s->next = NULL;
   return s;
 }
-struct stmt * stmt_create_for( struct expr *init_expr, struct expr *cond_expr, struct expr *loop_expr, struct stmt *body ) {
+struct stmt *stmt_create_for(struct expr *init_expr, struct expr *cond_expr, struct expr *loop_expr, struct stmt *body) {
   struct stmt *s = malloc(sizeof(struct stmt));
   if (!s) {
     fprintf(stderr, "Failed to allocate memory for statement\n");
@@ -86,8 +84,7 @@ struct stmt * stmt_create_for( struct expr *init_expr, struct expr *cond_expr, s
   return s;
 }
 
-// Print a statement with the given indentation level.
-void stmt_print( struct stmt *s, const int indent ) {
+void stmt_print(struct stmt *s, const int indent) {
   for (; s; s = s->next) {
     printf("%*s", indent * 2, "");
 
@@ -152,7 +149,7 @@ void stmt_print( struct stmt *s, const int indent ) {
   }
 }
 
-void stmt_resolve( struct stmt *s ) {
+void stmt_resolve(struct stmt *s) {
   for(; s; s = s->next) {
     switch (s->kind) {
       case STMT_EXPR:
@@ -200,7 +197,7 @@ static void stmt_typecheck_return(struct stmt *s, struct type *ftype) {
   }
 }
 
-void stmt_typecheck( struct stmt *s, struct type *ftype ) {
+void stmt_typecheck(struct stmt *s, struct type *ftype) {
   for (; s; s = s->next) {
     switch (s->kind) {
       case STMT_DECL: decl_typecheck(s->decl); break;

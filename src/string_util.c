@@ -58,7 +58,6 @@ uint8_t char_encode(const char **in) {
   }
 }
 
-// Maps chars -> byte values
 size_t string_encode(const char *in, char *out, size_t out_size) {
   assert(in != NULL);
   assert(out != NULL);  //TODO: add -DNDEBUG to makefile for non-debug builds
@@ -85,13 +84,10 @@ size_t string_encode(const char *in, char *out, size_t out_size) {
   return (size_t)(out - start + 1);
 }
 
-// NOTE: Static internal buffer - e.g.
-// printf("%s %s", char_decode(a,'\''), char_decode(b,'\''))
-// prints the same character twice.
 const char* char_decode(const char in, const char quote) {
   static char buf[6] = ""; // Enough for '\0xHH' + Null Terminator
 
-  // NOTE: Since " and \ are ASCII 34 and 92, respectively, there is no
+  // Since " and \ are ASCII 34 and 92, respectively, there is no
   // convenient way to filter them out of the printable character check.
   if (isprint(in)) {
     if (in == quote || in == '\\') {
@@ -109,7 +105,7 @@ const char* char_decode(const char in, const char quote) {
   switch (in) {
     case '\a': buf[1] = 'a'; buf[2] = '\0'; break;
     case '\b': buf[1] = 'b'; buf[2] = '\0'; break;
-    case 0x1B: buf[1] = 'e'; buf[2] = '\0'; break;  // NOTE: '\e' not supported by MSVC - using 0x1B for portability
+    case 0x1B: buf[1] = 'e'; buf[2] = '\0'; break;  // '\e' not supported by MSVC - using 0x1B for portability
     case '\f': buf[1] = 'f'; buf[2] = '\0'; break;
     case '\n': buf[1] = 'n'; buf[2] = '\0'; break;
     case '\r': buf[1] = 'r'; buf[2] = '\0'; break;
@@ -123,7 +119,6 @@ const char* char_decode(const char in, const char quote) {
   return buf;
 }
 
-// Maps byte values -> chars (with escaping)
 size_t string_decode(const char *in, char *out, size_t out_size) {
   assert(in != NULL);
   assert(out != NULL);

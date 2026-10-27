@@ -45,14 +45,12 @@ int scope_depth() {
   return current_depth;
 }
 
-// Binds name -> symbol  (innermost scope)
 int scope_bind(const char *name, struct symbol *symbol ) {
   assert(current_scope != NULL);
   return hash_table_insert(current_scope->symbols, name, symbol);
 }
 
-// Searches innermost -> outermost. NULL if not found
-struct symbol * scope_lookup( const char *name ) {
+struct symbol *scope_lookup( const char *name ) {
   struct scope *scope = current_scope;
   while (scope) {
     struct symbol *sym = hash_table_lookup(scope->symbols, name);
@@ -62,8 +60,7 @@ struct symbol * scope_lookup( const char *name ) {
   return NULL;
 }
 
-// Searches only innermost scope. Used for redeclaration checks
-struct symbol * scope_lookup_local( const char *name ) {
+struct symbol *scope_lookup_local( const char *name ) {
   assert(current_scope != NULL);
   return hash_table_lookup(current_scope->symbols, name);
 }

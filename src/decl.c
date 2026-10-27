@@ -13,8 +13,8 @@
 #include <stdio.h>
 #include <string.h>
 
-struct decl * decl_create(char *name, struct type *type, struct expr *value,
-                          struct stmt *code, struct decl *next) {
+struct decl *decl_create(char *const name, struct type *const type, struct expr *const value,
+                          struct stmt *const code, struct decl *const next) {
   struct decl *d = (struct decl *)malloc(sizeof(struct decl));
   if (!d) {
     fprintf(stderr, "Failed to allocate memory for declaration\n");
@@ -91,7 +91,7 @@ static void decl_resolve_func(struct decl *const d) {
     return;
   }
 
-  struct symbol * pre = scope_lookup_local(d->name);
+  struct symbol *pre = scope_lookup_local(d->name);
   if (pre) {
     // Existing symbol found: Check for conflicts
     if (pre->type->kind != TYPE_FUNCTION) {
@@ -166,7 +166,7 @@ static void decl_typecheck_variable(struct decl *const d) {
   if (d->value) expr_typecheck_init(d->type, d->value);
 }
 
-static void decl_typecheck_function(struct decl *d) {
+static void decl_typecheck_function(struct decl *const d) {
   struct type *ftype = d->symbol->type;
   if (d->code) {
     // Function definition: Typecheck body and infer return type (if needed).

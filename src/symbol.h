@@ -6,17 +6,36 @@ typedef enum {
   SYMBOL_GLOBAL    // `which` = unused
 } symbol_t;
 
-struct type;
+struct type;  // Forward declaration
 
+/**
+ * @brief Metadata representing an identifier.
+ */
 struct symbol {
   symbol_t kind;
   struct type *type;
   char *name;
-  int which;
-  bool is_defined;  // Functions only
+  int which;         // -1 for globals
+  bool is_defined;   // Functions only
   int frame_locals;  // Functions only: # of local slots
 };
 
-struct symbol * symbol_create( symbol_t kind, struct type *type, char *name );
+/**
+ * @brief Creates a new symbol on the heap.
+ *
+ * @param kind The kind of the symbol.
+ * @param type The type of the symbol.
+ * @param name The name of the symbol.
+ *
+ * @return Pointer to the newly created symbol.
+ *
+ * @warning Returned symbol must be freed by the caller.
+ */
+struct symbol *symbol_create( symbol_t kind, struct type *type, char *name );
 
+/**
+ * @brief Prints the binding information of a symbol.
+ *
+ * @param s Pointer to the symbol.
+ */
 void symbol_print_binding(const struct symbol *s);

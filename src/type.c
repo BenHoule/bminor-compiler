@@ -7,8 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-// Create a new type with the given kind, subtype, parameter list, and size.
-struct type * type_create( type_t kind, struct type *subtype, struct param_list *params, struct expr *size ) {
+struct type *type_create(type_t kind, struct type *subtype, struct param_list *params, struct expr *size) {
   struct type *t = malloc(sizeof(struct type));
   if (!t) {
     fprintf(stderr, "Failed to allocate memory for type\n");
@@ -21,39 +20,38 @@ struct type * type_create( type_t kind, struct type *subtype, struct param_list 
   return t;
 }
 
-struct type * type_create_void() {
+struct type *type_create_void(void) {
   return type_create(TYPE_VOID, NULL, NULL, NULL);
 }
-struct type * type_create_boolean() {
+struct type *type_create_boolean(void) {
   return type_create(TYPE_BOOLEAN, NULL, NULL, NULL);
 }
-struct type * type_create_char() {
+struct type *type_create_char(void) {
   return type_create(TYPE_CHAR, NULL, NULL, NULL);
 }
-struct type * type_create_integer() {
+struct type *type_create_integer(void) {
   return type_create(TYPE_INTEGER, NULL, NULL, NULL);
 }
-struct type * type_create_double() {
+struct type *type_create_double(void) {
   return type_create(TYPE_DOUBLE, NULL, NULL, NULL);
 }
-struct type * type_create_string() {
+struct type *type_create_string(void) {
   return type_create(TYPE_STRING, NULL, NULL, NULL);
 }
-struct type * type_create_array(struct type *subtype, struct expr *size) {
+struct type *type_create_array(struct type *subtype, struct expr *size) {
   return type_create(TYPE_ARRAY, subtype, NULL, size);
 }
-struct type * type_create_carray(struct type *subtype, struct expr *size) {
+struct type *type_create_carray(struct type *subtype, struct expr *size) {
   return type_create(TYPE_CARRAY, subtype, NULL, size);
 }
-struct type * type_create_function(struct type *subtype, struct param_list *params) {
+struct type *type_create_function(struct type *subtype, struct param_list *params) {
   return type_create(TYPE_FUNCTION, subtype, params, NULL);
 }
-struct type * type_create_auto() {
+struct type *type_create_auto(void) {
   return type_create(TYPE_AUTO, NULL, NULL, NULL);
 }
 
-struct type * type_primitive(type_t kind) {
-  // NOTE: Relies on TYPE_AUTO being the last type in the enum
+struct type *type_primitive(type_t kind) {
   static struct type primitives[TYPE_AUTO + 1] = {0};
   primitives[kind].kind = kind;
   return &primitives[kind];
@@ -89,8 +87,7 @@ static void type_print_affix(const char* prefix, struct type *t, const char* suf
   if (suffix && *suffix != '\0') printf("%s", suffix);
 }
 
-// Print a type in a human-readable format.
-void type_print( struct type *t ) {
+void type_print(struct type *t) {
   switch (t->kind) {
     case TYPE_VOID:    printf("void"   ); break;
     case TYPE_BOOLEAN: printf("boolean"); break;
@@ -131,6 +128,7 @@ bool type_is_primitive(const struct type *t) {
       return false;
   }
 }
+
 void type_typecheck(struct type *t) {
   for (; t; t = t->subtype) {
     if (!t->size) continue;
@@ -139,8 +137,8 @@ void type_typecheck(struct type *t) {
     if (s && s->kind != TYPE_INTEGER) {
       typecheck_error("Array size must be an integer");
     } else if (t->size->kind == EXPR_NEG || t->size->int_literal <= 0) {
-      // NOTE: Above check blocks [-(-1)]
-      // TODO: Evaluate constant expressions to handle negative literals correctly
+      // Above check blocks [-(-1)] ^^^
+      // TODO: Evaluate const expressions to handle negative literals correctly
       typecheck_error("Array size must be a positive integer");
     }
   }
