@@ -183,8 +183,24 @@ static void decl_typecheck_function(struct decl *const d) {
 }
 
 void decl_typecheck( struct decl *d ) {
-  for (; d; d = d->next) {
-    if (d->type->kind == TYPE_FUNCTION) decl_typecheck_function(d);
+  for (struct decl *current = d; current; current = current->next) {
+    if (current->type->kind == TYPE_FUNCTION) decl_typecheck_function(d);
     else decl_typecheck_variable(d);
+  }
+
+  // Second loop lets later definition resolve earlier prototype's return type
+  for (struct decl *current = d; current; current = current->next) {
+    if (current->type->kind != TYPE_FUNCTION) continue;
+
+    struct type *return_type = current->symbol->type->subtype;
+    if (return_type->kind == TYPE_AUTO) {
+      typecheck_error(
+        "Cannot infer return type for function '%s'; "
+        "provide a definition or an explicit return type",
+        current->name
+      );
+    }
+
+    current->type->subtype = return_type;
   }
 }
