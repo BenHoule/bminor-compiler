@@ -186,12 +186,21 @@ static void stmt_expect_boolean(struct expr *e, const char *context) {
 
 static void stmt_typecheck_return(struct stmt *s, struct type *ftype) {
   if (!s || !ftype) return;
-  struct type *t = s->expr ? expr_typecheck(s->expr) : type_primitive(TYPE_VOID);
-  if (!t) return;
+
+  struct type *t = s->expr
+    ? expr_typecheck(s->expr)
+    : type_primitive(TYPE_VOID);
+
+  if (!t) return;  // Avoid double-reporting
+  if (t->kind == TYPE_AUTO) {
+    typecheck_error("cannot infer return type from unresolved type");
+  }
+
   if (ftype->subtype->kind == TYPE_AUTO) {
     ftype->subtype = t;  // First return determines the type
     return;
   }
+
   if (!type_equals(t, ftype->subtype)) {
     typecheck_error("return type does not match function type");
   }
