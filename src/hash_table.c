@@ -8,66 +8,66 @@
 #define DEFAULT_FUNC hash_string
 
 struct entry {
-	char *key;
-	void *value;
-	unsigned hash;
-	struct entry *next;
+  char *key;
+  void *value;
+  unsigned hash;
+  struct entry *next;
 };
 
 struct hash_table {
-	hash_func_t hash_func;
-	int bucket_count;
-	int size;
-	struct entry **buckets;
-	int ibucket;
-	struct entry *ientry;
+  hash_func_t hash_func;
+  int bucket_count;
+  int size;
+  struct entry **buckets;
+  int ibucket;
+  struct entry *ientry;
 };
 
 struct hash_table *hash_table_create(int bucket_count, hash_func_t func)
 {
-	struct hash_table *h;
+  struct hash_table *h;
 
-	h = malloc(sizeof(struct hash_table));
-	if(!h)
-		return 0;
+  h = malloc(sizeof(struct hash_table));
+  if(!h)
+    return 0;
 
-	if(bucket_count < 1)
-		bucket_count = DEFAULT_SIZE;
-	if(!func)
-		func = DEFAULT_FUNC;
+  if(bucket_count < 1)
+    bucket_count = DEFAULT_SIZE;
+  if(!func)
+    func = DEFAULT_FUNC;
 
-	h->size = 0;
-	h->hash_func = func;
-	h->bucket_count = bucket_count;
+  h->size = 0;
+  h->hash_func = func;
+  h->bucket_count = bucket_count;
   h->ibucket = bucket_count;
   h->ientry = 0;
-	h->buckets = (struct entry **) calloc(bucket_count, sizeof(struct entry *));
-	if(!h->buckets) {
-		free(h);
-		return 0;
-	}
+  h->buckets = (struct entry **) calloc(bucket_count, sizeof(struct entry *));
+  if(!h->buckets) {
+    free(h);
+    return 0;
+  }
 
-	return h;
+  return h;
 }
 
 void hash_table_clear(struct hash_table *h)
 {
-	struct entry *e, *f;
-	int i;
+  struct entry *e, *f;
+  int i;
 
-	for(i = 0; i < h->bucket_count; i++) {
-		e = h->buckets[i];
-		while(e) {
-			f = e->next;
-			free(e->key);
-			free(e);
-			e = f;
-		}
-	}
+  for(i = 0; i < h->bucket_count; i++) {
+    e = h->buckets[i];
+    while(e) {
+      f = e->next;
+      free(e->key);
+      free(e);
+      e = f;
+    }
+  }
 
-	for(i = 0; i < h->bucket_count; i++) {
-		h->buckets[i] = 0;
-	}
+  for(i = 0; i < h->bucket_count; i++) {
+    h->buckets[i] = 0;
+  }
 
   h->size = 0;
   h->ibucket = h->bucket_count;
@@ -77,175 +77,175 @@ void hash_table_clear(struct hash_table *h)
 
 void hash_table_delete(struct hash_table *h)
 {
-	hash_table_clear(h);
-	free(h->buckets);
-	free(h);
+  hash_table_clear(h);
+  free(h->buckets);
+  free(h);
 }
 
 void *hash_table_lookup(struct hash_table *h, const char *key)
 {
-	struct entry *e;
-	unsigned hash, index;
+  struct entry *e;
+  unsigned hash, index;
 
-	hash = h->hash_func(key);
-	index = hash % h->bucket_count;
-	e = h->buckets[index];
+  hash = h->hash_func(key);
+  index = hash % h->bucket_count;
+  e = h->buckets[index];
 
-	while(e) {
-		if(hash == e->hash && !strcmp(key, e->key)) {
-			return e->value;
-		}
-		e = e->next;
-	}
+  while(e) {
+    if(hash == e->hash && !strcmp(key, e->key)) {
+      return e->value;
+    }
+    e = e->next;
+  }
 
-	return 0;
+  return 0;
 }
 
 int hash_table_size(struct hash_table *h)
 {
-	return h->size;
+  return h->size;
 }
 
 static int hash_table_double_buckets(struct hash_table *h)
 {
-	struct hash_table *hn = hash_table_create(2 * h->bucket_count, h->hash_func);
+  struct hash_table *hn = hash_table_create(2 * h->bucket_count, h->hash_func);
 
-	if(!hn)
-		return 0;
+  if(!hn)
+    return 0;
 
-	/* Move pairs to new hash */
-	char *key;
-	void *value;
-	hash_table_firstkey(h);
-	while(hash_table_nextkey(h, &key, &value))
-		if(!hash_table_insert(hn, key, value))
-		{
-			hash_table_delete(hn);
-			return 0;
-		}
+  /* Move pairs to new hash */
+  char *key;
+  void *value;
+  hash_table_firstkey(h);
+  while(hash_table_nextkey(h, &key, &value))
+    if(!hash_table_insert(hn, key, value))
+    {
+      hash_table_delete(hn);
+      return 0;
+    }
 
-	/* Delete all old pairs */
-	struct entry *e, *f;
-	int i;
-	for(i = 0; i < h->bucket_count; i++) {
-		e = h->buckets[i];
-		while(e) {
-			f = e->next;
-			free(e->key);
-			free(e);
-			e = f;
-		}
-	}
+  /* Delete all old pairs */
+  struct entry *e, *f;
+  int i;
+  for(i = 0; i < h->bucket_count; i++) {
+    e = h->buckets[i];
+    while(e) {
+      f = e->next;
+      free(e->key);
+      free(e);
+      e = f;
+    }
+  }
 
-	/* Make the old point to the new */
-	free(h->buckets);
-	h->buckets      = hn->buckets;
-	h->bucket_count = hn->bucket_count;
-	h->size         = hn->size;
+  /* Make the old point to the new */
+  free(h->buckets);
+  h->buckets      = hn->buckets;
+  h->bucket_count = hn->bucket_count;
+  h->size         = hn->size;
 
-	/* Delete reference to new, so old is safe */
-	free(hn);
+  /* Delete reference to new, so old is safe */
+  free(hn);
 
-	return 1;
+  return 1;
 }
 
 int hash_table_insert(struct hash_table *h, const char *key, const void *value)
 {
-	struct entry *e;
-	unsigned hash, index;
+  struct entry *e;
+  unsigned hash, index;
 
-	if( ((float) h->size / h->bucket_count) > DEFAULT_LOAD )
-		hash_table_double_buckets(h);
+  if( ((float) h->size / h->bucket_count) > DEFAULT_LOAD )
+    hash_table_double_buckets(h);
 
-	hash = h->hash_func(key);
-	index = hash % h->bucket_count;
-	e = h->buckets[index];
+  hash = h->hash_func(key);
+  index = hash % h->bucket_count;
+  e = h->buckets[index];
 
-	while(e) {
-		if(hash == e->hash && !strcmp(key, e->key))
-			return 0;
-		e = e->next;
-	}
+  while(e) {
+    if(hash == e->hash && !strcmp(key, e->key))
+      return 0;
+    e = e->next;
+  }
 
-	e = malloc(sizeof(struct entry));
-	if(!e)
-		return 0;
+  e = malloc(sizeof(struct entry));
+  if(!e)
+    return 0;
 
-	e->key = strdup(key);
-	if(!e->key) {
-		free(e);
-		return 0;
-	}
+  e->key = strdup(key);
+  if(!e->key) {
+    free(e);
+    return 0;
+  }
 
-	e->value = (void *) value;
-	e->hash = hash;
-	e->next = h->buckets[index];
-	h->buckets[index] = e;
-	h->size++;
+  e->value = (void *) value;
+  e->hash = hash;
+  e->next = h->buckets[index];
+  h->buckets[index] = e;
+  h->size++;
 
-	return 1;
+  return 1;
 }
 
 void *hash_table_remove(struct hash_table *h, const char *key)
 {
-	struct entry *e, *f;
-	void *value;
-	unsigned hash, index;
+  struct entry *e, *f;
+  void *value;
+  unsigned hash, index;
 
-	hash = h->hash_func(key);
-	index = hash % h->bucket_count;
-	e = h->buckets[index];
-	f = 0;
+  hash = h->hash_func(key);
+  index = hash % h->bucket_count;
+  e = h->buckets[index];
+  f = 0;
 
-	while(e) {
-		if(hash == e->hash && !strcmp(key, e->key)) {
-			if(f) {
-				f->next = e->next;
-			} else {
-				h->buckets[index] = e->next;
-			}
-			value = e->value;
-			free(e->key);
-			free(e);
-			h->size--;
-			return value;
-		}
-		f = e;
-		e = e->next;
-	}
+  while(e) {
+    if(hash == e->hash && !strcmp(key, e->key)) {
+      if(f) {
+        f->next = e->next;
+      } else {
+        h->buckets[index] = e->next;
+      }
+      value = e->value;
+      free(e->key);
+      free(e);
+      h->size--;
+      return value;
+    }
+    f = e;
+    e = e->next;
+  }
 
-	return 0;
+  return 0;
 }
 
 void hash_table_firstkey(struct hash_table *h)
 {
-	h->ientry = 0;
-	for(h->ibucket = 0; h->ibucket < h->bucket_count; h->ibucket++) {
-		h->ientry = h->buckets[h->ibucket];
-		if(h->ientry)
-			break;
-	}
+  h->ientry = 0;
+  for(h->ibucket = 0; h->ibucket < h->bucket_count; h->ibucket++) {
+    h->ientry = h->buckets[h->ibucket];
+    if(h->ientry)
+      break;
+  }
 }
 
 int hash_table_nextkey(struct hash_table *h, char **key, void **value)
 {
-	if(h->ientry) {
-		*key = h->ientry->key;
-		*value = h->ientry->value;
+  if(h->ientry) {
+    *key = h->ientry->key;
+    *value = h->ientry->value;
 
-		h->ientry = h->ientry->next;
-		if(!h->ientry) {
-			h->ibucket++;
-			for(; h->ibucket < h->bucket_count; h->ibucket++) {
-				h->ientry = h->buckets[h->ibucket];
-				if(h->ientry)
-					break;
-			}
-		}
-		return 1;
-	} else {
-		return 0;
-	}
+    h->ientry = h->ientry->next;
+    if(!h->ientry) {
+      h->ibucket++;
+      for(; h->ibucket < h->bucket_count; h->ibucket++) {
+        h->ientry = h->buckets[h->ibucket];
+        if(h->ientry)
+          break;
+      }
+    }
+    return 1;
+  } else {
+    return 0;
+  }
 }
 
 typedef unsigned long int ub4;	/* unsigned 4-byte quantities */
@@ -266,13 +266,13 @@ For every delta with one or two bits set, and the deltas of all three
   2/3 of the time.  (Well, 22/100 and 78/100 for some 2-bit deltas.)
 mix() was built out of 36 single-cycle latency instructions in a
   structure that could supported 2x parallelism, like so:
-	  a -= b;
-	  a -= c; x = (c>>13);
-	  b -= c; a ^= x;
-	  b -= a; x = (a<<8);
-	  c -= a; b ^= x;
-	  c -= b; x = (b>>13);
-	  ...
+    a -= b;
+    a -= c; x = (c>>13);
+    b -= c; a ^= x;
+    b -= a; x = (a<<8);
+    c -= a; b ^= x;
+    c -= b; x = (b>>13);
+    ...
   Unfortunately, superscalar Pentiums and Sparcs can't take advantage
   of that parallelism.  They've also turned some of those single-cycle
   latency instructions into multi-cycle latency instructions.  Still,
@@ -317,52 +317,52 @@ acceptable.  Do NOT use for cryptographic purposes.
 
 static ub4 jenkins_hash(const ub1 *k, ub4 length, ub4 initval)
 {
-	register ub4 a, b, c, len;	/* Set up the internal state */
-	len = length;
-	a = b = 0x9e3779b9;	/* the golden ratio; an arbitrary value */
-	c = initval;					 /* the previous hash value *//*---------------------------------------- handle most of the key */
-	while(len >= 12) {
-		a += (k[0] + ((ub4) k[1] << 8) + ((ub4) k[2] << 16) + ((ub4) k[3] << 24));
-		b += (k[4] + ((ub4) k[5] << 8) + ((ub4) k[6] << 16) + ((ub4) k[7] << 24));
-		c += (k[8] + ((ub4) k[9] << 8) + ((ub4) k[10] << 16) + ((ub4) k[11] << 24));
-		mix(a, b, c);
-		k += 12;
-		len -= 12;
-	}
-	/*------------------------------------- handle the last 11 bytes */
-	c += length;
-	switch (len) {		/* all the case statements fall through */
-	case 11:
-		c += ((ub4) k[10] << 24);
-	case 10:
-		c += ((ub4) k[9] << 16);
-	case 9:
-		c += ((ub4) k[8] << 8);
-		/* the first byte of c is reserved for the length */
-	case 8:
-		b += ((ub4) k[7] << 24);
-	case 7:
-		b += ((ub4) k[6] << 16);
-	case 6:
-		b += ((ub4) k[5] << 8);
-	case 5:
-		b += k[4];
-	case 4:
-		a += ((ub4) k[3] << 24);
-	case 3:
-		a += ((ub4) k[2] << 16);
-	case 2:
-		a += ((ub4) k[1] << 8);
-	case 1:
-		a += k[0];
-		/* case 0: nothing left to add */
-	}
-	mix(a, b, c);
+  register ub4 a, b, c, len;	/* Set up the internal state */
+  len = length;
+  a = b = 0x9e3779b9;	/* the golden ratio; an arbitrary value */
+  c = initval;					 /* the previous hash value *//*---------------------------------------- handle most of the key */
+  while(len >= 12) {
+    a += (k[0] + ((ub4) k[1] << 8) + ((ub4) k[2] << 16) + ((ub4) k[3] << 24));
+    b += (k[4] + ((ub4) k[5] << 8) + ((ub4) k[6] << 16) + ((ub4) k[7] << 24));
+    c += (k[8] + ((ub4) k[9] << 8) + ((ub4) k[10] << 16) + ((ub4) k[11] << 24));
+    mix(a, b, c);
+    k += 12;
+    len -= 12;
+  }
+  /*------------------------------------- handle the last 11 bytes */
+  c += length;
+  switch (len) {		/* all the case statements fall through */
+  case 11:
+    c += ((ub4) k[10] << 24);
+  case 10:
+    c += ((ub4) k[9] << 16);
+  case 9:
+    c += ((ub4) k[8] << 8);
+    /* the first byte of c is reserved for the length */
+  case 8:
+    b += ((ub4) k[7] << 24);
+  case 7:
+    b += ((ub4) k[6] << 16);
+  case 6:
+    b += ((ub4) k[5] << 8);
+  case 5:
+    b += k[4];
+  case 4:
+    a += ((ub4) k[3] << 24);
+  case 3:
+    a += ((ub4) k[2] << 16);
+  case 2:
+    a += ((ub4) k[1] << 8);
+  case 1:
+    a += k[0];
+    /* case 0: nothing left to add */
+  }
+  mix(a, b, c);
    /*-------------------------------------------- report the result */
-	return c;
+  return c;
 }
 
 unsigned hash_string(const char *s)
 {
-	return jenkins_hash((const ub1 *) s, strlen(s), 0);
+  return jenkins_hash((const ub1 *) s, strlen(s), 0);
 }

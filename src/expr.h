@@ -8,10 +8,10 @@ struct symbol;
 struct type;
 
 typedef enum {
-	EXPR_ADD,     // 'e + e'
-	EXPR_SUB,     // 'e - e'
-	EXPR_MUL,     // 'e * e'
-	EXPR_DIV,     // 'e / e'
+  EXPR_ADD,     // 'e + e'
+  EXPR_SUB,     // 'e - e'
+  EXPR_MUL,     // 'e * e'
+  EXPR_DIV,     // 'e / e'
   EXPR_MOD,     // 'e % e'
   EXPR_POW,     // 'e ^ e'
   EXPR_NEG,     // '-e'
@@ -44,7 +44,7 @@ typedef enum {
  * @brief Represents an expression node in the abstract syntax tree.
  */
 struct expr {
-	// Used by all exprs
+  // Used by all exprs
   expr_t kind;
   struct expr *left;
   struct expr *right;

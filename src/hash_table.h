@@ -23,7 +23,7 @@ void *value;
 hash_table_firstkey(h);
 
 while(hash_table_nextkey(h,&key,&value)) {
-	printf("table contains: %s\n",key);
+  printf("table contains: %s\n",key);
 }
 </pre>
 
