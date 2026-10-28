@@ -43,7 +43,7 @@ static void scanner_error_at(const YYLTYPE *loc, const char *fmt, ...);
 [[gnu::format(printf, 1, 2)]]
 static void scanner_error(const char *msg, ...);
 
-static void send_integer_to_yylval(const int base);
+static void send_integer_to_yylval(const char *text, int base);
 static void send_double_to_yylval();
 
 %}
@@ -117,17 +117,15 @@ IDENTIFIER  {L}{A}*
 "!="          { return TOKEN_NE; }
 
 "0x"{H}+  { /* INTEGER_LITERAL*/
-            yytext += 2;
-            send_integer_to_yylval(16);
+            send_integer_to_yylval(yytext + 2, 16);
             return TOKEN_INTEGER_LITERAL;
           }
 "0b"{B}+  {
-            yytext += 2;
-            send_integer_to_yylval(2);
+            send_integer_to_yylval(yytext + 2, 2);
             return TOKEN_INTEGER_LITERAL;
           }
 {D}+      {
-            send_integer_to_yylval(10);
+            send_integer_to_yylval(yytext, 10);
             return TOKEN_INTEGER_LITERAL;
           }
 
@@ -174,9 +172,9 @@ IDENTIFIER  {L}{A}*
               yylval.cval = (char)byte;
               return TOKEN_CHAR_LITERAL;
             }
-'{C}{2,}'   { scanner_error("Char literal too long (MAX=1)"); return TOKEN_CHAR_LITERAL; }
-'{C}*       { scanner_error("Unterminated char"); return TOKEN_CHAR_LITERAL; }
-''          { scanner_error("Empty char literal (use '\\0x00' for null)"); return TOKEN_CHAR_LITERAL; }
+'{C}{2,}'   { yylval.cval = 0; scanner_error("Char literal too long (MAX=1)"); return TOKEN_CHAR_LITERAL; }
+'{C}*       { yylval.cval = 0; scanner_error("Unterminated char"); return TOKEN_CHAR_LITERAL; }
+''          { yylval.cval = 0; scanner_error("Empty char literal (use '\\0x00' for null)"); return TOKEN_CHAR_LITERAL; }
 
 {IDENTIFIER}  { // Last so it loses ties
   yylval.sval = NULL;
@@ -217,7 +215,7 @@ IDENTIFIER  {L}{A}*
 
 .   {
       scanner_error("Unrecognized token '%c' (0x%02X)",
-                    isprint(yytext[0]) ? yytext[0] : '?',
+                    isprint((unsigned char)yytext[0]) ? yytext[0] : '?',
                     (uint8_t)yytext[0]);
     }
 %%
@@ -247,9 +245,9 @@ static void scanner_error(const char *fmt, ...) {
   va_end(args);
 }
 
-static void send_integer_to_yylval(const int base) {
+static void send_integer_to_yylval(const char *text, int base) {
   errno = 0;
-  yylval.ival = strtoll(yytext, NULL, base);
+  yylval.ival = strtoll(text, NULL, base);
   if (errno == ERANGE)
     scanner_error("Integer literal out of range [-2^63, 2^63)");
 }
@@ -262,7 +260,16 @@ static void send_double_to_yylval() {
 }
 
 void scanner_open(FILE *file) {
+  line = col = 1;
+  err_count = 0;
+  block = (YYLTYPE){0};
+  yylloc = (YYLTYPE){1, 1, 1, 1};
+  BEGIN(INITIAL);
   yyrestart(file);
+}
+
+void scanner_close(void) {
+  yylex_destroy();
 }
 
 int scanner_next_token(void) {

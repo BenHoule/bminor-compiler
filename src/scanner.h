@@ -8,6 +8,7 @@
  * @param[in] FILE* The input file to scan.
  */
 void scanner_open(FILE *);
+void scanner_close(void);
 
 /**
  * @brief Retrieves the next token from the scanner.

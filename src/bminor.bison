@@ -19,6 +19,10 @@ int yyerror(const char *msg);
 %}
 
 /* Set Bison parser options */
+%code requires {
+#include <stdint.h>
+}
+
 %locations
 %define parse.error detailed
 %define parse.lac full
@@ -26,7 +30,7 @@ int yyerror(const char *msg);
 
 /* Union of all possible semantic types */
 %union {
-  long long ival;
+  int64_t ival;
   double dval;
   char cval;
   char *sval;
@@ -257,11 +261,11 @@ postfix_expr  : primary_expr
               ;
 
 primary_expr  : '(' expr ')'            { $$ = $2; }
-              | TOKEN_IDENTIFIER        { $$ = expr_create_name($1); }
+              | TOKEN_IDENTIFIER        { $$ = expr_create_name($1); free($1); }
               | TOKEN_CHAR_LITERAL      { $$ = expr_create_char_literal($1); }
               | TOKEN_DOUBLE_LITERAL    { $$ = expr_create_double_literal($1); }
               | TOKEN_INTEGER_LITERAL   { $$ = expr_create_integer_literal($1); }
-              | TOKEN_STRING_LITERAL    { $$ = expr_create_string_literal($1); }
+              | TOKEN_STRING_LITERAL    { $$ = expr_create_string_literal($1); free($1); }
               | TOKEN_FALSE             { $$ = expr_create_false(); }
               | TOKEN_TRUE              { $$ = expr_create_true(); }
               ;
