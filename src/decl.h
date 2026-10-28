@@ -28,7 +28,7 @@ struct decl {
  * @param[in] code  : Associated code block (functions).
  * @param[in] next  : Next declaration in the list.
  *
- * @return Pointer to the newly created declaration node.
+ * @return Compilation-owned node; name ownership is transferred.
  */
 struct decl *decl_create(char *name, struct type *type, struct expr *value,
                           struct stmt *code, struct decl *next);

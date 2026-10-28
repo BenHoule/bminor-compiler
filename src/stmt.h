@@ -56,7 +56,7 @@ struct stmt {
  *
  * @return Pointer to the newly created statement.
  *
- * @warning Returned statement must be freed by the caller
+ * @warning Compilation-owned; released by memory_release().
  */
 struct stmt *stmt_create_simple(stmt_t kind, struct expr *expr);
 struct stmt *stmt_create_expr( struct expr *expr);
@@ -70,7 +70,7 @@ struct stmt *stmt_create_return( struct expr *expr );
  *
  * @return Pointer to the newly created statement.
  *
- * @warning Returned statement must be freed by the caller
+ * @warning Compilation-owned; released by memory_release().
  */
 struct stmt *stmt_create_decl(struct decl *decl);
 
@@ -81,7 +81,7 @@ struct stmt *stmt_create_decl(struct decl *decl);
  *
  * @return Pointer to the newly created statement.
  *
- * @warning Returned statement must be freed by the caller
+ * @warning Compilation-owned; released by memory_release().
  */
 struct stmt *stmt_create_block(struct stmt *body);
 
@@ -94,7 +94,7 @@ struct stmt *stmt_create_block(struct stmt *body);
  *
  * @return Pointer to the newly created statement.
  *
- * @warning Returned statement must be freed by the caller
+ * @warning Compilation-owned; released by memory_release().
  */
 struct stmt *stmt_create_if_else( struct expr *cond_expr, struct stmt *body, struct stmt *else_body );
 
@@ -108,7 +108,7 @@ struct stmt *stmt_create_if_else( struct expr *cond_expr, struct stmt *body, str
  *
  * @return Pointer to the newly created statement.
  *
- * @warning Returned statement must be freed by the caller
+ * @warning Compilation-owned; released by memory_release().
  */
 struct stmt *stmt_create_for( struct expr *init_expr, struct expr *cond_expr, struct expr *loop_expr, struct stmt *body );
 

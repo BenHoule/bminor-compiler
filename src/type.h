@@ -5,25 +5,25 @@ struct param_list;
 struct expr;
 
 typedef enum {
-	TYPE_VOID,
-	TYPE_BOOLEAN,
-	TYPE_CHAR,
-	TYPE_INTEGER,
+  TYPE_VOID,
+  TYPE_BOOLEAN,
+  TYPE_CHAR,
+  TYPE_INTEGER,
   TYPE_DOUBLE,
-	TYPE_STRING,
-	TYPE_ARRAY,
+  TYPE_STRING,
+  TYPE_ARRAY,
   TYPE_CARRAY,
-	TYPE_FUNCTION,
-  TYPE_AUTO  // type_primitive() relies on TYPE_AUTO being last
+  TYPE_FUNCTION,
+  TYPE_AUTO
 } type_t;
 
 /**
  * @brief Represents a type node in the abstract syntax tree.
  */
 struct type {
-	type_t kind;
-	struct param_list *params;
-	struct type *subtype;
+  type_t kind;
+  struct param_list *params;
+  struct type *subtype;
   struct expr *size;
 };
 
@@ -37,7 +37,7 @@ struct type {
  *
  * @return Pointer to the newly created type node.
  *
- * @warning Returned type must be freed by the caller.
+ * @warning Compilation-owned; released by memory_release(), not individually.
  */
 struct type *type_create( type_t kind, struct type *subtype, struct param_list *params, struct expr *size );
 
@@ -71,7 +71,7 @@ bool type_equals(struct type *a, struct type *b);
 void type_print( struct type *t );
 
 /**
- * @brief Resolves the given type (e.g., resolves 'auto' types).
+ * @brief Resolves names in array-size expressions.
  *
  * @param[in] t Pointer to the type.
  */
@@ -83,17 +83,15 @@ void type_resolve(struct type *t);
  * @param[in] t Pointer to the type.
  * @return true if the type is primitive, false otherwise.
  *
- * @warning Relies on TYPE_AUTO being the last type in the enum
  */
 bool type_is_primitive(const struct type *t);
 
 /**
  * @brief Returns the primitive type corresponding to the given kind.
  *
- * @param[in] kind The kind of the primitive type.
- * @return Pointer to the primitive type.
+ * @param[in] kind TYPE_VOID through TYPE_STRING.
+ * @return Borrowed canonical type; callers must not modify or free it.
  *
- * @warning Relies on TYPE_AUTO being the last type in the enum
  */
 struct type *type_primitive(type_t kind);
 

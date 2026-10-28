@@ -73,11 +73,12 @@ struct expr {
  *
  * @return A pointer to the newly created expression node.
  *
- * @warning Returned expression node must be freed by the caller.
+ * @warning Compilation-owned; released by memory_release(), not individually.
  */
 struct expr *expr_create(expr_t kind, struct expr *left, struct expr *right);
 
 // Additional constructors (aka `expr_create` wrappers)
+// Name/string constructors copy their input into compilation-owned storage.
 struct expr *expr_create_name(const char *n);
 struct expr *expr_create_integer_literal(int64_t c);
 struct expr *expr_create_double_literal(double c);
@@ -126,16 +127,6 @@ struct type *expr_typecheck(struct expr *e);
  * @param[in,out] val Pointer to the initializer expression to typecheck.
  */
 void expr_typecheck_init(struct type *want, struct expr *val);
-
-/**
- * @brief Checks if the given expression is a constant expression.
- *
- * @param[in] e Pointer to the expression to check.
- *
- * @return true if the expression is a literal or an initializer composed of
- * constant expressions, false otherwise.
- */
-bool expr_is_constant(const struct expr *e);
 
 typedef enum {
   EXPR_STAT_CONST,
