@@ -23,141 +23,110 @@ typedef enum {
 #define EXIT_COMPILE_ERROR 1  // Bad Input program
 #define EXIT_USAGE_ERROR 2    // Bad CLI command
 
-// Lookup table: command-line flags -> compilation stages
-static stage_t stage_from_flag(const char *user_flag) {
-  struct {
+static stage_t stage_from_flag(const char *flag) {
+  const static struct {
     const char *flag;
     stage_t stage;
-  } flag_table[] = {
-    {"-scan",      STAGE_SCAN},
-    {"-parse",     STAGE_PARSE},
-    {"-print",     STAGE_PRINT},
-    {"-resolve",   STAGE_RESOLVE},
+  } flags[] = {
+    {"-scan", STAGE_SCAN},
+    {"-parse", STAGE_PARSE},
+    {"-print", STAGE_PRINT},
+    {"-resolve", STAGE_RESOLVE},
     {"-typecheck", STAGE_TYPECHECK},
-    {"-codegen",   STAGE_CODEGEN}
+    {"-codegen", STAGE_CODEGEN}
   };
-
-  for (size_t i = 0; i < sizeof(flag_table) / sizeof(flag_table[0]); i++) {
-    // Include null terminator in strncmp so that exact match is required
-    const size_t flag_length = strlen(flag_table[i].flag) + 1;
-    if (strncmp(user_flag, flag_table[i].flag, flag_length) == 0) {
-      return flag_table[i].stage;
-    }
-  }
-
+  for (size_t i = 0; i < sizeof flags / sizeof *flags; i++)
+    if (strcmp(flag, flags[i].flag) == 0) return flags[i].stage;
   return STAGE_INVALID;
 }
 
-static inline void print_usage(const char *prog_name) {
-  fprintf(stderr, "Usage: %s <stage> <input file>\n", prog_name);
+static void print_usage(const char *program) {
+  fprintf(stderr, "Usage: %s <stage> <input file>\n"
+          "Stages: -scan -parse -print -resolve -typecheck\n"
+          "        -codegen (not implemented)\n", program);
 }
 
-// - `argv[1]` = stage flag
-// - `argv[2]` = input file
+static int compile(stage_t stage, const char *flag) {
+  if (stage == STAGE_SCAN) {
+    int token;
+    while ((token = scanner_next_token()) != 0) {
+      printf("%s\n", token_name(token));
+      if (token == TOKEN_STRING_LITERAL || token == TOKEN_IDENTIFIER)
+        free(yylval.sval);
+    }
+    return scanner_error_count() ? EXIT_COMPILE_ERROR : EXIT_SUCCESS;
+  }
+
+  if (yyparse() || scanner_error_count() || parser_error_count())
+    return EXIT_COMPILE_ERROR;
+
+  if (stage == STAGE_PARSE) {
+    printf("parse successful\n");
+    return EXIT_SUCCESS;
+  }
+
+  if (stage == STAGE_PRINT) {
+    decl_print(parser_result, 0);
+    printf("\n");
+    return EXIT_SUCCESS;
+  }
+
+  resolver_trace = stage == STAGE_RESOLVE;
+  scope_enter();
+  decl_resolve(parser_result);
+  scope_exit();
+  if (resolver_error_count()) return EXIT_COMPILE_ERROR;
+  if (stage == STAGE_RESOLVE) return EXIT_SUCCESS;
+
+  decl_typecheck(parser_result);
+  if (typecheck_error_count()) return EXIT_COMPILE_ERROR;
+
+  if (stage == STAGE_CODEGEN) {
+    fprintf(stderr, "bminor: stage not implemented (%s)\n", flag);
+    return EXIT_COMPILE_ERROR;
+  }
+
+  return EXIT_SUCCESS;
+}
+
 int main(int argc, char *argv[]) {
+  // stdout set to line-buffer (vs. full-buffer):
+  // - Allows real-time processing of output
+  //   - Minimizes interleaving from multithreading (once implemented)
+  //   - Better for piping to other programs (according to google)
+  if (setvbuf(stdout, NULL, _IOLBF, 0) != 0) {
+    fprintf(stderr, "bminor: failed to configure output buffering\n");
+    return EXIT_COMPILE_ERROR;
+  }
+
   if (argc != 3) {
     print_usage(argv[0]);
     return EXIT_USAGE_ERROR;
   }
 
-  const stage_t stage = stage_from_flag(argv[1]);
+  stage_t stage = stage_from_flag(argv[1]);
+  if (stage == STAGE_INVALID) {
+    fprintf(stderr, "bminor: invalid flag (%s)\n", argv[1]);
+    print_usage(argv[0]);
+    return EXIT_USAGE_ERROR;
+  }
 
-  FILE *input_file = fopen(argv[2], "r");
-  if (input_file == NULL) {
-    char err_msg[256];
-    snprintf(err_msg, sizeof(err_msg),
-      "bminor: failed to open '%s'", argv[2]);
-    perror(err_msg);
+  FILE *input = fopen(argv[2], "r");
+  if (!input) {
+    fprintf(stderr, "bminor: failed to open '%s': ", argv[2]);
+    perror(NULL);
     return EXIT_COMPILE_ERROR;
   }
-  scanner_open(input_file);
 
-  switch (stage) {
-    case STAGE_SCAN:
-      int token = 0;
-      while((token = scanner_next_token()) != 0) {
-        const char *name = token_name(token);
-        printf("%s\n", name);
-        if (token == TOKEN_STRING_LITERAL || token == TOKEN_IDENTIFIER) {
-          free(yylval.sval);
-        }
-      }
-      if (scanner_error_count()) return EXIT_COMPILE_ERROR;
-      break;
+  scanner_open(input);
+  int status = compile(stage, argv[1]);
+  scanner_close();
 
-    case STAGE_PARSE:
-      if (yyparse() || scanner_error_count() || parser_error_count()) {
-        fclose(input_file);
-        return EXIT_COMPILE_ERROR;
-      }
-      printf("parse successful\n");  // For assignment 2 - remove later
-      break;
-
-    case STAGE_PRINT:
-      if (yyparse() || scanner_error_count() || parser_error_count()) {
-        fclose(input_file);
-        return EXIT_COMPILE_ERROR;
-      }
-      decl_print(parser_result, 0);
-      printf("\n");
-      break;
-
-    case STAGE_RESOLVE:
-      if (yyparse() || scanner_error_count() || parser_error_count()) {
-        fclose(input_file);
-        return EXIT_COMPILE_ERROR;
-      }
-      resolver_trace = true;
-      scope_enter();
-      decl_resolve(parser_result);
-      scope_exit();
-      if (resolver_error_count()) return EXIT_COMPILE_ERROR;
-      break;
-
-    case STAGE_TYPECHECK:
-      if (yyparse() || scanner_error_count() || parser_error_count()) {
-        fclose(input_file);
-        return EXIT_COMPILE_ERROR;
-      }
-      scope_enter();
-      decl_resolve(parser_result);
-      scope_exit();
-
-      // Skipping typecheck after resolver errors is simpler than guarding
-      // every name lookup for unresolved identifiers.
-      if (resolver_error_count()) return EXIT_COMPILE_ERROR;
-
-      decl_typecheck(parser_result);
-      if (typecheck_error_count()) return EXIT_COMPILE_ERROR;
-      break;
-
-    case STAGE_CODEGEN:
-      if (yyparse() || scanner_error_count() || parser_error_count()) {
-        fclose(input_file);
-        return EXIT_COMPILE_ERROR;
-      }
-      scope_enter();
-      decl_resolve(parser_result);
-      scope_exit();
-
-      // No code generation if name-resolution/typechecking fails
-      if (resolver_error_count()) return EXIT_COMPILE_ERROR;
-
-      decl_typecheck(parser_result);
-      if (typecheck_error_count()) return EXIT_COMPILE_ERROR;
-
-      // Codegen goes here
-      fprintf(stderr, "bminor: stage not implemented (%s)\n", argv[1]);
-      fclose(input_file);
-      return EXIT_COMPILE_ERROR;
-
-    default:
-      fprintf(stderr, "bminor: invalid flag (%s)\n", argv[1]);
-      print_usage(argv[0]);
-      fclose(input_file);
-      return EXIT_USAGE_ERROR;
+  if (fclose(input) != 0) {
+    perror("bminor: failed to close input");
+    status = EXIT_COMPILE_ERROR;
   }
-  fclose(input_file);
 
-  return EXIT_SUCCESS;
+
+  return status;
 }
