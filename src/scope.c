@@ -9,7 +9,7 @@ struct scope {
   struct scope *parent;
   struct hash_table *symbols;
 };
-struct scope *current_scope = NULL;
+static struct scope *current_scope = NULL;
 
 static int current_depth = 0;
 

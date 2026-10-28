@@ -20,7 +20,7 @@ set -u
 # Move to the project root directory
 cd "$(dirname "$0")/.." || exit 1
 
-BIN=./bminor
+BIN=${BMINOR:-./bminor}
 
 # Test if the binary exists and is executable
 [[ -x $BIN ]] || { echo "error: $BIN not built; run 'make' first"; exit 1; }
@@ -59,9 +59,9 @@ run_case() {
     if [[ ${BMINOR_VALGRIND:-0} == 1 ]]; then
         valgrind --quiet --error-exitcode=125 --leak-check=full \
                  --errors-for-leak-kinds=definite \
-                 stdbuf -oL "$BIN" "$flag" "$file" >"$output_file" 2>&1
+                 "$BIN" "$flag" "$file" >"$output_file" 2>&1
     else
-        stdbuf -oL "$BIN" "$flag" "$file" >"$output_file" 2>&1
+        "$BIN" "$flag" "$file" >"$output_file" 2>&1
     fi
     status=$? # capture the exit status of the command
 
@@ -75,8 +75,8 @@ run_case() {
     local ok=1 why=""
     if [[ $expect == good && $status -ne 0 ]]; then
         ok=0; why="expected success, exited $status"
-    elif [[ $expect == bad && $status -eq 0 ]]; then
-        ok=0; why="expected failure, exited 0"
+    elif [[ $expect == bad && $status -ne 1 ]]; then
+        ok=0; why="expected compile error (1), exited $status"
     fi
 
     # Check expected output if an expected file exists

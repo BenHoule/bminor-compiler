@@ -13,4 +13,5 @@ unsigned int resolver_error_count();
  * @param[in] fmt The format string (printf-style).
  * @param[in] varg (...) Additional arguments for the format string.
  */
+[[gnu::format(printf, 1, 2)]]
 void resolver_error(const char *fmt, ...);

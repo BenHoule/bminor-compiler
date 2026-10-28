@@ -16,7 +16,7 @@ set -u
 
 cd "$(dirname "$0")/../.." || exit 1
 
-BIN=./bminor
+BIN=${BMINOR:-./bminor}
 [[ -x $BIN ]] || { echo "error: $BIN not built; run 'make' first"; exit 1; }
 
 RED=$'\e[31m'; GREEN=$'\e[32m'; DIM=$'\e[2m'; RESET=$'\e[0m'
@@ -53,6 +53,16 @@ for file in "${cases[@]}"; do
         printf '%s FAIL%s %s %s(not idempotent)%s\n' "$RED" "$RESET" "$name" "$DIM" "$RESET"
         diff -u "$tmp1" "$tmp2" | tail -n +3 | sed 's/^/      /'
         fail=$((fail+1)); continue
+    fi
+
+    # Some parser/printer fixtures deliberately contain type errors.
+    # For well-typed inputs, the printed program must remain well typed.
+    if "$BIN" -typecheck "$file" >"$bind1" 2>&1; then
+        if ! "$BIN" -typecheck "$tmp1" >"$bind2" 2>&1; then
+            printf ' FAIL %s (printed program no longer typechecks)\n' "$name"
+            cat "$bind2"
+            fail=$((fail+1)); continue
+        fi
     fi
 
     "$BIN" -resolve "$file" >"$bind1" 2>&1

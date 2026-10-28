@@ -19,7 +19,7 @@ set -u
 
 cd "$(dirname "$0")/../.." || exit 1
 
-BIN=./bminor
+BIN=${BMINOR:-./bminor}
 [[ -x $BIN ]] || { echo "error: $BIN not built; run 'make' first"; exit 1; }
 
 RED=$'\e[31m'; GREEN=$'\e[32m'; DIM=$'\e[2m'; RESET=$'\e[0m'
