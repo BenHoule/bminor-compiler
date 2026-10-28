@@ -1,0 +1,7 @@
+f: function auto ();
+f: function auto () = {
+	return 1;
+}
+main: function integer () = {
+	return f();
+}
