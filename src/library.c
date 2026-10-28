@@ -3,9 +3,9 @@ This is the standard library of functions for bminor, implemented in C.
 The print statement in bminor expects there to exist a function
 for each type that can be printed.  So, the following bminor code:
 
-x: int = 10;
+x: integer = 10;
 b: boolean = true;
-x: string = "hello";
+s: string = "hello";
 
 print x, b, s;
 
@@ -24,12 +24,15 @@ Is effectively this C code:
 x = integer_power(a,b);
 */
 
-#include <stdio.h>
-#include <stdint.h>
+#include "library.h"
 
-void print_integer( long x )
+#include <inttypes.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+void print_integer(int64_t x)
 {
-  printf("%ld",x);
+  printf("%" PRId64, x);
 }
 
 void print_string( const char *s )
@@ -47,12 +50,24 @@ void print_character( char c )
   printf("%c",c);
 }
 
-long integer_power( long x, long y )
+void print_double(double value)
 {
-  long result = 1;
-  while(y>0) {
-    result = result * x;
-    y = y -1;
+  printf("%.17g", value);
+}
+
+int64_t integer_power(int64_t x, int64_t y)
+{
+  int64_t result = 1;
+  while (y > 0) {
+    if ((y & 1) && __builtin_mul_overflow(result, x, &result)) {
+      fprintf(stderr, "bminor runtime: integer power overflow\n");
+      exit(EXIT_FAILURE);
+    }
+    y /= 2;
+    if (y && __builtin_mul_overflow(x, x, &x)) {
+      fprintf(stderr, "bminor runtime: integer power overflow\n");
+      exit(EXIT_FAILURE);
+    }
   }
   return result;
 }

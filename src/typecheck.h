@@ -11,4 +11,5 @@ unsigned int typecheck_error_count(void);
  * @param[in] fmt The format string.
  * @param[in] varg (...) Additional arguments for the format string.
  */
+[[gnu::format(printf, 1, 2)]]
 void typecheck_error(const char *fmt, ...);

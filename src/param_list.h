@@ -8,10 +8,10 @@ struct symbol;
  * @brief Represents a parameter list node in the abstract syntax tree.
  */
 struct param_list {
-	char *name;
-	struct type *type;
-	struct symbol *symbol;
-	struct param_list *next;
+  char *name;
+  struct type *type;
+  struct symbol *symbol;
+  struct param_list *next;
 };
 
 /**
@@ -23,7 +23,7 @@ struct param_list {
  *
  * @return A pointer to the newly created parameter list node.
  *
- * @warning Returned parameter list node must be freed by the caller.
+ * @warning Compilation-owned; takes ownership of malloc-allocated name.
  */
 struct param_list *param_list_create(char *name, struct type *type,
                                       struct param_list *next);

@@ -4,7 +4,7 @@
 struct type;
 
 typedef enum {
-  SYMBOL_LOCAL,    // `which` = stack slot index
+  SYMBOL_LOCAL,    // `which` = logical local index (not a byte offset)
   SYMBOL_PARAM,    // `which` = parameter index
   SYMBOL_GLOBAL    // `which` = unused
 } symbol_t;
@@ -18,7 +18,7 @@ struct symbol {
   char *name;
   int which;         // -1 for globals
   bool is_defined;   // Functions only
-  int frame_locals;  // Functions only: # of local slots
+  int frame_locals;  // Functions only: local declaration count
 };
 
 /**
@@ -30,7 +30,7 @@ struct symbol {
  *
  * @return Pointer to the newly created symbol.
  *
- * @warning Returned symbol must be freed by the caller.
+ * @warning Compilation-owned; borrows its name and type.
  */
 struct symbol *symbol_create( symbol_t kind, struct type *type, char *name );
 
