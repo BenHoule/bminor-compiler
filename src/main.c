@@ -2,6 +2,7 @@
 #include "bminor.tab.h"
 #include "bminor_parser.h"
 #include "decl.h"
+#include "memory.h"
 #include "resolver.h"
 #include "scope.h"
 #include "typecheck.h"
@@ -127,6 +128,6 @@ int main(int argc, char *argv[]) {
     status = EXIT_COMPILE_ERROR;
   }
 
-
+  memory_release();
   return status;
 }
