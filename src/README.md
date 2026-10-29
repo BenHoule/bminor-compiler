@@ -47,3 +47,51 @@ which is needed to implement the print statement and the exponentiation
 operator.  You are welcome to add items to the library if you find
 it helpful.  Set up your Makefile carefully: library.c should be
 linked against a compiled bminor program, not against the compiler itself.
+
+Project implementation notes
+----------------------------
+
+Current pipeline is scanner -> parser -> AST -> resolver -> typechecker; IR/code generation is not implemented yet.
+
+Ownership:
+- AST nodes, allocated types, symbols, and accepted token strings are owned by
+  the compilation allocation registry in `memory.c`. The driver calls
+  `memory_release()` after the last AST consumer, on successful and failed
+  compilations. Do not free these objects individually.
+- Declaration/parameter constructors take ownership of malloc-allocated token
+  text. Expression name/string constructors copy their input; parser actions
+  free the consumed token after copying. Unconsumed tokens are freed by Bison
+  destructors, or by the scan-only driver.
+- Scopes own hash-table keys/entries and borrow symbols. Exiting a scope must
+  not destroy symbols: bound expressions still reference them.
+- Expression type annotations, symbol types, and AST type fields may alias.
+  Canonical primitive types are borrowed static objects; never mutate/free them.
+- The scanner owns its Flex buffers; `scanner_close()` releases them.
+
+AST contracts:
+- Successful typechecking requires prior successful resolution. Compilation
+  errors stop the pipeline before lowering. A read-only `decl_validate()` pass
+  checks concrete types and bound names before any future IR consumer.
+- `EXPR_ARG` is a list cell: `left` is an element, `right` is the next cell.
+  `EXPR_INIT.left` points to initializer-list cells. Containers do not have a
+  value type; their elements do.
+- Read only union members appropriate to a node's kind. Resolver traversal
+  uses an explicit stack and never temporarily rewires child pointers.
+  The compiler still has global scanner/resolver state and is not reentrant.
+- Type compatibility deliberately ignores array lengths and parameter names.
+- Symbol `which` values are logical indices. `frame_locals` counts local
+  declarations, not bytes or target-specific stack slots.
+- Arithmetic constants are evaluated without rewriting the AST. Runtime-sized
+  arrays remain allowed; lowering must validate their dimensions at runtime.
+
+Runtime:
+- `library.h` defines the ABI for generated programs, including 64-bit integers
+  and double printing. Link `library.c` with generated code, not the compiler.
+- Integer power uses checked exponentiation by squaring. Nonpositive exponents
+  return 1, including `0^0`; overflow reports an error and exits.
+- The current toolchain assumes GCC-compatible C23 and overflow builtins.
+
+Source spans in resolver/typechecker diagnostics and a minimal-parentheses
+printer remain separate follow-ups.
+Parser/scanner locations are already tracked; propagating spans through AST
+construction requires a deliberate diagnostic-output change.
