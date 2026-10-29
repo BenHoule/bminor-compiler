@@ -1,4 +1,5 @@
 #include "stmt.h"
+#include "memory.h"
 #include "decl.h"
 #include "expr.h"
 #include "scope.h"
@@ -13,11 +14,7 @@ struct stmt *stmt_create_simple(
   stmt_t kind,
   struct expr *expr
 ) {
-  struct stmt *s = malloc(sizeof(struct stmt));
-  if (!s) {
-    fprintf(stderr, "Failed to allocate memory for statement\n");
-    exit(EXIT_FAILURE);
-  }
+  struct stmt *s = memory_allocate(sizeof *s);
   s->kind = kind;
   s->expr = expr;
   s->next = NULL;
@@ -34,11 +31,7 @@ struct stmt *stmt_create_print(struct expr *expr) {
 }
 
 struct stmt *stmt_create_decl(struct decl *decl) {
-  struct stmt *s = malloc(sizeof(struct stmt));
-  if (!s) {
-    fprintf(stderr, "Failed to allocate memory for statement\n");
-    exit(EXIT_FAILURE);
-  }
+  struct stmt *s = memory_allocate(sizeof *s);
   s->kind = STMT_DECL;
   s->decl = decl;
   s->next = NULL;
@@ -46,22 +39,14 @@ struct stmt *stmt_create_decl(struct decl *decl) {
 }
 
 struct stmt *stmt_create_block(struct stmt *body) {
-  struct stmt *s = malloc(sizeof(struct stmt));
-  if (!s) {
-    fprintf(stderr, "Failed to allocate memory for statement\n");
-    exit(EXIT_FAILURE);
-  }
+  struct stmt *s = memory_allocate(sizeof *s);
   s->kind = STMT_BLOCK;
   s->block = body;
   s->next = NULL;
   return s;
 }
 struct stmt *stmt_create_if_else(struct expr *cond_expr, struct stmt *body, struct stmt *else_body) {
-  struct stmt *s = malloc(sizeof(struct stmt));
-  if (!s) {
-    fprintf(stderr, "Failed to allocate memory for statement\n");
-    exit(EXIT_FAILURE);
-  }
+  struct stmt *s = memory_allocate(sizeof *s);
   s->kind = STMT_IF_ELSE;
   s->cond_expr = cond_expr;
   s->body = body;
@@ -70,11 +55,7 @@ struct stmt *stmt_create_if_else(struct expr *cond_expr, struct stmt *body, stru
   return s;
 }
 struct stmt *stmt_create_for(struct expr *init_expr, struct expr *cond_expr, struct expr *loop_expr, struct stmt *body) {
-  struct stmt *s = malloc(sizeof(struct stmt));
-  if (!s) {
-    fprintf(stderr, "Failed to allocate memory for statement\n");
-    exit(EXIT_FAILURE);
-  }
+  struct stmt *s = memory_allocate(sizeof *s);
   s->kind = STMT_FOR;
   s->init_expr = init_expr;
   s->cond_expr = cond_expr;
@@ -95,12 +76,10 @@ void stmt_print(struct stmt *s, const int indent) {
         printf("if (");
         expr_print(s->cond_expr);
         printf(") ");
-        if (s->body->kind != STMT_BLOCK) stmt_print(s->body, indent);
-        else stmt_print(s->body, indent);
+        stmt_print(s->body, indent);
         if (s->else_body) {
           printf(" else ");
-          if (s->else_body->kind != STMT_BLOCK) stmt_print(s->else_body, indent);
-          else stmt_print(s->else_body, indent);
+          stmt_print(s->else_body, indent);
         }
         break;
       case STMT_FOR:
@@ -117,8 +96,7 @@ void stmt_print(struct stmt *s, const int indent) {
           expr_print(s->loop_expr);
         }
         printf(") ");
-        if (s->body->kind != STMT_BLOCK) stmt_print(s->body, indent);
-        else stmt_print(s->body, indent);
+        stmt_print(s->body, indent);
         break;
       case STMT_PRINT:
         printf("print");
@@ -194,6 +172,7 @@ static void stmt_typecheck_return(struct stmt *s, struct type *ftype) {
   if (!t) return;  // Avoid double-reporting
   if (t->kind == TYPE_AUTO) {
     typecheck_error("cannot infer return type from unresolved type");
+    return;
   }
 
   if (ftype->subtype->kind == TYPE_AUTO) {
@@ -219,6 +198,7 @@ void stmt_typecheck(struct stmt *s, struct type *ftype) {
           if (t && !type_is_primitive(t)) {
             typecheck_error("'print' requires primitive type");
           }
+
         }
         break;
       case STMT_IF_ELSE:

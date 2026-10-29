@@ -1,4 +1,5 @@
 #include "decl.h"
+#include "memory.h"
 #include "expr.h"
 #include "param_list.h"
 #include "resolver.h"
@@ -9,17 +10,13 @@
 #include "typecheck.h"
 
 #include <assert.h>
-#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 
 struct decl *decl_create(char *name, struct type *type, struct expr *value,
                           struct stmt *code, struct decl *next) {
-  struct decl *d = malloc(sizeof(struct decl));
-  if (!d) {
-    fprintf(stderr, "Failed to allocate memory for declaration\n");
-    exit(EXIT_FAILURE);
-  }
+  struct decl *d = memory_allocate(sizeof *d);
+  memory_take(name);
   d->name = name;
   d->type = type;
   d->value = value;
@@ -192,14 +189,13 @@ static void decl_typecheck_function(struct decl *d) {
 }
 
 void decl_typecheck(struct decl *d) {
-  struct decl *current;
-  for (current = d; current; current = current->next) {
+  for (struct decl *current = d; current; current = current->next) {
     if (current->type->kind == TYPE_FUNCTION) decl_typecheck_function(current);
     else decl_typecheck_variable(current);
   }
 
   // Second loop lets later definition resolve earlier prototype's return type
-  for (current = d; current; current = current->next) {
+  for (struct decl *current = d; current; current = current->next) {
     if (current->type->kind != TYPE_FUNCTION) continue;
 
     struct type *return_type = current->symbol->type->subtype;

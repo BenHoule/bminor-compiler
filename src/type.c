@@ -1,4 +1,5 @@
 #include "type.h"
+#include "memory.h"
 #include "expr.h"
 #include "param_list.h"
 #include "typecheck.h"
@@ -8,11 +9,7 @@
 #include <stdlib.h>
 
 struct type *type_create(type_t kind, struct type *subtype, struct param_list *params, struct expr *size) {
-  struct type *t = malloc(sizeof(struct type));
-  if (!t) {
-    fprintf(stderr, "Failed to allocate memory for type\n");
-    exit(EXIT_FAILURE);
-  }
+  struct type *t = memory_allocate(sizeof *t);
   t->kind = kind;
   t->subtype = subtype;
   t->params = params;
@@ -52,12 +49,19 @@ struct type *type_create_auto(void) {
 }
 
 struct type *type_primitive(type_t kind) {
-  static struct type primitives[TYPE_AUTO + 1] = {0};
-  primitives[kind].kind = kind;
+  assert(kind >= TYPE_VOID && kind <= TYPE_STRING);
+  static struct type primitives[] = {
+    {.kind = TYPE_VOID},
+    {.kind = TYPE_BOOLEAN},
+    {.kind = TYPE_CHAR},
+    {.kind = TYPE_INTEGER},
+    {.kind = TYPE_DOUBLE},
+    {.kind = TYPE_STRING}
+  };
   return &primitives[kind];
 }
 
-//TODO: Handle 'auto' (currently treated as its own type)
+// Array lengths and parameter names do not participate in compatibility.
 bool type_equals(struct type *a, struct type *b) {
   if (a == b) return true;
   if (!a || !b || a->kind != b->kind) return false;
