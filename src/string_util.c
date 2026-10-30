@@ -84,12 +84,12 @@ size_t string_encode(const char *in, char *out, size_t out_size) {
   return (size_t)(out - start + 1);
 }
 
-const char* char_decode(const char in, const char quote) {
-  static char buf[6] = ""; // Enough for '\0xHH' + Null Terminator
+void char_decode(const char in, const char quote, char buf[6]) {
+  memset(buf, 0, 6);
 
   // Since " and \ are ASCII 34 and 92, respectively, there is no
   // convenient way to filter them out of the printable character check.
-  if (isprint(in)) {
+  if (isprint((unsigned char)in)) {
     if (in == quote || in == '\\') {
       buf[0] = '\\';
       buf[1] = in;
@@ -98,7 +98,7 @@ const char* char_decode(const char in, const char quote) {
       buf[0] = in;
       buf[1] = '\0';  // Null-terminate the printable character
     }
-    return buf;
+    return;
   }
 
   buf[0] = '\\';
@@ -116,13 +116,12 @@ const char* char_decode(const char in, const char quote) {
       buf[2] = 'x';
       byte_to_hexstr(&buf[3], (uint8_t)in);
   }
-  return buf;
 }
 
 size_t string_decode(const char *in, char *out, size_t out_size) {
   assert(in != NULL);
   assert(out != NULL);
-  assert(out_size > 2);  //TODO: add -DNDEBUG to makefile for non-debug builds
+  assert(out_size > 2);
 
   char *start = out;
   *out = '"';
@@ -130,15 +129,17 @@ size_t string_decode(const char *in, char *out, size_t out_size) {
   out_size--;
 
   while (*in) {
-    const char *next = char_decode(*in, '\"');
-    if (*next == '\0') return ERR_INVALID_CHAR;
+    char next[6] = {0};
+    char_decode(*in, '\"', next);
+    const size_t length = strlen(next);
+    assert(length < sizeof next);
 
-    const size_t REQ_SPACE = strlen(next) + 2;  // Char + Closing quote + '\0'
+    const size_t REQ_SPACE = length + 2;  // Char + Closing quote + '\0'
     if(REQ_SPACE > out_size) return ERR_TOO_LONG;  // Overflow
 
-    memcpy(out, next, strlen(next));
-    out += strlen(next);
-    out_size -= strlen(next);
+    for (size_t i = 0; i < length; i++) out[i] = next[i];
+    out += length;
+    out_size -= length;
     in++;
   }
 

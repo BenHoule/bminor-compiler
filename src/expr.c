@@ -1,4 +1,5 @@
 #include "expr.h"
+#include "memory.h"
 #include "param_list.h"
 #include "resolver.h"
 #include "scope.h"
@@ -16,11 +17,7 @@
 #include <string.h>
 
 struct expr *expr_create(expr_t kind, struct expr *left, struct expr *right) {
-  struct expr *e = malloc(sizeof(struct expr));
-  if (!e) {
-    fprintf(stderr, "Failed to allocate memory for expression\n");
-    exit(EXIT_FAILURE);
-  }
+  struct expr *e = memory_allocate(sizeof *e);
   e->kind = kind;
   e->left = left;
   e->right = right;
@@ -30,7 +27,7 @@ struct expr *expr_create(expr_t kind, struct expr *left, struct expr *right) {
 }
 struct expr *expr_create_name(const char *n) {
   struct expr *e = expr_create( EXPR_NAME, NULL, NULL );
-  e->name = n;
+  e->name = n ? memory_copy_string(n) : NULL;
   e->symbol = NULL;
   return e;
 }
@@ -56,7 +53,7 @@ struct expr *expr_create_char_literal(char c) {
 }
 struct expr *expr_create_string_literal(const char *str) {
   struct expr *e = expr_create( EXPR_STR, NULL, NULL );
-  e->string_literal = str;
+  e->string_literal = str ? memory_copy_string(str) : NULL;
   return e;
 }
 struct expr *expr_create_false(void) {
@@ -115,10 +112,19 @@ void expr_print(struct expr *e) {
     case EXPR_INT:    printf("%" PRId64, e->int_literal); break;
     case EXPR_DOUBLE: printf("%#.17g", e->double_literal); break;
     case EXPR_BOOL:   printf("%s", e->bool_literal ? "true" : "false"); break;
-    case EXPR_CHAR:   printf("'%s'", char_decode(e->char_literal, '\'')); break;
+    case EXPR_CHAR: {
+      char decoded[6];
+      char_decode(e->char_literal, '\'', decoded);
+      printf("'%s'", decoded);
+      break;
+    }
     case EXPR_STR:
-      static char decoded_str[1278] = "";  // 255(max string length) * 5 + 3
-      string_decode(e->string_literal, decoded_str, sizeof(decoded_str));
+      char decoded_str[1278];  // 255(max string length) * 5 + 3
+      size_t decoded_size = string_decode(e->string_literal, decoded_str, sizeof decoded_str);
+      if (decoded_size == ERR_TOO_LONG || decoded_size == ERR_INVALID_CHAR) {
+        fprintf(stderr, "bminor: cannot print string literal\n");
+        exit(EXIT_FAILURE);
+      }
       printf("%s", decoded_str);
       break;
 
@@ -151,54 +157,48 @@ void expr_print(struct expr *e) {
 }
 
 
-// Returns True on success, False on failure
-static bool symbol_find_and_bind(struct expr *e) {
-    return e->kind != EXPR_NAME ||
-      (e->symbol = scope_lookup(e->name));
-}
-
-// Morris Preorder Traversal - (Root-Left-Right) - Time: O(N), Space: O(1)
-// NOTE: Messing with AST like this may cause race conditions
-// TODO: Implement stack-based traversal (thread-safe)
+/**
+ * Resolves names using an explicit stack without modifying AST links.
+ *
+ * Morris traversal is a possible O(1)-auxiliary-space alternative, but it
+ * temporarily threads AST pointers and requires exclusive access and complete
+ * traversal. See the "Expression resolver traversal" section in src/README.md
+ * for a copyable implementation and its invariants.
+ */
 void expr_resolve( struct expr *e ) {
-  while (e) {
-    if (!e->left) {
-      if (!symbol_find_and_bind(e)) {
-        //TODO: Add line/col to error message
-        resolver_error("Undefined identifier '%s'", e->name);
-      }
-      e = e->right;
-      continue;
-    }
-
-    // Find Inorder predecessor of current node (rightmost node in left subtree)
-    struct expr *pre = e->left;
-    while (pre->right && pre->right != e) {
-      pre = pre->right;
-    }
-
-    if (pre->right != NULL) {
-      assert(pre->right == e);
-      pre->right = NULL;       // Unlink (finished traversing left subtree)
-      e = e->right;
-      continue;                // Avoid double reporting for the same node
-    }
-
-    if (!symbol_find_and_bind(e)) {
-      //TODO: Add line/col to error message
-      resolver_error("Undefined identifier '%s'", e->name);
-    }
-
-    pre->right = e;  // Link (until we finish traversing left subtree)
-    e = e->left;
+  if (!e) return;
+  size_t count = 0, capacity = 32;
+  struct expr **stack = malloc(capacity * sizeof *stack);
+  if (!stack) {
+    fprintf(stderr, "bminor: failed to allocate resolver stack\n");
+    exit(EXIT_FAILURE);
   }
+  stack[count++] = e;
+  while (count) {
+    e = stack[--count];
+    if (e->kind == EXPR_NAME && !(e->symbol = scope_lookup(e->name)))
+      resolver_error("Undefined identifier '%s'", e->name);
+    if (count + 2 > capacity) {
+      capacity *= 2;
+      struct expr **grown = realloc(stack, capacity * sizeof *stack);
+      if (!grown) {
+        free(stack);
+        fprintf(stderr, "bminor: failed to grow resolver stack\n");
+        exit(EXIT_FAILURE);
+      }
+      stack = grown;
+    }
+    if (e->right) stack[count++] = e->right;
+    if (e->left) stack[count++] = e->left;
+  }
+  free(stack);
 }
 
 static const char *expr_op_name(expr_t kind) {
   switch (kind) {
     case EXPR_ADD: return "+";   case EXPR_SUB: return "-";
     case EXPR_MUL: return "*";   case EXPR_DIV: return "/";
-    case EXPR_MOD: return "%%";  case EXPR_POW: return "^";
+    case EXPR_MOD: return "%";   case EXPR_POW: return "^";
     case EXPR_NEG: return "-";   case EXPR_NOT: return "!";
     case EXPR_INC: return "++";  case EXPR_DEC: return "--";
     case EXPR_LEN: return "#";   case EXPR_LT:  return "<";
@@ -213,7 +213,8 @@ static const char *expr_op_name(expr_t kind) {
 
 static bool expr_is_lvalue(const struct expr *e) {
   if (!e) return false;
-  const bool is_assignable = e->symbol && e->symbol->type->kind != TYPE_FUNCTION
+  const bool is_assignable = e->kind == EXPR_NAME && e->symbol
+                             && e->symbol->type->kind != TYPE_FUNCTION
                              && e->symbol->type->kind != TYPE_VOID;
 
   return e->kind == EXPR_IDX || (e->kind == EXPR_NAME && is_assignable);
@@ -254,7 +255,11 @@ static struct type *expr_typecheck_binary(struct expr *e, bool allow_non_numeric
       return NULL;
   }
 
-  return (e->kind <= EXPR_POW) ? l : type_primitive(TYPE_BOOLEAN);
+  switch (e->kind) {
+    case EXPR_ADD: case EXPR_SUB: case EXPR_MUL:
+    case EXPR_DIV: case EXPR_MOD: case EXPR_POW: return l;
+    default: return type_primitive(TYPE_BOOLEAN);
+  }
 }
 
 static struct type *expr_typecheck_logical(struct expr *e) {
@@ -290,30 +295,43 @@ static struct type *expr_typecheck_call(struct expr *e) {
     return NULL;
   }
 
+  bool valid = true;
+  bool previously_reported = false;
   int index = 1;
   const struct param_list *param = t->params;
 
   for (struct expr *arg = e->right; arg; arg = arg->right, index++) {
     if (!param) {
-      typecheck_error("too many arguments in function call");
-      return t->subtype;
+      if (!previously_reported) {
+        typecheck_error("too many arguments in function call");
+        previously_reported = true;
+      }
+      valid = false;
+      continue;
     }
 
     struct type *arg_type = expr_typecheck(arg->left);
-    if (arg_type && !type_equals(arg_type, param->type))
+    if (!arg_type) valid = false;
+    else if (!type_equals(arg_type, param->type)) {
       typecheck_error("argument %d has incorrect type", index);
+      valid = false;
+    }
 
     param = param->next;
   }
 
-  if (param) typecheck_error("too few arguments in function call");
-  return t->subtype;
+  if (param) {
+    typecheck_error("too few arguments in function call");
+    return NULL;
+  }
+  return valid ? t->subtype : NULL;
 }
 
 
 // Returns NULL when `e` contains an error that has already been reported
 struct type *expr_typecheck(struct expr *e) {
   if (!e) return NULL;
+  e->type = NULL;
 
   switch (e->kind) {
     case EXPR_ADD: case EXPR_SUB: case EXPR_MUL: case EXPR_DIV: case EXPR_MOD:
@@ -467,28 +485,9 @@ void expr_typecheck_init(struct type *want, struct expr *val) {
   }
 }
 
-bool expr_is_constant(const struct expr *e) {
-  if (!e) return false;
-  switch (e->kind) {
-    case EXPR_INT: case EXPR_BOOL: case EXPR_CHAR: case EXPR_STR:
-    case EXPR_DOUBLE:
-      return true;
-
-    case EXPR_NEG:
-      return e->left->kind == EXPR_INT || e->left->kind == EXPR_DOUBLE;
-
-    case EXPR_INIT:
-      for (const struct expr *a = e->left; a; a = a->right)
-        if (!expr_is_constant(a->left)) return false;
-
-      return true;
-
-    default: return false;
-  }
-}
-
 static expr_status_t expr_status_error(const char *msg) {
-  typecheck_error(msg);
+  // WARNING: passing msg directly would interpret arbitrary format specifiers (bad and dangerous).
+  typecheck_error("%s", msg);
   return EXPR_STAT_ERROR;
 }
 
