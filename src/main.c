@@ -82,6 +82,13 @@ static int compile(stage_t stage, const char *flag) {
   decl_typecheck(parser_result);
   if (typecheck_error_count()) return EXIT_COMPILE_ERROR;
 
+  // Check AST invariant: "all types are concrete and all names are bound"
+  // NOTE: Array/initializer containers are exempt from value-type requirements
+  if (!decl_validate(parser_result)) {
+    typecheck_error("internal: typed AST invariant failed");
+    return EXIT_COMPILE_ERROR;
+  }
+
   if (stage == STAGE_CODEGEN) {
     fprintf(stderr, "bminor: stage not implemented (%s)\n", flag);
     return EXIT_COMPILE_ERROR;

@@ -149,3 +149,17 @@ struct expr_constant {
  * EXPR_STAT_ERROR means a diagnostic has already been reported.
  */
 expr_status_t expr_status(const struct expr *e, struct expr_constant *out);
+
+/**
+ * @brief Read-only successful-frontend invariant check for expressions.
+ * @details Requires every name expression to have a resolved symbol and every
+ * value-producing expression to have a valid concrete type. Recursively
+ * validates child expressions and their attached types. Argument-list and
+ * initializer-list container nodes are exempt from the value-type requirement;
+ * their elements are validated recursively.
+ *
+ * @param[in] e Pointer to the expression to validate.
+ *
+ * @return true if the expression is valid, false otherwise.
+ */
+bool expr_validate(const struct expr *e);

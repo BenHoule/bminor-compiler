@@ -101,3 +101,15 @@ struct type *type_primitive(type_t kind);
  * @param[in] t Pointer to the type.
  */
 void type_typecheck(struct type *t);
+
+/**
+ * @brief Read-only successful-frontend invariant check for types.
+ * @details Rejects null and unresolved `auto` types. Recursively validates
+ * array element types and any array-size expression, function return types,
+ * and parameter types. Accepts only the declared concrete primitive kinds.
+ *
+ * @param[in] t Pointer to the type to validate.
+ *
+ * @return true if the type is valid, false otherwise.
+ */
+bool type_validate(const struct type *t);

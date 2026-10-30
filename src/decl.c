@@ -210,3 +210,12 @@ void decl_typecheck(struct decl *d) {
     current->type->subtype = return_type;
   }
 }
+
+bool decl_validate(const struct decl *d) {
+  for (; d; d = d->next) {
+    if (!d->symbol || !type_validate(d->type) ||
+        !type_validate(d->symbol->type) || !expr_validate(d->value) ||
+        !stmt_validate(d->code)) return false;
+  }
+  return true;
+}

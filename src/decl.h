@@ -63,3 +63,16 @@ void decl_resolve(struct decl *d);
  * @note Modifies AST.
  */
 void decl_typecheck(struct decl *d);
+
+/**
+ * @brief Read-only successful-frontend invariant check, before lowering.
+ * @details Checks that each declaration has a resolved symbol, that both the
+ * declaration and symbol types are concrete/valid, and that any
+ * initializer expression or function body satisfies its corresponding
+ * validator.
+ *
+ * @param[in] d Pointer to the declaration list to validate.
+ *
+ * @return true if the declaration list is valid, false otherwise.
+ */
+bool decl_validate(const struct decl *d);

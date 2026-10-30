@@ -622,3 +622,11 @@ expr_status_t expr_status(const struct expr *e, struct expr_constant *out) {
 
   return EXPR_STAT_CONST;
 }
+
+bool expr_validate(const struct expr *e) {
+  if (!e) return true;
+  if (e->kind == EXPR_NAME && !e->symbol) return false;
+  if (e->kind != EXPR_ARG && e->kind != EXPR_INIT && !type_validate(e->type))
+    return false;
+  return expr_validate(e->left) && expr_validate(e->right);
+}

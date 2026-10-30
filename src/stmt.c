@@ -216,3 +216,29 @@ void stmt_typecheck(struct stmt *s, struct type *ftype) {
     }
   }
 }
+
+bool stmt_validate(const struct stmt *s) {
+  for (; s; s = s->next) {
+    switch (s->kind) {
+      case STMT_DECL:
+        if (!decl_validate(s->decl)) return false;
+        break;
+      case STMT_EXPR: case STMT_PRINT: case STMT_RETURN:
+        if (!expr_validate(s->expr)) return false;
+        break;
+      case STMT_BLOCK:
+        if (!stmt_validate(s->block)) return false;
+        break;
+      case STMT_IF_ELSE:
+        if (!expr_validate(s->cond_expr) || !stmt_validate(s->body) ||
+            !stmt_validate(s->else_body)) return false;
+        break;
+      case STMT_FOR:
+        if (!expr_validate(s->init_expr) || !expr_validate(s->cond_expr) ||
+            !expr_validate(s->loop_expr) || !stmt_validate(s->body)) return false;
+        break;
+      default: return false;
+    }
+  }
+  return true;
+}

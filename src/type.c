@@ -153,3 +153,16 @@ void type_typecheck(struct type *t) {
       typecheck_error("Array size must be a positive integer");
   }
 }
+
+bool type_validate(const struct type *t) {
+  if (!t || t->kind == TYPE_AUTO) return false;
+  if (t->kind == TYPE_ARRAY || t->kind == TYPE_CARRAY)
+    return type_validate(t->subtype) && (!t->size || expr_validate(t->size));
+  if (t->kind == TYPE_FUNCTION) {
+    if (!type_validate(t->subtype)) return false;
+    for (const struct param_list *p = t->params; p; p = p->next)
+      if (!type_validate(p->type)) return false;
+    return true;
+  }
+  return t->kind >= TYPE_VOID && t->kind <= TYPE_STRING;
+}

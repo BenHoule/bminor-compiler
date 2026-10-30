@@ -136,3 +136,14 @@ void stmt_resolve(struct stmt *s);
  * @param[in] ftype The expected type for return statements.
  */
 void stmt_typecheck(struct stmt *s, struct type *ftype);
+
+/**
+ * @brief Read-only successful-frontend invariant check for statements.
+ * @details Traverses the statement sequence and validates the data owned by
+ * each statement kind.
+ *
+ * @param[in] s Pointer to the statement to validate.
+ *
+ * @return true if the statement is valid, false otherwise.
+ */
+bool stmt_validate(const struct stmt *s);
