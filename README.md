@@ -1,270 +1,134 @@
-# COMP.4060 - COMPILER CONSTRUCTION: BMINOR
-### Install & Build
+# COMP.4060 - Compiler Construction: BMinor
+
+## Install and build
+
+Requirements: GCC 14 (C23), GNU Make 4.3+, Flex, Bison, and Bash.
+Valgrind and clang-format are optional development tools.
+
 ```sh
 git clone https://github.com/BenHoule/bminor-compiler
-cd bminor-compiler/
+cd bminor-compiler
 make
 make test
 ./bminor -scan test/scanner/good/keywords.bminor
 ```
-**NOTE:** Makefile uses gcc-14 and `-std=c23` / `-std=gnu23` flags
 
----
-### Testing
+## Status and command-line interface
+
 ```sh
-make test
-make valgrind
+./bminor <stage> <input-file>
 ```
-Will run all test suites in sequence, with/without valrind. The main `test/` directory is grouped by compiler stage, with passing and failing cases in separate directories:
+
+| Stage | Behavior |
+|-------|----------|
+| `-scan` | Print token names |
+| `-parse` | Check syntax and report success |
+| `-print` | Print a parseable, conservatively parenthesized program |
+| `-resolve` | Bind identifiers and print symbol positions |
+| `-typecheck` | Resolve, typecheck, and validate the typed AST |
+| `-codegen` | Check the frontend, then report that generation is unimplemented |
+
+Exit codes: **0** for success, **1** for compile/input errors, **2** for CLI
+usage errors.
+
+The pipeline is scanner -> parser -> AST -> resolver -> typechecker -> future IR.
+The [source directory guide](src/README.md) documents ownership, AST invariants,
+and the generated-program ABI. Starter filenames and the AST-centered structure
+are retained.
+
+Flex and Bison generate files under `build/`; edit their source specifications,
+not the generated C files. The [runtime library](src/library.c) links with
+generated programs, never with the compiler.
+
+## Development and testing
+
 ```sh
-test/
-  scanner/
-    good/<test>.bminor
-      expected/<test>.expected  # optional exact-output baseline
-      out/<test>.out            # generated test output
-    bad/<test>.bminor
-      expected/<test>.expected
-      out/<test>.out
-  parser/
+make unit           # scanner/string/hash-table and runtime unit checks
+make test           # all unit, stage, printer, resolver-position, and book tests
+make valgrind       # unit and stage regressions under Valgrind
+make release        # optimized binary: build/release/bminor
+make sanitize       # isolated ASan/UBSan build and complete test suite
+make analyze        # GCC static analysis of handwritten C
+make format-check   # optional clang-format check; existing files need formatting
+```
+
+Release and sanitizer builds use separate directories to avoid mixing objects.
+`CPPFLAGS`, `CFLAGS`, `GENFLAGS`, `LDFLAGS`, and `LDLIBS` can be overridden.
+The default compiler is `gcc-14`; use `make CC=...` to override it with another
+compatible compiler.
+
+Regression cases live under `test/<stage>/{good,bad}/`:
+
+```text
+test/scanner/
+  good/
+    keywords.bminor
+    expected/keywords.expected  # optional exact-output baseline
+    out/keywords.out            # generated output
+  bad/
     ...
 ```
 
-Each case must have the expected exit status. If its matching file exists under `expected/`, the program output must match exactly. `make clean` removes generated `out/` directories.
+Good cases must exit 0; bad cases must exit 1, not crash. Optional expected-output
+files must match exactly. Printer checks include exact precedence/literal
+fixtures, idempotence, binding traces, and re-typechecking of well-typed inputs.
+See the [test guide](test/README.md) for constant-expression cases.
 
-Individual tests may be passed directly to the compiler:
+Select stages or a different binary with:
+
 ```sh
-./bminor -scan test/scanner/good/keywords.bminor
+BMINOR_STAGES="printer typechecker" test/runtests.sh
+BMINOR="$PWD/build/release/bminor" test/runtests.sh
+book_tests/run-tests.sh ./bminor -parse book_tests/parser
 ```
 
-Examples from the compiler book reside in a separate `book_tests/` directory in the project root and can be run with:
+`make clean` removes build artifacts, generated test `out/` directories, and
+book-test `.bminor.out` files; it does not delete arbitrary repository `.out` files.
+
+## Tooling
+
+- **EditorConfig / clang-format:** shared formatting settings; keep bulk
+  formatting separate from behavioral edits. The format target is opt-in until
+  the existing formatting baseline is normalized.
+- **Bear / clangd:** `bear -- make -B` produces a compilation database with the
+  real include paths and generated-header locations. Use C23-capable versions.
+- **GCC `-fanalyzer`:** `make analyze` compiles handwritten sources for analysis.
+- **Cppcheck / ShellCheck:** optional complementary C and shell checks.
+- **ASan / UBSan / Valgrind:** check memory lifetimes and undefined behavior.
+
+CI runs the complete test suite, Valgrind regressions, GCC analysis, and
+sanitizer tests.
+
+## Grammar and precedence
+
+The authoritative grammar is [bminor.bison](src/bminor.bison); token definitions
+and literal rules are in [scanner.flex](src/scanner.flex). Avoid maintaining a
+second grammar copy in this README.
+
+The grammar uses explicit precedence layers and matched/unmatched statements
+to resolve dangling `else`. Exponentiation is right-associative and binds more
+tightly than unary minus:
+
+```text
+-x^2     means -(x^2)
+(-x)^2   means (-x) raised to 2
+2^3^2    means 2^(3^2)
+```
+
+Printing preserves these distinctions and keeps double literals distinguishable
+from integer literals.
+
+## Contributing
+
+Create a branch, make focused changes, and run the relevant checks:
+
 ```sh
-cd book_tests/
-chmod +rwx run-tests.sh
-./run-tests.sh ../bminor <-scan|-parse|etc...> ./
+git switch -c <branch>
+make test
+git add <changed-files>
+git commit -m "Describe the change"
+git push -u origin <branch>
 ```
 
----
-### Contributing
-Make a branch
-```sh
-git checkout -b <branch>
-```
-
-*...make changes...*
-
-Push changes
-```sh
-git add .
-git commit -m "message"
-git checkout main
-git pull
-git checkout <branch>
-git rebase main
-git push [--force-with-lease]
-git checkout main
-git merge --ff-only <branch>
-git push
-```
-
----
-### Grammar
-```bison
-program   : decl_list
-          ;
-
-decl_list : decl decl_list
-          | %empty
-          ;
-
-decl      : TOKEN_IDENTIFIER ':' var_type ';'
-          | TOKEN_IDENTIFIER ':' var_type '=' init ';'
-          | TOKEN_IDENTIFIER ':' func_type ';'
-          | TOKEN_IDENTIFIER ':' func_type '=' block
-          ;
-
-/* ------- INITIALIZERS ------- */
-init      : expr
-          | '{' init_list '}'
-          ;
-
-init_list : init
-          | init ',' init_list
-          ;
-
-/* ------- BLOCKS ------- */
-block           : '{' block_item_list '}'
-                ;
-
-block_item_list : block_item block_item_list
-                | %empty
-                ;
-
-block_item      : decl
-                | stmt
-                ;
-
-/* ------- TYPES ------- */
-func_type       : TOKEN_FUNCTION return_type '(' opt_param_list ')'
-                ;
-
-return_type     : primitive_type
-                | TOKEN_VOID
-                | TOKEN_AUTO
-                ;
-
-opt_param_list  : param_list
-                | %empty
-                ;
-
-param_list      : param
-                | param ',' param_list
-                ;
-
-param           : TOKEN_IDENTIFIER ':' param_type
-                ;
-
-param_type      : primitive_type         /* No lengths on array params */
-                | TOKEN_ARRAY '[' ']' param_type
-                | TOKEN_CARRAY '[' ']' param_type
-                ;
-
-var_type        : simple_type
-                | TOKEN_AUTO
-                ;
-
-simple_type     : primitive_type
-                | TOKEN_ARRAY '[' expr ']' simple_type
-                | TOKEN_CARRAY '[' expr ']' simple_type
-                ;
-
-primitive_type  : TOKEN_BOOLEAN
-                | TOKEN_CHAR
-                | TOKEN_DOUBLE
-                | TOKEN_INTEGER
-                | TOKEN_STRING
-                ;
-
-/* ------- STATEMENTS ------- */
-stmt            : matched_stmt
-                | unmatched_stmt        /* Dangling else resolution */
-                ;
-
-matched_stmt    : simple_stmt
-                | TOKEN_IF '(' expr ')' matched_stmt TOKEN_ELSE matched_stmt
-                | TOKEN_FOR '(' opt_expr ';' opt_expr ';' opt_expr ')' matched_stmt
-                ;
-
-unmatched_stmt  : TOKEN_IF '(' expr ')' stmt
-                | TOKEN_IF '(' expr ')' matched_stmt TOKEN_ELSE unmatched_stmt
-                | TOKEN_FOR '(' opt_expr ';' opt_expr ';' opt_expr ')' unmatched_stmt
-                ;
-
-simple_stmt     : block
-                | expr ';'
-                | TOKEN_RETURN ';'
-                | TOKEN_RETURN expr ';'
-                | TOKEN_PRINT ';'
-                | TOKEN_PRINT expr_list ';'
-                ;
-
-/* ------- EXPRESSIONS ------- */
-opt_expr_list : expr_list
-              | %empty
-              ;
-
-expr_list     : expr
-              | expr ',' expr_list
-              ;
-
-opt_expr      : expr
-              | %empty
-              ;
-
-expr          : or_expr
-              | or_expr '=' expr
-              ; /* right-associative */
-
-or_expr       : and_expr
-              | or_expr TOKEN_OR and_expr
-              ; /* left-associative */
-
-and_expr      : cmp_expr
-              | and_expr TOKEN_AND cmp_expr
-              ;
-
-cmp_expr      : add_expr
-              | cmp_expr '<' add_expr
-              | cmp_expr '>' add_expr
-              | cmp_expr TOKEN_LE add_expr
-              | cmp_expr TOKEN_GE add_expr
-              | cmp_expr TOKEN_EQ add_expr
-              | cmp_expr TOKEN_NE add_expr
-              ;
-
-add_expr      : mul_expr
-              | add_expr '+' mul_expr
-              | add_expr '-' mul_expr
-              ;
-
-mul_expr      : unary_expr
-              | mul_expr '*' unary_expr
-              | mul_expr '/' unary_expr
-              | mul_expr '%' unary_expr
-              ;
-
-unary_expr    : len_expr
-              | '-' unary_expr
-              | '!' unary_expr
-              ;
-
-len_expr      : pow_expr
-              | '#' len_expr
-              ;
-
-pow_expr      : postfix_expr
-              | postfix_expr '^' unary_expr        /* -x^2 -> -(x^2) */
-              ;
-
-postfix_expr  : primary_expr
-              | postfix_expr TOKEN_INC
-              | postfix_expr TOKEN_DEC
-              | postfix_expr '[' expr ']'
-              | postfix_expr '(' opt_expr_list ')'
-              ;
-
-primary_expr  : '(' expr ')'
-              | TOKEN_IDENTIFIER
-              | TOKEN_CHAR_LITERAL
-              | TOKEN_DOUBLE_LITERAL
-              | TOKEN_INTEGER_LITERAL
-              | TOKEN_STRING_LITERAL
-              | TOKEN_FALSE
-              | TOKEN_TRUE
-              ;
-```
-**NOTE:**  bottom-up structure (upper "consists of" lower); e.g. A `unary_expr` (-, !) consists of a `pow_expr` (^):
-```
-" -x^2 "
-unary_expr
--> '-' len_expr
--> '-' pow_expr
--> '-' (postfix_expr '^' unary_expr)
--> '-' (primary_expr '^' len_expr)
--> '-' (TOKEN_NAME   '^' pow_expr)
--> '-' (TOKEN_NAME   '^' postfix_expr)
--> '-' (TOKEN_NAME   '^' primary_expr)
--> '-' (TOKEN_NAME   '^' TOKEN_INTEGER_LITERAL)
--> semantically " -(x^2) "
-```
-`unary_expr` has no path to `primary_expr` that does not pass through `pow_expr`. Were it the other way around, the derivation would look like:
-```
-" -x^2 "
-pow_expr
--> unary_expr '^' pow_expr
--> ('-' unary_expr)   '^' unary_expr
--> ('-' len_expr)     '^' len_expr
--> ('-' postfix_expr) '^' postfix_expr
--> ('-' primary_expr) '^' primary_expr
--> ('-' TOKEN_NAME)   '^' TOKEN_INTEGER_LITERAL
--> semantically " (-x)^2 "
-```
+Open a pull request for review. Keep starter filenames and attribution intact;
+do not include generated artifacts or unrelated formatting in behavior fixes.

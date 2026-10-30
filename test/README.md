@@ -3,21 +3,32 @@
 make test
 make valgrind
 ```
-Will run all test suites in sequence, with/without valrind. The main `test/` directory is grouped by compiler stage, with passing and failing cases in separate directories:
+`make test` runs unit, stage, printer round-trip, resolver-position, and book
+tests. `make valgrind` runs unit checks and the stage regression driver under
+Valgrind, not the printer/resolver scripts or book tests.
+`make sanitize` runs the complete test target with an isolated ASan/UBSan build.
+The test drivers accept `BMINOR=/absolute/path/to/compiler`.
+
+The main `test/` directory is grouped by compiler stage, with passing and failing
+cases in separate directories:
 ```sh
 test/
   scanner/
-    good/<test>.bminor
+    good/
+      <test>.bminor
       expected/<test>.expected  # optional exact-output baseline
       out/<test>.out            # generated test output
-    bad/<test>.bminor
+    bad/
+      <test>.bminor
       expected/<test>.expected
       out/<test>.out
   parser/
     ...
 ```
 
-Each case must have the expected exit status. If its matching file exists under `expected/`, the program output must match exactly. `make clean` removes generated `out/` directories.
+Good cases must exit 0; bad cases must exit 1, not crash or fail with a usage
+error. If a matching file exists under `expected/`, output must match exactly.
+`make clean` removes generated `out/` directories.
 
 ### Printer and constant-expression regressions
 
@@ -54,6 +65,5 @@ Individual tests may be passed directly to the compiler:
 Examples from the compiler book reside in a separate `book_tests/` directory in the project root and can be run with:
 ```sh
 cd book_tests
-chmod +rwx run-tests.sh
-./run-tests.sh ../bminor <-scan|-parse|etc...> ./
+./run-tests.sh ../bminor -parse parser
 ```
