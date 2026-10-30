@@ -83,7 +83,7 @@ book_tests/run-tests.sh ./bminor -parse book_tests/parser
 ```
 
 `make clean` removes build artifacts, generated test `out/` directories, and
-book-test `.bminor.out` files; it does not delete arbitrary repository `.out` files.
+book-test `.bminor.out` files.
 
 ## Tooling
 
