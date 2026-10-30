@@ -1,23 +1,27 @@
 **1. Testing (General)**
-- `string_decode`: exact-fit, one-byte-short, empty-string, and maximally escaped tests
+- Done: `string_decode` exact-fit, one-byte-short, empty-string, and maximally escaped tests.
+- Done: hash-table clear/reuse, scanner reopening, runtime ABI/power, and deep resolver tests.
 
 **2. Make expression printing precedence-aware**
-- Pass precedence level + associativity (optional) to recursive printing calls.
-- Wrap child in parentheses only if `child_precedence <= parent_precedence`.
+- Optional formatting improvement; current fully parenthesized printer preserves meaning.
+- A compact printer must consider operand position and associativity as well as precedence.
 
 **3. Expand `roundtrip.sh` beyond byte-idempotence and binding-trace comparison.**
-- Cannot detect consistently printed but semantically different expression.
-- Add structural AST comparison/targeted precedence tests, plus successful re-typechecking of valid typed fixtures.
+- Done: targeted exact-output precedence/literal fixtures and re-typechecking of well-typed inputs.
+- Optional: structural AST comparison for broader property testing.
 
-**4. Update AST traversal to be thread safe**
-- Morris algorithm is not thread safe (edits AST directly).
-- Trying to minimize recursion to save the stack some grief.
+**4. Non-mutating AST traversal**
+- Done: iterative resolver traversal uses an explicit stack and preserves child links.
+- This does not make the compiler reentrant; scanner/resolver state is still global.
 
 **5. Add location (line/col) info to name-resolution/typecheck errors(?)**
 - Both stages traverse AST, does the information even exist at this point?
 - If not, is it worth attaching it to AST nodes?
 
-**6. Fix Array Size Typechecking**
-- `type_typecheck` rejects all negative expressions, even if it shouldn't; e.g. `[-(-1)]`
-- Need to evaluate constant expressions to handle negative literals correctly
-- Add tests for nested negations in array size
+**6. Array Size Typechecking**
+- Done: shared constant evaluation handles nested negation/arithmetic and initializer counts.
+- Runtime-dependent integer dimensions remain allowed and require runtime checks during lowering.
+
+**7. Typed AST invariant**
+- Done: read-only validation checks concrete types and bound names before lowering.
+- List/initializer containers are explicitly exempt from value-type requirements.
