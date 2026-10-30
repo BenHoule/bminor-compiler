@@ -173,11 +173,13 @@ void expr_resolve( struct expr *e ) {
     fprintf(stderr, "bminor: failed to allocate resolver stack\n");
     exit(EXIT_FAILURE);
   }
+
   stack[count++] = e;
   while (count) {
     e = stack[--count];
     if (e->kind == EXPR_NAME && !(e->symbol = scope_lookup(e->name)))
       resolver_error("Undefined identifier '%s'", e->name);
+
     if (count + 2 > capacity) {
       capacity *= 2;
       struct expr **grown = realloc(stack, capacity * sizeof *stack);
@@ -186,11 +188,14 @@ void expr_resolve( struct expr *e ) {
         fprintf(stderr, "bminor: failed to grow resolver stack\n");
         exit(EXIT_FAILURE);
       }
+
       stack = grown;
     }
+
     if (e->right) stack[count++] = e->right;
     if (e->left) stack[count++] = e->left;
   }
+
   free(stack);
 }
 
@@ -213,34 +218,35 @@ static const char *expr_op_name(expr_t kind) {
 
 static bool expr_is_lvalue(const struct expr *e) {
   if (!e) return false;
+
   const bool is_assignable = e->kind == EXPR_NAME && e->symbol
                              && e->symbol->type->kind != TYPE_FUNCTION
                              && e->symbol->type->kind != TYPE_VOID;
 
-  return e->kind == EXPR_IDX || (e->kind == EXPR_NAME && is_assignable);
+  return e->kind == EXPR_IDX || is_assignable;
 }
 
 static struct type *expr_typecheck_binary(struct expr *e, bool allow_non_numeric) {
   if (!e) return nullptr;
 
-  struct type *l = expr_typecheck(e->left);
-  struct type *r = expr_typecheck(e->right);
-  if (!l || !r) return nullptr;
-  if (!type_equals(l, r)) {
+  struct type *left_type = expr_typecheck(e->left);
+  struct type *right_type = expr_typecheck(e->right);
+  if (!left_type || !right_type) return nullptr;
+  if (!type_equals(left_type, right_type)) {
     typecheck_error("'%s' requires matching operand types "
                     "(no implicit conversion)",
                     expr_op_name(e->kind));
     return nullptr;
   }
 
-  switch (l->kind) {
+  switch (left_type->kind) {
     case TYPE_INTEGER: break;
     case TYPE_DOUBLE:
       if (e->kind == EXPR_MOD || e->kind == EXPR_POW) {  // Matches C/C++
         typecheck_error("%s cannot operate on double operands",
                         expr_op_name(e->kind));
         return nullptr;
-      }  // NOTE: Could check type on code generation & use fmod()/pow() for doubles
+      }  // Could check type on code generation & use fmod()/pow() for doubles
       break;
 
     case TYPE_VOID: case TYPE_ARRAY: case TYPE_CARRAY: case TYPE_FUNCTION:
@@ -257,7 +263,8 @@ static struct type *expr_typecheck_binary(struct expr *e, bool allow_non_numeric
 
   switch (e->kind) {
     case EXPR_ADD: case EXPR_SUB: case EXPR_MUL:
-    case EXPR_DIV: case EXPR_MOD: case EXPR_POW: return l;
+    case EXPR_DIV: case EXPR_MOD: case EXPR_POW: return left_type;
+
     default: return type_primitive(TYPE_BOOLEAN);
   }
 }
@@ -266,15 +273,15 @@ static struct type *expr_typecheck_logical(struct expr *e) {
   if (!e) return nullptr;
 
   e->type = expr_typecheck(e->left);
-  struct type *r = expr_typecheck(e->right);
-  if (!e->type || !r) return nullptr;  // Avoid double-reporting
-  if (e->type->kind != TYPE_BOOLEAN || r->kind != TYPE_BOOLEAN) {
-    typecheck_error(
-      "logical operator '%s' requires boolean operands",
-      expr_op_name(e->kind)
-    );
+  struct type *right_type = expr_typecheck(e->right);
+  if (!e->type || !right_type) return nullptr;  // Avoid double-reporting
+
+  if (e->type->kind != TYPE_BOOLEAN || right_type->kind != TYPE_BOOLEAN) {
+    typecheck_error("logical operator '%s' requires boolean operands",
+                    expr_op_name(e->kind));
     return nullptr;
   }
+
   return type_primitive(TYPE_BOOLEAN);
 }
 
@@ -563,6 +570,7 @@ expr_status_t expr_status(const struct expr *e, struct expr_constant *out) {
       struct expr_constant operand;
       expr_status_t status = expr_status(e->left, &operand);
       if (status != EXPR_STAT_CONST) return status;
+
       out->kind = operand.kind;
       if (operand.kind == EXPR_INT) {
         if (__builtin_sub_overflow((int64_t)0, operand.integer, &out->integer)) {
@@ -578,8 +586,7 @@ expr_status_t expr_status(const struct expr *e, struct expr_constant *out) {
     }
 
     case EXPR_ADD: case EXPR_SUB: case EXPR_MUL:
-    case EXPR_DIV: case EXPR_MOD: case EXPR_POW:
-      break;
+    case EXPR_DIV: case EXPR_MOD: case EXPR_POW: break;
 
     default: return EXPR_STAT_RUNTIME;
   }
@@ -628,5 +635,6 @@ bool expr_validate(const struct expr *e) {
   if (e->kind == EXPR_NAME && !e->symbol) return false;
   if (e->kind != EXPR_ARG && e->kind != EXPR_INIT && !type_validate(e->type))
     return false;
+
   return expr_validate(e->left) && expr_validate(e->right);
 }

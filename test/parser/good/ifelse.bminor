@@ -1,5 +1,5 @@
 // Copied from https://dthain.github.io/compilers-fa25/bminor
-// NOTE: name resolution is a later compiler stage
+// Name resolution is a later compiler stage
 
 main: function integer () = {
   // An arithmetic expression statement.

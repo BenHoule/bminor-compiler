@@ -5,7 +5,7 @@ extern bool resolver_trace;  // Toggles printing binding trace
 /**
  * @return The number of recorded resolver errors.
  */
-unsigned int resolver_error_count();
+unsigned int resolver_error_count(void);
 
 /**
  * @brief Reports a resolver error with a formatted message.

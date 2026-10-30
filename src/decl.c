@@ -13,8 +13,11 @@
 #include <stdio.h>
 #include <string.h>
 
-struct decl *decl_create(char *name, struct type *type, struct expr *value,
-                          struct stmt *code, struct decl *next) {
+struct decl *decl_create(
+  char *name,
+  struct type *type, struct expr *value,
+  struct stmt *code, struct decl *next
+) {
   struct decl *d = memory_allocate(sizeof *d);
   memory_take(name);
   d->name = name;
@@ -78,7 +81,7 @@ static void decl_resolve_var(struct decl *d) {
   symbol_print_binding(d->symbol);
 }
 
-// NOTE: Early returns prevent bodies of rejected function definitions
+// WARNING: Early returns prevent bodies of rejected function definitions
 // from being resolved; Errors in a rejected body are unreported.
 static void decl_resolve_func(struct decl *d) {
   assert(d); assert(d->type); assert(d->type->kind == TYPE_FUNCTION);

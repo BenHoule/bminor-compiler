@@ -13,7 +13,7 @@ static struct scope *current_scope = nullptr;
 
 static int current_depth = 0;
 
-void scope_enter() {
+void scope_enter(void) {
   struct scope *new_scope = malloc(sizeof(struct scope));
   if (!new_scope) {
     fprintf(stderr, "Failed to allocate memory for new scope\n");
@@ -32,7 +32,7 @@ void scope_enter() {
   current_depth++;
 }
 
-void scope_exit() {
+void scope_exit(void) {
   assert(current_scope != nullptr);
   struct scope *old_scope = current_scope;
   current_scope = current_scope->parent;
@@ -41,16 +41,16 @@ void scope_exit() {
   current_depth--;
 }
 
-int scope_depth() {
+int scope_depth(void) {
   return current_depth;
 }
 
-int scope_bind(const char *name, struct symbol *symbol ) {
+int scope_bind(const char *name, struct symbol *symbol) {
   assert(current_scope != nullptr);
   return hash_table_insert(current_scope->symbols, name, symbol);
 }
 
-struct symbol *scope_lookup( const char *name ) {
+struct symbol *scope_lookup(const char *name) {
   struct scope *scope = current_scope;
   while (scope) {
     struct symbol *sym = hash_table_lookup(scope->symbols, name);
@@ -60,7 +60,7 @@ struct symbol *scope_lookup( const char *name ) {
   return nullptr;
 }
 
-struct symbol *scope_lookup_local( const char *name ) {
+struct symbol *scope_lookup_local(const char *name) {
   assert(current_scope != nullptr);
   return hash_table_lookup(current_scope->symbols, name);
 }

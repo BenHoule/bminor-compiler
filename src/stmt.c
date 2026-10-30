@@ -8,7 +8,6 @@
 
 #include <assert.h>
 #include <stdio.h>
-#include <stdlib.h>
 
 struct stmt *stmt_create_simple(
   stmt_t kind,
@@ -29,7 +28,6 @@ struct stmt *stmt_create_return(struct expr *expr) {
 struct stmt *stmt_create_print(struct expr *expr) {
   return stmt_create_simple(STMT_PRINT, expr);
 }
-
 struct stmt *stmt_create_decl(struct decl *decl) {
   struct stmt *s = memory_allocate(sizeof *s);
   s->kind = STMT_DECL;
@@ -37,7 +35,6 @@ struct stmt *stmt_create_decl(struct decl *decl) {
   s->next = nullptr;
   return s;
 }
-
 struct stmt *stmt_create_block(struct stmt *body) {
   struct stmt *s = memory_allocate(sizeof *s);
   s->kind = STMT_BLOCK;
@@ -45,7 +42,9 @@ struct stmt *stmt_create_block(struct stmt *body) {
   s->next = nullptr;
   return s;
 }
-struct stmt *stmt_create_if_else(struct expr *cond_expr, struct stmt *body, struct stmt *else_body) {
+struct stmt *stmt_create_if_else(
+  struct expr *cond_expr, struct stmt *body, struct stmt *else_body
+) {
   struct stmt *s = memory_allocate(sizeof *s);
   s->kind = STMT_IF_ELSE;
   s->cond_expr = cond_expr;
@@ -54,7 +53,10 @@ struct stmt *stmt_create_if_else(struct expr *cond_expr, struct stmt *body, stru
   s->next = nullptr;
   return s;
 }
-struct stmt *stmt_create_for(struct expr *init_expr, struct expr *cond_expr, struct expr *loop_expr, struct stmt *body) {
+struct stmt *stmt_create_for(
+  struct expr *init_expr, struct expr *cond_expr,
+  struct expr *loop_expr, struct stmt *body
+) {
   struct stmt *s = memory_allocate(sizeof *s);
   s->kind = STMT_FOR;
   s->init_expr = init_expr;
@@ -72,6 +74,7 @@ void stmt_print(struct stmt *s, const int indent) {
     switch (s->kind) {
       case STMT_DECL: decl_print(s->decl, indent); break;
       case STMT_EXPR: expr_print_affix("", s->expr, ";"); break;
+
       case STMT_IF_ELSE:
         printf("if (");
         expr_print(s->cond_expr);
@@ -82,6 +85,7 @@ void stmt_print(struct stmt *s, const int indent) {
           stmt_print(s->else_body, indent);
         }
         break;
+
       case STMT_FOR:
         printf("for (");
         expr_print(s->init_expr);
@@ -98,6 +102,7 @@ void stmt_print(struct stmt *s, const int indent) {
         printf(") ");
         stmt_print(s->body, indent);
         break;
+
       case STMT_PRINT:
         printf("print");
         if (s->expr) {
@@ -106,6 +111,7 @@ void stmt_print(struct stmt *s, const int indent) {
         }
         printf(";");
         break;
+
       case STMT_RETURN:
         printf("return");
         if (s->expr) {
@@ -114,52 +120,64 @@ void stmt_print(struct stmt *s, const int indent) {
         }
         printf(";");
         break;
+
       case STMT_BLOCK:
         printf("{\n%*s", (indent + 1) * 2, "");
         stmt_print(s->block, indent + 1);
         printf("\n%*s}", indent * 2, "");
         break;
+
       default: unreachable();
     }
-    if (s->next) {
-      printf("\n%*s", indent * 2, "");
-    }
+
+    if (s->next) printf("\n%*s", indent * 2, "");
   }
 }
+
 
 void stmt_resolve(struct stmt *s) {
   for(; s; s = s->next) {
     switch (s->kind) {
       case STMT_EXPR:
       case STMT_PRINT:
-      case STMT_RETURN: expr_resolve(s->expr); break;
-      case STMT_DECL: decl_resolve(s->decl); break;
+      case STMT_RETURN:
+        expr_resolve(s->expr);
+        break;
+
+      case STMT_DECL:
+        decl_resolve(s->decl);
+        break;
+
       case STMT_BLOCK:
         scope_enter();
         stmt_resolve(s->block);
         scope_exit();
         break;
+
       case STMT_IF_ELSE:
         expr_resolve(s->cond_expr);
         stmt_resolve(s->body);
         stmt_resolve(s->else_body);
         break;
+
       case STMT_FOR:
         expr_resolve(s->init_expr);
         expr_resolve(s->cond_expr);
         expr_resolve(s->loop_expr);
         stmt_resolve(s->body);
         break;
+
       default: unreachable();  // Tells compiler to omit bounds check before jump table
     }
   }
 }
 
+
 static void stmt_expect_boolean(struct expr *e, const char *context) {
   struct type *t = expr_typecheck(e);
-  if (t && t->kind != TYPE_BOOLEAN) {
+  if (!t) return;
+  if (t->kind != TYPE_BOOLEAN)
     typecheck_error("'%s' requires a boolean expression", context);
-  }
 }
 
 static void stmt_typecheck_return(struct stmt *s, struct type *ftype) {
@@ -180,42 +198,44 @@ static void stmt_typecheck_return(struct stmt *s, struct type *ftype) {
     return;
   }
 
-  if (!type_equals(t, ftype->subtype)) {
+  if (!type_equals(t, ftype->subtype))
     typecheck_error("return type does not match function type");
-  }
 }
 
 void stmt_typecheck(struct stmt *s, struct type *ftype) {
   for (; s; s = s->next) {
     switch (s->kind) {
-      case STMT_DECL: decl_typecheck(s->decl); break;
-      case STMT_EXPR: expr_typecheck(s->expr); break;
-      case STMT_BLOCK: stmt_typecheck(s->block, ftype); break;
+      case STMT_DECL:   decl_typecheck(s->decl); break;
+      case STMT_EXPR:   expr_typecheck(s->expr); break;
+      case STMT_BLOCK:  stmt_typecheck(s->block, ftype); break;
       case STMT_RETURN: stmt_typecheck_return(s, ftype); break;
+
       case STMT_PRINT:
         for (struct expr *a = s->expr; a; a = a->right) {
           struct type *t = expr_typecheck(a->left);
-          if (t && !type_is_primitive(t)) {
+          if (t && !type_is_primitive(t))
             typecheck_error("'print' requires primitive type");
-          }
-
         }
         break;
+
       case STMT_IF_ELSE:
         stmt_expect_boolean(s->cond_expr, "if");
         stmt_typecheck(s->body, ftype);
         stmt_typecheck(s->else_body, ftype);
         break;
+
       case STMT_FOR:
         expr_typecheck(s->init_expr);
         if (s->cond_expr) stmt_expect_boolean(s->cond_expr, "for");
         expr_typecheck(s->loop_expr);
         stmt_typecheck(s->body, ftype);
         break;
+
       default: unreachable();
     }
   }
 }
+
 
 bool stmt_validate(const struct stmt *s) {
   for (; s; s = s->next) {

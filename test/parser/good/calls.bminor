@@ -1,4 +1,4 @@
-// NOTE: name resolution is a later compiler stage
+// Name resolution is a later compiler stage
 
 main: function integer () = {
     f(x)[1]++;

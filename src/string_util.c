@@ -36,7 +36,7 @@ uint8_t char_encode(const char **in) {
   switch (**in) {
     case 'a': return '\a';
     case 'b': return '\b';
-    case 'e': return 0x1B;  // NOTE: '\e' not supported by MSVC - using 0x1B for portability
+    case 'e': return 0x1B;  // '\e' not supported by MSVC - using 0x1B for portability
     case 'f': return '\f';
     case 'n': return '\n';
     case 'r': return '\r';

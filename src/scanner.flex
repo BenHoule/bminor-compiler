@@ -162,7 +162,7 @@ IDENTIFIER  {L}{A}*
                     }
 
 '{C}'       { /* CHAR_LITERAL
-               * NOTE: `char_encode` may return a value outside of standard
+               * WARNING: `char_encode` may return a value outside of standard
                * ASCII range [0-127] */
               const char *ctext = yytext + 1;  // Skip the opening quote
               const uint8_t byte = char_encode(&ctext);

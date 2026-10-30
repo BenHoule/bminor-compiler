@@ -70,17 +70,21 @@ bool type_equals(struct type *a, struct type *b) {
     case TYPE_ARRAY:
     case TYPE_CARRAY:
       return type_equals(a->subtype, b->subtype);
+
     case TYPE_FUNCTION:
-    if (!type_equals(a->subtype, b->subtype)) return false;
-    const struct param_list *p = a->params;
-    const struct param_list *q = b->params;
-    while(p && q) {
-      if (!type_equals(p->type, q->type)) return false;
-      p = p->next;
-      q = q->next;
-      // NOTE: Param names are not compared (standard convention)
-    }
-    return p == nullptr && q == nullptr;
+      if (!type_equals(a->subtype, b->subtype)) return false;
+
+      const struct param_list *p = a->params;
+      const struct param_list *q = b->params;
+      while(p && q) {
+        if (!type_equals(p->type, q->type)) return false;
+        p = p->next;
+        q = q->next;
+        // Param names are not compared (standard convention)
+      }
+
+      return p == nullptr && q == nullptr;
+
     default: return true;
   }
 }
@@ -106,11 +110,13 @@ void type_print(struct type *t) {
       expr_print_affix("array [", t->size, "] ");
       type_print(t->subtype);
       break;
+
     case TYPE_FUNCTION:
       assert(t->subtype);
       type_print_affix("function ", t->subtype, " ");
       param_list_print(t->params);
       break;
+
     default: unreachable();
   }
 }
@@ -128,6 +134,7 @@ bool type_is_primitive(const struct type *t) {
     case TYPE_DOUBLE:
     case TYPE_STRING:
       return true;
+
     default:
       return false;
   }
@@ -158,11 +165,15 @@ bool type_validate(const struct type *t) {
   if (!t || t->kind == TYPE_AUTO) return false;
   if (t->kind == TYPE_ARRAY || t->kind == TYPE_CARRAY)
     return type_validate(t->subtype) && (!t->size || expr_validate(t->size));
+
   if (t->kind == TYPE_FUNCTION) {
     if (!type_validate(t->subtype)) return false;
+
     for (const struct param_list *p = t->params; p; p = p->next)
       if (!type_validate(p->type)) return false;
+
     return true;
   }
+
   return t->kind >= TYPE_VOID && t->kind <= TYPE_STRING;
 }

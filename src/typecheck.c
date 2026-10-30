@@ -5,7 +5,7 @@
 
 static unsigned int error_count = 0;
 
-unsigned int typecheck_error_count() {
+unsigned int typecheck_error_count(void) {
   return error_count;
 }
 
