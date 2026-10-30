@@ -26,7 +26,7 @@ int scope_depth(void);
  * @param[in] name The name to bind.
  * @param[in] symbol The symbol to associate with the name.
  *
- * @return 0 on success, non-zero on failure (e.g. redeclaration in same scope).
+ * @return Non-zero on success, zero on failure (e.g. redeclaration in same scope).
  */
 int scope_bind(const char *name, struct symbol *symbol );
 

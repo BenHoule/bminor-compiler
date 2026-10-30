@@ -43,7 +43,7 @@ generated programs, never with the compiler.
 ## Development and testing
 
 ```sh
-make unit           # scanner/string/hash-table and runtime unit checks
+make unit           # scanner/string, AST, and runtime unit checks
 make test           # all unit, stage, printer, resolver-position, and book tests
 make valgrind       # unit and stage regressions under Valgrind
 make release        # optimized binary: build/release/bminor

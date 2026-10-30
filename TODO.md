@@ -1,6 +1,6 @@
 **1. Testing (General)**
 - Done: `string_decode` exact-fit, one-byte-short, empty-string, and maximally escaped tests.
-- Done: hash-table clear/reuse, scanner reopening, runtime ABI/power, and deep resolver tests.
+- Done: scanner reopening, runtime ABI/power, and deep resolver tests.
 
 **2. Make expression printing precedence-aware**
 - Optional formatting improvement; current fully parenthesized printer preserves meaning.

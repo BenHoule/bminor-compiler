@@ -93,9 +93,22 @@ FRONTEND_OBJS := $(filter-out $(BUILD_DIR)/main.o,$(OBJS))
 $(BUILD_DIR)/scanner_unit_tests: $(TEST_DIR)/scanner/unit_tests.c $(FRONTEND_OBJS)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) -o $@ $^ $(LDLIBS)
 
-unit: $(BUILD_DIR)/scanner_unit_tests
-	@$(BUILD_DIR)/scanner_unit_tests
+$(BUILD_DIR)/programs_unit_tests: $(TEST_DIR)/programs/unit_tests.c $(FRONTEND_OBJS)
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) -o $@ $^ $(LDLIBS)
 
+$(BUILD_DIR)/runtime_unit_tests: $(TEST_DIR)/runtime/unit_tests.c $(SRC_DIR)/library.c $(SRC_DIR)/library.h | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) -o $@ $(TEST_DIR)/runtime/unit_tests.c $(SRC_DIR)/library.c $(LDLIBS)
+
+unit: $(BUILD_DIR)/scanner_unit_tests $(BUILD_DIR)/programs_unit_tests $(BUILD_DIR)/runtime_unit_tests
+	@$(BUILD_DIR)/scanner_unit_tests
+	@$(BUILD_DIR)/programs_unit_tests
+	@$(BUILD_DIR)/runtime_unit_tests > $(BUILD_DIR)/runtime-print.out
+	@diff -u $(TEST_DIR)/runtime/print.expected $(BUILD_DIR)/runtime-print.out
+	@$(BUILD_DIR)/runtime_unit_tests overflow > $(BUILD_DIR)/runtime-overflow.out 2>&1; \
+	  status=$$?; test $$status -eq 1 || exit 1; \
+	  diff -u $(TEST_DIR)/runtime/overflow.expected $(BUILD_DIR)/runtime-overflow.out
+
+# Test and valgrind targets
 test: $(BIN) unit
 	@BMINOR=$(abspath $(BIN)) $(TEST_DIR)/runtests.sh
 	@BMINOR=$(abspath $(BIN)) $(TEST_DIR)/printer/roundtrip.sh
@@ -105,8 +118,10 @@ test: $(BIN) unit
 	@$(BOOK_DIR)/run-tests.sh $(abspath $(BIN)) -print $(BOOK_DIR)/printer
 	@$(BOOK_DIR)/run-tests.sh $(abspath $(BIN)) -typecheck $(BOOK_DIR)/typecheck
 
-valgrind: $(BIN) $(BUILD_DIR)/scanner_unit_tests
+valgrind: $(BIN) $(BUILD_DIR)/scanner_unit_tests $(BUILD_DIR)/programs_unit_tests $(BUILD_DIR)/runtime_unit_tests
 	@valgrind --quiet --error-exitcode=125 --leak-check=full $(BUILD_DIR)/scanner_unit_tests
+	@valgrind --quiet --error-exitcode=125 --leak-check=full $(BUILD_DIR)/programs_unit_tests
+	@valgrind --quiet --error-exitcode=125 --leak-check=full $(BUILD_DIR)/runtime_unit_tests
 	@BMINOR=$(abspath $(BIN)) BMINOR_VALGRIND=1 $(TEST_DIR)/runtests.sh
 
 release:

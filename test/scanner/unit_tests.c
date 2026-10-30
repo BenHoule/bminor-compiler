@@ -75,6 +75,24 @@ static void test_string_decode_boundaries(void) {
   char quote_output[6] = {0};
   const size_t quote_size = string_decode(quote, quote_output, 4);
   CHECK(quote_size == ERR_TOO_LONG);
+
+  char exact[4];
+  CHECK(string_decode("a", exact, sizeof exact) == sizeof exact);
+  CHECK(strcmp(exact, "\"a\"") == 0);
+  char empty[3];
+  CHECK(string_decode("", empty, sizeof empty) == sizeof empty);
+  CHECK(strcmp(empty, "\"\"") == 0);
+  char escaped[1278];
+  char raw[256];
+  memset(raw, 1, 255);
+  raw[255] = '\0';
+  CHECK(string_decode(raw, escaped, sizeof escaped) == sizeof escaped);
+  CHECK(string_decode(raw, escaped, sizeof escaped - 1) == ERR_TOO_LONG);
+
+  char a[6], b[6];
+  char_decode('a', '\'', a);
+  char_decode('\n', '\'', b);
+  CHECK(strcmp(a, "a") == 0 && strcmp(b, "\\n") == 0);
 }
 
 static void test_scanner_values(void) {
@@ -106,6 +124,18 @@ static void test_scanner_values(void) {
   CHECK(scanner_next_token() == 0);
   CHECK(scanner_error_count() == 0);
 
+  fclose(input);
+
+  input = tmpfile();
+  CHECK(input != NULL);
+  if (!input) return;
+  fputs("42", input);
+  rewind(input);
+  scanner_open(input);
+  CHECK(scanner_next_token() == TOKEN_INTEGER_LITERAL);
+  CHECK(yylloc.first_line == 1 && yylloc.first_column == 1);
+  CHECK(scanner_error_count() == 0);
+  scanner_close();
   fclose(input);
 }
 
