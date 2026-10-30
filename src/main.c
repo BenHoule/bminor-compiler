@@ -25,7 +25,7 @@ typedef enum {
 #define EXIT_USAGE_ERROR 2    // Bad CLI command
 
 static stage_t stage_from_flag(const char *flag) {
-  const static struct {
+  static const struct {
     const char *flag;
     stage_t stage;
   } flags[] = {
