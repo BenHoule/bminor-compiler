@@ -84,6 +84,122 @@ AST contracts:
 - Arithmetic constants are evaluated without rewriting the AST. Runtime-sized
   arrays remain allowed; lowering must validate their dimensions at runtime.
 
+Expression resolver traversal
+-----------------------------
+
+The active `expr_resolve()` uses an explicit stack. It does not modify child
+links and bounds C call-stack usage independently of AST height. The alternatives
+below are documented for comparison and experimentation; the active implementation
+should be changed only after measuring representative programs.
+
+### Why not rely on tail-call optimization?
+
+Tail-call optimization (TCO) is helpful when a recursive call is in tail
+position: the caller has no work left after the call returns. It is not a
+general replacement for a traversal stack. A binary-tree preorder traversal
+must visit the left child and then still return to visit the right child, so
+the left recursive call is not a tail call. The right-child call may be
+written in tail position, but that does not eliminate stack growth along a
+deep left branch. Also, C does not guarantee TCO; whether a compiler applies
+it depends on the compiler, options, and exact function shape.
+
+Thus, TCO can reduce stack use in suitable recursive formulations, but it does
+not reliably bound stack use for arbitrary expression-tree shapes. A manual
+stack makes pending work explicit and avoids depending on TCO. It uses O(h)
+auxiliary pointers for traversal height `h`, and the storage is heap-allocated
+and grows as needed.
+
+### Explicit manual-stack alternative
+
+This is the active implementation in `expr.c`. Keep it here as a reference if
+experimenting with Morris traversal:
+
+```c
+void expr_resolve(struct expr *e) {
+  if (!e) return;
+  size_t count = 0, capacity = 32;
+  struct expr **stack = malloc(capacity * sizeof *stack);
+  if (!stack) {
+    fprintf(stderr, "bminor: failed to allocate resolver stack\n");
+    exit(EXIT_FAILURE);
+  }
+  stack[count++] = e;
+  while (count) {
+    e = stack[--count];
+    if (e->kind == EXPR_NAME && !(e->symbol = scope_lookup(e->name)))
+      resolver_error("Undefined identifier '%s'", e->name);
+    if (count + 2 > capacity) {
+      capacity *= 2;
+      struct expr **grown = realloc(stack, capacity * sizeof *stack);
+      if (!grown) {
+        free(stack);
+        fprintf(stderr, "bminor: failed to grow resolver stack\n");
+        exit(EXIT_FAILURE);
+      }
+      stack = grown;
+    }
+    if (e->right) stack[count++] = e->right;
+    if (e->left) stack[count++] = e->left;
+  }
+  free(stack);
+}
+```
+
+### Morris preorder alternative
+
+Morris traversal uses O(1) auxiliary pointer space by temporarily threading
+AST links. That space bound does not imply it is faster: finding predecessors
+and writing/restoring links adds work and memory writes. Whether it helps is
+an empirical question.
+
+To try it, replace the active `expr_resolve()` implementation in `expr.c` with
+this function. It reports the same undefined-name error and visits each
+expression once in root-left-right order:
+
+```c
+void expr_resolve(struct expr *e) {
+  while (e) {
+    if (!e->left) {
+      if (e->kind == EXPR_NAME && !(e->symbol = scope_lookup(e->name))) {
+        resolver_error("Undefined identifier '%s'", e->name);
+      }
+      e = e->right;
+      continue;
+    }
+
+    struct expr *predecessor = e->left;
+    while (predecessor->right && predecessor->right != e) {
+      predecessor = predecessor->right;
+    }
+
+    if (!predecessor->right) {
+      if (e->kind == EXPR_NAME && !(e->symbol = scope_lookup(e->name))) {
+        resolver_error("Undefined identifier '%s'", e->name);
+      }
+      predecessor->right = e;
+      e = e->left;
+    } else {
+      predecessor->right = NULL;
+      e = e->right;
+    }
+  }
+}
+```
+
+Morris traversal has stricter preconditions than the stack version:
+
+- The AST must be a tree, not a DAG with shared child nodes or a graph with
+  cycles.
+- No other thread, callback, diagnostic hook, or reentrant compiler operation
+  may inspect or traverse the AST while links are temporarily threaded.
+- The traversal must run to completion. Do not add early returns, `longjmp`,
+  cancellation, or other exits that could leave a temporary thread installed.
+- Keep the thread test `predecessor->right == e` exact: a real right child must
+  not be mistaken for a traversal thread.
+
+This affects AST-link safety only; the resolver still uses global scope and
+error state, so this choice alone does not make the compiler thread-safe.
+
 Runtime:
 - `library.h` defines the ABI for generated programs, including 64-bit integers
   and double printing. Link `library.c` with generated code, not the compiler.
