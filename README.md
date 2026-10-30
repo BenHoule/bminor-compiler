@@ -102,8 +102,7 @@ sanitizer tests.
 ## Grammar and precedence
 
 The authoritative grammar is [bminor.bison](src/bminor.bison); token definitions
-and literal rules are in [scanner.flex](src/scanner.flex). Avoid maintaining a
-second grammar copy in this README.
+and literal rules are in [scanner.flex](src/scanner.flex).
 
 The grammar uses explicit precedence layers and matched/unmatched statements
 to resolve dangling `else`. Exponentiation is right-associative and binds more
