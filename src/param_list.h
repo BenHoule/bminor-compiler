@@ -19,7 +19,7 @@ struct param_list {
  *
  * @param[in] name The name of the parameter.
  * @param[in] type The type of the parameter.
- * @param[in] next Pointer to the next parameter in the list (can be NULL).
+ * @param[in] next Pointer to the next parameter in the list (can be nullptr).
  *
  * @return A pointer to the newly created parameter list node.
  *

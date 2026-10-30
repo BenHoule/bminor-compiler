@@ -7,7 +7,7 @@
 - A compact printer must consider operand position and associativity as well as precedence.
 
 **3. Expand `roundtrip.sh` beyond byte-idempotence and binding-trace comparison.**
-- Done: targeted exact-output precedence/literal fixtures and re-typechecking of well-typed inputs.
+- Done: exact-output precedence/literal fixtures and re-typechecking of well-typed inputs.
 - Optional: structural AST comparison for broader property testing.
 
 **4. Non-mutating AST traversal**

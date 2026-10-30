@@ -17,7 +17,7 @@ struct stmt *stmt_create_simple(
   struct stmt *s = memory_allocate(sizeof *s);
   s->kind = kind;
   s->expr = expr;
-  s->next = NULL;
+  s->next = nullptr;
   return s;
 }
 struct stmt *stmt_create_expr(struct expr *expr) {
@@ -34,7 +34,7 @@ struct stmt *stmt_create_decl(struct decl *decl) {
   struct stmt *s = memory_allocate(sizeof *s);
   s->kind = STMT_DECL;
   s->decl = decl;
-  s->next = NULL;
+  s->next = nullptr;
   return s;
 }
 
@@ -42,7 +42,7 @@ struct stmt *stmt_create_block(struct stmt *body) {
   struct stmt *s = memory_allocate(sizeof *s);
   s->kind = STMT_BLOCK;
   s->block = body;
-  s->next = NULL;
+  s->next = nullptr;
   return s;
 }
 struct stmt *stmt_create_if_else(struct expr *cond_expr, struct stmt *body, struct stmt *else_body) {
@@ -51,7 +51,7 @@ struct stmt *stmt_create_if_else(struct expr *cond_expr, struct stmt *body, stru
   s->cond_expr = cond_expr;
   s->body = body;
   s->else_body = else_body;
-  s->next = NULL;
+  s->next = nullptr;
   return s;
 }
 struct stmt *stmt_create_for(struct expr *init_expr, struct expr *cond_expr, struct expr *loop_expr, struct stmt *body) {
@@ -61,7 +61,7 @@ struct stmt *stmt_create_for(struct expr *init_expr, struct expr *cond_expr, str
   s->cond_expr = cond_expr;
   s->loop_expr = loop_expr;
   s->body = body;
-  s->next = NULL;
+  s->next = nullptr;
   return s;
 }
 

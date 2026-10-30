@@ -102,7 +102,7 @@ int main(int argc, char *argv[]) {
   // - Allows real-time processing of output
   //   - Minimizes interleaving from multithreading (once implemented)
   //   - Better for piping to other programs (according to google)
-  if (setvbuf(stdout, NULL, _IOLBF, 0) != 0) {
+  if (setvbuf(stdout, nullptr, _IOLBF, 0) != 0) {
     fprintf(stderr, "bminor: failed to configure output buffering\n");
     return EXIT_COMPILE_ERROR;
   }
@@ -122,7 +122,7 @@ int main(int argc, char *argv[]) {
   FILE *input = fopen(argv[2], "r");
   if (!input) {
     fprintf(stderr, "bminor: failed to open '%s': ", argv[2]);
-    perror(NULL);
+    perror(nullptr);
     return EXIT_COMPILE_ERROR;
   }
 

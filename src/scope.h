@@ -35,15 +35,15 @@ int scope_bind(const char *name, struct symbol *symbol );
  *
  * @param[in] name The name to look up.
  *
- * @return Symbol associated with the name if found, NULL otherwise.
+ * @return Symbol associated with the name if found, nullptr otherwise.
  */
-struct symbol *scope_lookup( const char *name );
+struct symbol *scope_lookup(const char *name);
 
 /**
  * @brief Searches (only) innermost scope for the given name.
  *
  * @param[in] name The name to look up.
  *
- * @return Symbol associated with the name if found, NULL otherwise.
+ * @return Symbol associated with the name if found, nullptr otherwise.
  */
-struct symbol *scope_lookup_local( const char *name );
+struct symbol *scope_lookup_local(const char *name);

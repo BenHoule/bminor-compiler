@@ -97,7 +97,7 @@ static void test_string_decode_boundaries(void) {
 
 static void test_scanner_values(void) {
   FILE *input = tmpfile();
-  if (input == NULL) {
+  if (input == nullptr) {
     fprintf(stderr, "%s:%d: tmpfile failed\n", __FILE__, __LINE__);
     failures++;
     return;
@@ -116,8 +116,8 @@ static void test_scanner_values(void) {
   CHECK(scanner_next_token() == TOKEN_DOUBLE_LITERAL);
   CHECK(yylval.dval == 125.0);
   CHECK(scanner_next_token() == TOKEN_STRING_LITERAL);
-  CHECK(yylval.sval != NULL);
-  if (yylval.sval != NULL) {
+  CHECK(yylval.sval != nullptr);
+  if (yylval.sval != nullptr) {
     CHECK(strcmp(yylval.sval, "a\nb") == 0);
     free(yylval.sval);
   }
@@ -127,7 +127,7 @@ static void test_scanner_values(void) {
   fclose(input);
 
   input = tmpfile();
-  CHECK(input != NULL);
+  CHECK(input != nullptr);
   if (!input) return;
   fputs("42", input);
   rewind(input);

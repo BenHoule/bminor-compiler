@@ -27,7 +27,7 @@ static uint8_t hexval(char c) {
 }
 
 uint8_t char_encode(const char **in) {
-  assert(in != NULL);  //TODO: add -DNDEBUG to makefile for non-debug builds
+  assert(in != nullptr);  //TODO: add -DNDEBUG to makefile for non-debug builds
 
   if (**in != '\\')
     return (uint8_t)**in;
@@ -59,8 +59,8 @@ uint8_t char_encode(const char **in) {
 }
 
 size_t string_encode(const char *in, char *out, size_t out_size) {
-  assert(in != NULL);
-  assert(out != NULL);  //TODO: add -DNDEBUG to makefile for non-debug builds
+  assert(in != nullptr);
+  assert(out != nullptr);  //TODO: add -DNDEBUG to makefile for non-debug builds
 
   char *start = out;
   in++;  // Skip the opening double quote
@@ -119,8 +119,8 @@ void char_decode(const char in, const char quote, char buf[6]) {
 }
 
 size_t string_decode(const char *in, char *out, size_t out_size) {
-  assert(in != NULL);
-  assert(out != NULL);
+  assert(in != nullptr);
+  assert(out != nullptr);
   assert(out_size > 2);
 
   char *start = out;

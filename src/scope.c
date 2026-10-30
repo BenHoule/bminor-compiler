@@ -9,7 +9,7 @@ struct scope {
   struct scope *parent;
   struct hash_table *symbols;
 };
-static struct scope *current_scope = NULL;
+static struct scope *current_scope = nullptr;
 
 static int current_depth = 0;
 
@@ -33,7 +33,7 @@ void scope_enter() {
 }
 
 void scope_exit() {
-  assert(current_scope != NULL);
+  assert(current_scope != nullptr);
   struct scope *old_scope = current_scope;
   current_scope = current_scope->parent;
   hash_table_delete(old_scope->symbols);
@@ -46,7 +46,7 @@ int scope_depth() {
 }
 
 int scope_bind(const char *name, struct symbol *symbol ) {
-  assert(current_scope != NULL);
+  assert(current_scope != nullptr);
   return hash_table_insert(current_scope->symbols, name, symbol);
 }
 
@@ -57,10 +57,10 @@ struct symbol *scope_lookup( const char *name ) {
     if (sym) return sym;
     scope = scope->parent;
   }
-  return NULL;
+  return nullptr;
 }
 
 struct symbol *scope_lookup_local( const char *name ) {
-  assert(current_scope != NULL);
+  assert(current_scope != nullptr);
   return hash_table_lookup(current_scope->symbols, name);
 }

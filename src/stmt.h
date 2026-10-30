@@ -90,7 +90,7 @@ struct stmt *stmt_create_block(struct stmt *body);
  *
  * @param[in] cond_expr The condition expression.
  * @param[in] body The body of the if statement.
- * @param[in] else_body The body of the else statement (can be NULL).
+ * @param[in] else_body The body of the else statement (can be nullptr).
  *
  * @return Pointer to the newly created statement.
  *

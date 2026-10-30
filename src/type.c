@@ -18,34 +18,34 @@ struct type *type_create(type_t kind, struct type *subtype, struct param_list *p
 }
 
 struct type *type_create_void(void) {
-  return type_create(TYPE_VOID, NULL, NULL, NULL);
+  return type_create(TYPE_VOID, nullptr, nullptr, nullptr);
 }
 struct type *type_create_boolean(void) {
-  return type_create(TYPE_BOOLEAN, NULL, NULL, NULL);
+  return type_create(TYPE_BOOLEAN, nullptr, nullptr, nullptr);
 }
 struct type *type_create_char(void) {
-  return type_create(TYPE_CHAR, NULL, NULL, NULL);
+  return type_create(TYPE_CHAR, nullptr, nullptr, nullptr);
 }
 struct type *type_create_integer(void) {
-  return type_create(TYPE_INTEGER, NULL, NULL, NULL);
+  return type_create(TYPE_INTEGER, nullptr, nullptr, nullptr);
 }
 struct type *type_create_double(void) {
-  return type_create(TYPE_DOUBLE, NULL, NULL, NULL);
+  return type_create(TYPE_DOUBLE, nullptr, nullptr, nullptr);
 }
 struct type *type_create_string(void) {
-  return type_create(TYPE_STRING, NULL, NULL, NULL);
+  return type_create(TYPE_STRING, nullptr, nullptr, nullptr);
 }
 struct type *type_create_array(struct type *subtype, struct expr *size) {
-  return type_create(TYPE_ARRAY, subtype, NULL, size);
+  return type_create(TYPE_ARRAY, subtype, nullptr, size);
 }
 struct type *type_create_carray(struct type *subtype, struct expr *size) {
-  return type_create(TYPE_CARRAY, subtype, NULL, size);
+  return type_create(TYPE_CARRAY, subtype, nullptr, size);
 }
 struct type *type_create_function(struct type *subtype, struct param_list *params) {
-  return type_create(TYPE_FUNCTION, subtype, params, NULL);
+  return type_create(TYPE_FUNCTION, subtype, params, nullptr);
 }
 struct type *type_create_auto(void) {
-  return type_create(TYPE_AUTO, NULL, NULL, NULL);
+  return type_create(TYPE_AUTO, nullptr, nullptr, nullptr);
 }
 
 struct type *type_primitive(type_t kind) {
@@ -80,7 +80,7 @@ bool type_equals(struct type *a, struct type *b) {
       q = q->next;
       // NOTE: Param names are not compared (standard convention)
     }
-    return p == NULL && q == NULL;
+    return p == nullptr && q == nullptr;
     default: return true;
   }
 }

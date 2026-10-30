@@ -68,8 +68,8 @@ struct expr {
  * @brief Creates new expression node on the heap (with the given properties)
  *
  * @param[in] kind The kind of expression to create.
- * @param[in] left The left child expression (can be NULL).
- * @param[in] right The right child expression (can be NULL).
+ * @param[in] left The left child expression (can be nullptr).
+ * @param[in] right The right child expression (can be nullptr).
  *
  * @return A pointer to the newly created expression node.
  *

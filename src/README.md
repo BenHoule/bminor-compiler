@@ -179,7 +179,7 @@ void expr_resolve(struct expr *e) {
       predecessor->right = e;
       e = e->left;
     } else {
-      predecessor->right = NULL;
+      predecessor->right = nullptr;
       e = e->right;
     }
   }

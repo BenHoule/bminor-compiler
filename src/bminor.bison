@@ -11,7 +11,7 @@
 #include <stdlib.h>
 
 static unsigned int err_count = 0;
-struct decl *parser_result = NULL;
+struct decl *parser_result = nullptr;
 
 int yylex(void);
 int yyerror(const char *msg);
@@ -101,21 +101,21 @@ program   : decl_list       { parser_result = $1; }
           ;
 
 decl_list : decl decl_list  { $1->next = $2; $$ = $1; }
-          | %empty          { $$ = NULL; }
+          | %empty          { $$ = nullptr; }
           ;
 
-decl      : TOKEN_IDENTIFIER ':' var_type ';'             { $$ = decl_create($1, $3, NULL, NULL, NULL); }
-          | TOKEN_IDENTIFIER ':' var_type '=' init ';'    { $$ = decl_create($1, $3, $5, NULL, NULL); }
-          | TOKEN_IDENTIFIER ':' func_type ';'            { $$ = decl_create($1, $3, NULL, NULL, NULL); }
-          | TOKEN_IDENTIFIER ':' func_type '=' block      { $$ = decl_create($1, $3, NULL, $5, NULL); }
+decl      : TOKEN_IDENTIFIER ':' var_type ';'             { $$ = decl_create($1, $3, nullptr, nullptr, nullptr); }
+          | TOKEN_IDENTIFIER ':' var_type '=' init ';'    { $$ = decl_create($1, $3, $5, nullptr, nullptr); }
+          | TOKEN_IDENTIFIER ':' func_type ';'            { $$ = decl_create($1, $3, nullptr, nullptr, nullptr); }
+          | TOKEN_IDENTIFIER ':' func_type '=' block      { $$ = decl_create($1, $3, nullptr, $5, nullptr); }
           ;
 
 /* ------- INITIALIZERS ------- */
 init      : expr
-          | '{' init_list '}'                   { $$ = expr_create(EXPR_INIT, $2, NULL); }
+          | '{' init_list '}'                   { $$ = expr_create(EXPR_INIT, $2, nullptr); }
           ;
 
-init_list : init                                { $$ = expr_create(EXPR_ARG, $1, NULL); }
+init_list : init                                { $$ = expr_create(EXPR_ARG, $1, nullptr); }
           | init ',' init_list                  { $$ = expr_create(EXPR_ARG, $1, $3); }
           ;
 
@@ -124,7 +124,7 @@ block           : '{' block_item_list '}'       { $$ = stmt_create_block($2); }
                 ;
 
 block_item_list : block_item block_item_list    { $1->next = $2; $$ = $1; }
-                | %empty                        { $$ = NULL; }
+                | %empty                        { $$ = nullptr; }
                 ;
 
 block_item      : decl                          { $$ = stmt_create_decl($1); }
@@ -141,19 +141,19 @@ return_type     : primitive_type
                 ;
 
 opt_param_list  : param_list
-                | %empty              { $$ = NULL; }
+                | %empty              { $$ = nullptr; }
                 ;
 
 param_list      : param
                 | param ',' param_list         { $1->next = $3; $$ = $1; }
                 ;
 
-param           : TOKEN_IDENTIFIER ':' param_type   { $$ = param_list_create($1, $3, NULL); }
+param           : TOKEN_IDENTIFIER ':' param_type   { $$ = param_list_create($1, $3, nullptr); }
                 ;
 
 param_type      : primitive_type         /* No lengths on array params */
-                | TOKEN_ARRAY '[' ']' param_type    { $$ = type_create_array($4, NULL); }
-                | TOKEN_CARRAY '[' ']' param_type   { $$ = type_create_carray($4, NULL); }
+                | TOKEN_ARRAY '[' ']' param_type    { $$ = type_create_array($4, nullptr); }
+                | TOKEN_CARRAY '[' ']' param_type   { $$ = type_create_carray($4, nullptr); }
                 ;
 
 var_type        : simple_type
@@ -182,30 +182,30 @@ matched_stmt    : simple_stmt
                 | TOKEN_FOR '(' opt_expr ';' opt_expr ';' opt_expr ')' matched_stmt    { $$ = stmt_create_for($3, $5, $7, $9); }
                 ;
 
-unmatched_stmt  : TOKEN_IF '(' expr ')' stmt                                             { $$ = stmt_create_if_else($3, $5, NULL); }
+unmatched_stmt  : TOKEN_IF '(' expr ')' stmt                                             { $$ = stmt_create_if_else($3, $5, nullptr); }
                 | TOKEN_IF '(' expr ')' matched_stmt TOKEN_ELSE unmatched_stmt           { $$ = stmt_create_if_else($3, $5, $7); }
                 | TOKEN_FOR '(' opt_expr ';' opt_expr ';' opt_expr ')' unmatched_stmt    { $$ = stmt_create_for($3, $5, $7, $9); }
                 ;
 
 simple_stmt     : block
                 | expr ';'                      { $$ = stmt_create_expr($1); }
-                | TOKEN_RETURN ';'              { $$ = stmt_create_return(NULL); }
+                | TOKEN_RETURN ';'              { $$ = stmt_create_return(nullptr); }
                 | TOKEN_RETURN expr ';'         { $$ = stmt_create_return($2); }
-                | TOKEN_PRINT ';'               { $$ = stmt_create_print(NULL); }
+                | TOKEN_PRINT ';'               { $$ = stmt_create_print(nullptr); }
                 | TOKEN_PRINT expr_list ';'     { $$ = stmt_create_print($2); }
                 ;
 
 /* ------- EXPRESSIONS ------- */
 opt_expr_list : expr_list
-              | %empty                      { $$ = NULL; }
+              | %empty                      { $$ = nullptr; }
               ;
 
-expr_list     : expr                        { $$ = expr_create(EXPR_ARG, $1, NULL); }
+expr_list     : expr                        { $$ = expr_create(EXPR_ARG, $1, nullptr); }
               | expr ',' expr_list          { $$ = expr_create(EXPR_ARG, $1, $3); }
               ;
 
 opt_expr      : expr
-              | %empty                      { $$ = NULL; }
+              | %empty                      { $$ = nullptr; }
               ;
 
 expr          : or_expr
@@ -241,12 +241,12 @@ mul_expr      : unary_expr
               ;
 
 unary_expr    : len_expr
-              | '-' unary_expr                  { $$ = expr_create(EXPR_NEG, $2, NULL); }
-              | '!' unary_expr                  { $$ = expr_create(EXPR_NOT, $2, NULL); }
+              | '-' unary_expr                  { $$ = expr_create(EXPR_NEG, $2, nullptr); }
+              | '!' unary_expr                  { $$ = expr_create(EXPR_NOT, $2, nullptr); }
               ;
 
 len_expr      : pow_expr
-              | '#' len_expr                    { $$ = expr_create(EXPR_LEN, $2, NULL); }
+              | '#' len_expr                    { $$ = expr_create(EXPR_LEN, $2, nullptr); }
               ;
 
 pow_expr      : postfix_expr
@@ -254,8 +254,8 @@ pow_expr      : postfix_expr
               ;
 
 postfix_expr  : primary_expr
-              | postfix_expr TOKEN_INC                { $$ = expr_create(EXPR_INC,  $1, NULL); }
-              | postfix_expr TOKEN_DEC                { $$ = expr_create(EXPR_DEC,  $1, NULL); }
+              | postfix_expr TOKEN_INC                { $$ = expr_create(EXPR_INC,  $1, nullptr); }
+              | postfix_expr TOKEN_DEC                { $$ = expr_create(EXPR_DEC,  $1, nullptr); }
               | postfix_expr '[' expr ']'             { $$ = expr_create(EXPR_IDX,  $1, $3); }
               | postfix_expr '(' opt_expr_list ')'    { $$ = expr_create(EXPR_CALL, $1, $3); }
               ;

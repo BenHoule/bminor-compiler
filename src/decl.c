@@ -22,7 +22,7 @@ struct decl *decl_create(char *name, struct type *type, struct expr *value,
   d->value = value;
   d->code = code;
   d->next = next;
-  d->symbol = NULL;
+  d->symbol = nullptr;
   return d;
 }
 

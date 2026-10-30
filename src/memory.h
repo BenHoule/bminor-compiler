@@ -25,7 +25,7 @@ void *memory_allocate(size_t size);
 /**
  * @brief Copies a NUL-terminated string into registered memory.
  *
- * @param text String to copy; must not be NULL.
+ * @param text String to copy; must not be nullptr.
  *
  * @return Pointer to the registered copy.
  *
@@ -36,7 +36,7 @@ char *memory_copy_string(const char *text);
 /**
  * @brief Registers an existing heap allocation for release.
  *
- * @param pointer Heap pointer to take ownership of. NULL is ignored.
+ * @param pointer Heap pointer to take ownership of. nullptr is ignored.
  *
  * @warning The pointer must be safe to pass to free(). Do not use or free it
  *          after memory_release().

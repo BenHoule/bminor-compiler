@@ -40,14 +40,14 @@ static void test_ast_contracts(void) {
   CHECK(!expr_validate(value));
   CHECK(expr_typecheck(value) == type_primitive(TYPE_INTEGER));
   CHECK(expr_validate(value));
-  struct expr *list = expr_create(EXPR_ARG, value, NULL);
+  struct expr *list = expr_create(EXPR_ARG, value, nullptr);
   CHECK(expr_validate(list));
   CHECK(!type_validate(type_create_auto()));
 
   scope_enter();
   struct symbol *symbol = symbol_create(SYMBOL_GLOBAL, type_primitive(TYPE_INTEGER), "x");
   CHECK(scope_bind("x", symbol) != 0);
-  struct expr *tree = NULL;
+  struct expr *tree = nullptr;
   for (int i = 0; i < 10000; i++) {
     tree = expr_create(EXPR_ARG, expr_create_name("x"), tree);
   }

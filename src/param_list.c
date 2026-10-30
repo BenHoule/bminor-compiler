@@ -15,7 +15,7 @@ struct param_list *param_list_create(char *name, struct type *type, struct param
   p->name = name;
   p->type = type;
   p->next = next;
-  p->symbol = NULL;
+  p->symbol = nullptr;
   return p;
 }
 
@@ -34,7 +34,7 @@ void param_list_resolve( struct param_list *a ) {
 
   for(; a; a = a->next) {
     //TODO: Add line/col of declaration to error message (use yyerror?)
-    if ((a->symbol = scope_lookup_local(a->name)) != NULL) {
+    if ((a->symbol = scope_lookup_local(a->name)) != nullptr) {
       resolver_error(
         "Symbol '%s' already declared in the current scope", a->name
       );

@@ -21,48 +21,48 @@ struct expr *expr_create(expr_t kind, struct expr *left, struct expr *right) {
   e->kind = kind;
   e->left = left;
   e->right = right;
-  e->type = NULL;
+  e->type = nullptr;
   e->int_literal = 0;
   return e;
 }
 struct expr *expr_create_name(const char *n) {
-  struct expr *e = expr_create( EXPR_NAME, NULL, NULL );
-  e->name = n ? memory_copy_string(n) : NULL;
-  e->symbol = NULL;
+  struct expr *e = expr_create( EXPR_NAME, nullptr, nullptr );
+  e->name = n ? memory_copy_string(n) : nullptr;
+  e->symbol = nullptr;
   return e;
 }
 struct expr *expr_create_integer_literal(int64_t i) {
-  struct expr *e = expr_create( EXPR_INT, NULL, NULL );
+  struct expr *e = expr_create( EXPR_INT, nullptr, nullptr );
   e->int_literal = i;
   return e;
 }
 struct expr *expr_create_double_literal(double d) {
-  struct expr *e = expr_create( EXPR_DOUBLE, NULL, NULL );
+  struct expr *e = expr_create( EXPR_DOUBLE, nullptr, nullptr );
   e->double_literal = d;
   return e;
 }
 struct expr *expr_create_boolean_literal(bool b) {
-  struct expr *e = expr_create( EXPR_BOOL, NULL, NULL );
+  struct expr *e = expr_create( EXPR_BOOL, nullptr, nullptr );
   e->bool_literal = b;
   return e;
 }
 struct expr *expr_create_char_literal(char c) {
-  struct expr *e = expr_create( EXPR_CHAR, NULL, NULL );
+  struct expr *e = expr_create( EXPR_CHAR, nullptr, nullptr );
   e->char_literal = c;
   return e;
 }
 struct expr *expr_create_string_literal(const char *str) {
-  struct expr *e = expr_create( EXPR_STR, NULL, NULL );
-  e->string_literal = str ? memory_copy_string(str) : NULL;
+  struct expr *e = expr_create( EXPR_STR, nullptr, nullptr );
+  e->string_literal = str ? memory_copy_string(str) : nullptr;
   return e;
 }
 struct expr *expr_create_false(void) {
-  struct expr *e = expr_create( EXPR_BOOL, NULL, NULL );
+  struct expr *e = expr_create( EXPR_BOOL, nullptr, nullptr );
   e->bool_literal = false;
   return e;
 }
 struct expr *expr_create_true(void) {
-  struct expr *e = expr_create( EXPR_BOOL, NULL, NULL );
+  struct expr *e = expr_create( EXPR_BOOL, nullptr, nullptr );
   e->bool_literal = true;
   return e;
 }
@@ -221,16 +221,16 @@ static bool expr_is_lvalue(const struct expr *e) {
 }
 
 static struct type *expr_typecheck_binary(struct expr *e, bool allow_non_numeric) {
-  if (!e) return NULL;
+  if (!e) return nullptr;
 
   struct type *l = expr_typecheck(e->left);
   struct type *r = expr_typecheck(e->right);
-  if (!l || !r) return NULL;
+  if (!l || !r) return nullptr;
   if (!type_equals(l, r)) {
     typecheck_error("'%s' requires matching operand types "
                     "(no implicit conversion)",
                     expr_op_name(e->kind));
-    return NULL;
+    return nullptr;
   }
 
   switch (l->kind) {
@@ -239,20 +239,20 @@ static struct type *expr_typecheck_binary(struct expr *e, bool allow_non_numeric
       if (e->kind == EXPR_MOD || e->kind == EXPR_POW) {  // Matches C/C++
         typecheck_error("%s cannot operate on double operands",
                         expr_op_name(e->kind));
-        return NULL;
+        return nullptr;
       }  // NOTE: Could check type on code generation & use fmod()/pow() for doubles
       break;
 
     case TYPE_VOID: case TYPE_ARRAY: case TYPE_CARRAY: case TYPE_FUNCTION:
       typecheck_error("'%s' cannot operate on non-primitive types",
                       expr_op_name(e->kind));
-      return NULL;
+      return nullptr;
 
     default:
       if (allow_non_numeric) break;
       typecheck_error("'%s' requires numeric operands",
                       expr_op_name(e->kind));
-      return NULL;
+      return nullptr;
   }
 
   switch (e->kind) {
@@ -263,36 +263,36 @@ static struct type *expr_typecheck_binary(struct expr *e, bool allow_non_numeric
 }
 
 static struct type *expr_typecheck_logical(struct expr *e) {
-  if (!e) return NULL;
+  if (!e) return nullptr;
 
   e->type = expr_typecheck(e->left);
   struct type *r = expr_typecheck(e->right);
-  if (!e->type || !r) return NULL;  // Avoid double-reporting
+  if (!e->type || !r) return nullptr;  // Avoid double-reporting
   if (e->type->kind != TYPE_BOOLEAN || r->kind != TYPE_BOOLEAN) {
     typecheck_error(
       "logical operator '%s' requires boolean operands",
       expr_op_name(e->kind)
     );
-    return NULL;
+    return nullptr;
   }
   return type_primitive(TYPE_BOOLEAN);
 }
 
 static struct type *expr_typecheck_call(struct expr *e) {
-  if (!e) return NULL;
+  if (!e) return nullptr;
 
   struct type *t = expr_typecheck(e->left);
-  if (!t) return NULL;  // Avoid double-reporting
+  if (!t) return nullptr;  // Avoid double-reporting
   if (t->kind != TYPE_FUNCTION) {
     typecheck_error("call requires a function");
-    return NULL;
+    return nullptr;
   }
   if (t->subtype->kind == TYPE_AUTO) {
     typecheck_error(
       "cannot call a function before its return type is inferred; "
       "use an explicit return type"
     );
-    return NULL;
+    return nullptr;
   }
 
   bool valid = true;
@@ -322,16 +322,16 @@ static struct type *expr_typecheck_call(struct expr *e) {
 
   if (param) {
     typecheck_error("too few arguments in function call");
-    return NULL;
+    return nullptr;
   }
-  return valid ? t->subtype : NULL;
+  return valid ? t->subtype : nullptr;
 }
 
 
-// Returns NULL when `e` contains an error that has already been reported
+// Returns nullptr when `e` contains an error that has already been reported
 struct type *expr_typecheck(struct expr *e) {
-  if (!e) return NULL;
-  e->type = NULL;
+  if (!e) return nullptr;
+  e->type = nullptr;
 
   switch (e->kind) {
     case EXPR_ADD: case EXPR_SUB: case EXPR_MUL: case EXPR_DIV: case EXPR_MOD:
@@ -351,7 +351,7 @@ struct type *expr_typecheck(struct expr *e) {
       e->type = expr_typecheck(e->left);
       if (e->type && e->type->kind != TYPE_BOOLEAN) {
         typecheck_error("logical NOT ('!') requires a boolean operand");
-        e->type = NULL;
+        e->type = nullptr;
       }
       break;
 
@@ -360,7 +360,7 @@ struct type *expr_typecheck(struct expr *e) {
       if (e->type && e->type->kind != TYPE_INTEGER &&
           e->type->kind != TYPE_DOUBLE) {
         typecheck_error("negation ('-') requires a numeric operand");
-        e->type = NULL;
+        e->type = nullptr;
       }
       break;
 
@@ -370,11 +370,11 @@ struct type *expr_typecheck(struct expr *e) {
       if (!expr_is_lvalue(e->left)) {
         typecheck_error("'%s' requires an lvalue",
                         expr_op_name(e->kind));
-        e->type = NULL;
+        e->type = nullptr;
       } else if (e->type->kind != TYPE_INTEGER) {
         typecheck_error("'%s' requires an integer",
                         expr_op_name(e->kind));
-        e->type = NULL;
+        e->type = nullptr;
       }
       break;
 
@@ -383,7 +383,7 @@ struct type *expr_typecheck(struct expr *e) {
       if (!e->type) break;  // Avoid double-reporting
       if (e->type->kind != TYPE_ARRAY) {
         typecheck_error("length operator ('#') requires an array");
-        e->type = NULL;
+        e->type = nullptr;
       } else e->type = type_primitive(TYPE_INTEGER);
       break;
 
@@ -391,15 +391,15 @@ struct type *expr_typecheck(struct expr *e) {
       e->type = expr_typecheck(e->left);
       if (e->type && !expr_is_lvalue(e->left)) {
         typecheck_error("left side of '=' is not assignable");
-        e->type = NULL;
+        e->type = nullptr;
         // No break (still need to typecheck right-hand side)
       }
 
       struct type *r = expr_typecheck(e->right);
-      if (!r) e->type = NULL;
+      if (!r) e->type = nullptr;
       if (e->type && !type_equals(e->type, r)) {
         typecheck_error("types must match for assignment");
-        e->type = NULL;
+        e->type = nullptr;
       }
       break;
 
@@ -408,17 +408,17 @@ struct type *expr_typecheck(struct expr *e) {
       if (e->type) {
         if (e->type->kind != TYPE_ARRAY && e->type->kind != TYPE_CARRAY) {
           typecheck_error("indexing requires an array");
-          e->type = NULL;
+          e->type = nullptr;
           // No break (still need to typecheck index)
         } else e->type = e->type->subtype;
       }
 
       struct type *idx = expr_typecheck(e->right);
       if (!idx) {
-        e->type = NULL;
+        e->type = nullptr;
       } else if (idx->kind != TYPE_INTEGER) {
         typecheck_error("array index must be an integer");
-        e->type = NULL;
+        e->type = nullptr;
       }
       break;
 

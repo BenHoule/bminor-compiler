@@ -136,7 +136,7 @@ IDENTIFIER  {L}{A}*
 {D}+"."{E}?       { send_double_to_yylval(); return TOKEN_DOUBLE_LITERAL; }
 
 \"{S}*\"            { /* STRING_LITERAL */
-                      yylval.sval = NULL;
+                      yylval.sval = nullptr;
 
                       constexpr size_t STRING_MAX = 255;
                       char encoded_str[STRING_MAX + 1] = {0};
@@ -149,14 +149,14 @@ IDENTIFIER  {L}{A}*
                           return TOKEN_STRING_LITERAL;
                         default:
                           yylval.sval = strdup(encoded_str);
-                          if (yylval.sval == NULL)
+                          if (yylval.sval == nullptr)
                             scanner_error("Failed to allocate memory for string literal");
                       }
 
                       return TOKEN_STRING_LITERAL;
                     }
 \"{S}*              {
-                      yylval.sval = NULL;
+                      yylval.sval = nullptr;
                       scanner_error("Unterminated string");
                       return TOKEN_STRING_LITERAL;
                     }
@@ -177,7 +177,7 @@ IDENTIFIER  {L}{A}*
 ''          { yylval.cval = 0; scanner_error("Empty char literal (use '\\0x00' for null)"); return TOKEN_CHAR_LITERAL; }
 
 {IDENTIFIER}  { // Last so it loses ties
-  yylval.sval = NULL;
+  yylval.sval = nullptr;
   static constexpr size_t IDENTIFIER_MAX = 255;
   if (yyleng > IDENTIFIER_MAX) {
     scanner_error("Identifier too long (MAX=255)");
@@ -185,7 +185,7 @@ IDENTIFIER  {L}{A}*
   }
 
   yylval.sval = strdup(yytext);
-  if (yylval.sval == NULL)
+  if (yylval.sval == nullptr)
     scanner_error("Failed to allocate memory for identifier");
 
   // If B-Minor included typedefs or enums, we would check for those here
@@ -247,14 +247,14 @@ static void scanner_error(const char *fmt, ...) {
 
 static void send_integer_to_yylval(const char *text, int base) {
   errno = 0;
-  yylval.ival = strtoll(text, NULL, base);
+  yylval.ival = strtoll(text, nullptr, base);
   if (errno == ERANGE)
     scanner_error("Integer literal out of range [-2^63, 2^63)");
 }
 
 static void send_double_to_yylval() {
   errno = 0;
-  yylval.dval = strtod(yytext, NULL);
+  yylval.dval = strtod(yytext, nullptr);
   if (errno == ERANGE)
     scanner_error("Double literal out of range [+-1.8e-308, +-1.8e308]");
 }
