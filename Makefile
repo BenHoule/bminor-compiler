@@ -7,12 +7,28 @@ TEST_DIR  := $(ROOT_DIR)/test
 BOOK_DIR  := $(ROOT_DIR)/book_tests
 
 # -MMD -MP make gcc emit .d files so header edits trigger rebuilds automatically.
-CFLAGS   := -std=c23 -g -Wall -Wextra -Werror -I$(SRC_DIR) -I$(BUILD_DIR) -MMD -MP
+CPPFLAGS += -I$(SRC_DIR) -I$(BUILD_DIR)
+CFLAGS   ?= -std=c23 -g -Wall -Wextra -Werror
+DEPFLAGS := -MMD -MP
+
 # flex/bison emit code we do not control; do not fail the build on its warnings.
 # gnu23: flex calls POSIX fileno(), which strict ISO mode hides.
-GENFLAGS := -std=gnu23 -g -w -I$(SRC_DIR) -I$(BUILD_DIR) -MMD -MP
-STARTERFLAGS := $(CFLAGS) -Wno-implicit-fallthrough
-LDLIBS   :=
+GENFLAGS ?= -std=gnu23 -g -Wall -Wextra -Wno-sign-compare
+LDLIBS   ?=
+PROFILE  ?= debug
+
+# -O2 for safe optimization (-03 can be overly aggressive)
+ifeq ($(PROFILE),release)
+CFLAGS += -O2
+GENFLAGS += -O2
+endif
+
+# Sanitized build for debugging with address and undefined behavior checks
+ifeq ($(PROFILE),sanitize)
+CFLAGS += -O1 -fsanitize=address,undefined -fno-omit-frame-pointer
+GENFLAGS += -O1 -fsanitize=address,undefined -fno-omit-frame-pointer
+LDFLAGS += -fsanitize=address,undefined
+endif
 
 # Source files
 FLEX_SRC  := $(wildcard $(SRC_DIR)/*.flex)
@@ -29,7 +45,7 @@ OBJS      := $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(HAND_SRC)) \
              $(GEN_SRC:.c=.o)
 
 # Make Commands
-.PHONY: all test clean valgrind
+.PHONY: all test clean valgrind unit release sanitize analyze format-check
 
 # Prevent generated source files from being deleted after compilation
 .SECONDARY: $(GEN_SRC)
@@ -37,9 +53,12 @@ OBJS      := $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(HAND_SRC)) \
 # Default target
 all: $(BIN)
 
+# Rebuild objects when checked-in build flags/rules change.
+$(OBJS): $(ROOT_DIR)/Makefile
+
 # Build the binary from object files
 $(BIN): $(OBJS)
-	$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
+	$(CC) $(LDFLAGS) -o $@ $^ $(LDLIBS)
 
 # Create the build directory
 $(BUILD_DIR):
@@ -47,18 +66,18 @@ $(BUILD_DIR):
 
 # Build object files from hand-written source files
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c | $(BUILD_DIR)
-	$(CC) $(CFLAGS) -c -o $@ $<
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(DEPFLAGS) -c -o $@ $<
 
 $(BUILD_DIR)/hash_table.o: $(SRC_DIR)/hash_table.c | $(BUILD_DIR)
-	$(CC) $(STARTERFLAGS) -c -o $@ $<
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(DEPFLAGS) -c -o $@ $<
 
 # Build object files from generated source files
 $(BUILD_DIR)/%.o: $(BUILD_DIR)/%.c
-	$(CC) $(GENFLAGS) -c -o $@ $<
+	$(CC) $(CPPFLAGS) $(GENFLAGS) $(DEPFLAGS) -c -o $@ $<
 
 # Generate bison source files
-# -v/--report-file produce build/parser.output: read this to debug grammar conflicts.
-$(BUILD_DIR)/%.c $(BUILD_DIR)/%.tab.h: $(SRC_DIR)/%.bison | $(BUILD_DIR)
+# -v/--report-file produce build/bminor.output.
+$(BUILD_DIR)/%.c $(BUILD_DIR)/%.tab.h &: $(SRC_DIR)/%.bison | $(BUILD_DIR)
 	bison --defines=$(BUILD_DIR)/$*.tab.h --output=$(BUILD_DIR)/$*.c \
 	      -v --report-file=$(BUILD_DIR)/$*.output $<
 
@@ -70,26 +89,46 @@ $(BUILD_DIR)/%.c: $(SRC_DIR)/%.flex | $(BUILD_DIR)
 $(BUILD_DIR)/scanner.o $(BUILD_DIR)/main.o: $(BISON_HEADERS)
 
 # Scanner and string utility unit tests
-$(BUILD_DIR)/scanner_unit_tests: $(TEST_DIR)/scanner/unit_tests.c $(BUILD_DIR)/scanner.o $(BUILD_DIR)/bminor.o $(BUILD_DIR)/string_util.o
-	$(CC) $(CFLAGS) -o $@ $^
+FRONTEND_OBJS := $(filter-out $(BUILD_DIR)/main.o,$(OBJS))
+$(BUILD_DIR)/scanner_unit_tests: $(TEST_DIR)/scanner/unit_tests.c $(FRONTEND_OBJS)
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) -o $@ $^ $(LDLIBS)
 
-# Test and valgrind targets
-test: $(BIN)
-	@$(TEST_DIR)/runtests.sh
-	@$(TEST_DIR)/printer/roundtrip.sh
-	@$(TEST_DIR)/resolver/positions.sh -resolve
-	@$(BOOK_DIR)/run-tests.sh $(ROOT_DIR)/bminor -scan $(BOOK_DIR)/scanner
-	@$(BOOK_DIR)/run-tests.sh $(ROOT_DIR)/bminor -parse $(BOOK_DIR)/parser
-	@$(BOOK_DIR)/run-tests.sh $(ROOT_DIR)/bminor -print $(BOOK_DIR)/printer
-	@$(BOOK_DIR)/run-tests.sh $(ROOT_DIR)/bminor -typecheck $(BOOK_DIR)/typecheck
+unit: $(BUILD_DIR)/scanner_unit_tests
+	@$(BUILD_DIR)/scanner_unit_tests
 
-valgrind: $(BIN)
-	@BMINOR_VALGRIND=1 $(TEST_DIR)/runtests.sh
+test: $(BIN) unit
+	@BMINOR=$(abspath $(BIN)) $(TEST_DIR)/runtests.sh
+	@BMINOR=$(abspath $(BIN)) $(TEST_DIR)/printer/roundtrip.sh
+	@BMINOR=$(abspath $(BIN)) $(TEST_DIR)/resolver/positions.sh
+	@$(BOOK_DIR)/run-tests.sh $(abspath $(BIN)) -scan $(BOOK_DIR)/scanner
+	@$(BOOK_DIR)/run-tests.sh $(abspath $(BIN)) -parse $(BOOK_DIR)/parser
+	@$(BOOK_DIR)/run-tests.sh $(abspath $(BIN)) -print $(BOOK_DIR)/printer
+	@$(BOOK_DIR)/run-tests.sh $(abspath $(BIN)) -typecheck $(BOOK_DIR)/typecheck
+
+valgrind: $(BIN) $(BUILD_DIR)/scanner_unit_tests
+	@valgrind --quiet --error-exitcode=125 --leak-check=full $(BUILD_DIR)/scanner_unit_tests
+	@BMINOR=$(abspath $(BIN)) BMINOR_VALGRIND=1 $(TEST_DIR)/runtests.sh
+
+release:
+	$(MAKE) PROFILE=release BUILD_DIR=$(ROOT_DIR)/build/release BIN=$(ROOT_DIR)/build/release/bminor all
+
+sanitize:
+	$(MAKE) PROFILE=sanitize BUILD_DIR=$(ROOT_DIR)/build/sanitize BIN=$(ROOT_DIR)/build/sanitize/bminor test
+
+ANALYSIS_OBJS := $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/analyze/%.o,$(HAND_SRC) $(SRC_DIR)/library.c)
+analyze: $(ANALYSIS_OBJS)
+
+$(BUILD_DIR)/analyze/%.o: $(SRC_DIR)/%.c $(BISON_HEADERS) $(wildcard $(SRC_DIR)/*.h) $(ROOT_DIR)/Makefile
+	@mkdir -p $(@D)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -fanalyzer -c $< -o $@
+
+format-check:
+	clang-format --dry-run --Werror $(HAND_SRC) $(wildcard $(SRC_DIR)/*.h)
 
 # Clean build artifacts
 clean:
 	rm -rf $(BUILD_DIR) $(BIN)
-	find $(ROOT_DIR) -type f -name '*.out' -delete
+	find $(BOOK_DIR) -type f -name '*.bminor.out' -delete
 	find $(ROOT_DIR)/test -type d -name out -prune -exec rm -rf {} +
 
 # Include dependency files generated by the compiler for header tracking
