@@ -3,10 +3,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-// Forward declarations
-struct symbol;
-struct type;
-
 typedef enum {
   EXPR_ADD,     // 'e + e'
   EXPR_SUB,     // 'e - e'
@@ -39,6 +35,8 @@ typedef enum {
   EXPR_DOUBLE,  // 'i.i'
   EXPR_NAME     // 'x'
 } expr_t;
+
+struct symbol;  // Forward declaration
 
 /**
  * @brief Represents an expression node in the abstract syntax tree.
@@ -111,6 +109,8 @@ void expr_print_affix(const char* prefix, struct expr *e, const char* suffix);
  */
 void expr_resolve(struct expr *e);
 
+struct type;  // Forward declaration
+
 /**
  * @brief Typechecks the given expression and returns its type.
  *
@@ -163,3 +163,25 @@ expr_status_t expr_status(const struct expr *e, struct expr_constant *out);
  * @return true if the expression is valid, false otherwise.
  */
 bool expr_validate(const struct expr *e);
+
+struct ir_func;  // Forward declaration
+
+/**
+ * @brief Lowers a variable expression to the intermediate representation.
+ *
+ * @param[in] s Pointer to the symbol representing the variable.
+ * @param[in] func Pointer to the IR function context.
+ *
+ * @return The index of the lowered variable in the IR function.
+ */
+int expr_lower_var(const struct symbol *s, const struct ir_func *func);
+
+/**
+ * @brief Lowers an expression to the intermediate representation.
+ *
+ * @param[in] e Pointer to the expression to lower.
+ * @param[in] func Pointer to the IR function context.
+ *
+ * @return The index of the lowered expression in the IR function.
+ */
+int expr_lower(struct expr *e, struct ir_func *func);

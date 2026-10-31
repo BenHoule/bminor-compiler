@@ -1,4 +1,5 @@
 #include "expr.h"
+#include "ir.h"
 #include "memory.h"
 #include "param_list.h"
 #include "resolver.h"
@@ -637,4 +638,14 @@ bool expr_validate(const struct expr *e) {
     return false;
 
   return expr_validate(e->left) && expr_validate(e->right);
+}
+
+int expr_lower_var(const struct symbol *s, const struct ir_func *func) {
+  // Implementation goes here
+  return 0;  // Placeholder
+}
+
+int expr_lower(struct expr *e, struct ir_func *func) {
+  // Implementation goes here
+  return 0;  // Placeholder
 }
