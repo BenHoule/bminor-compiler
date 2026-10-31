@@ -641,11 +641,24 @@ bool expr_validate(const struct expr *e) {
 }
 
 int expr_lower_var(const struct symbol *s, const struct ir_func *func) {
-  // Implementation goes here
-  return 0;  // Placeholder
+  assert(s); assert(func);
+
+  if (s->kind == SYMBOL_GLOBAL) {
+    // TODO: Implement lowering for global variables
+    fprintf(stderr, "Lowering global variable (%s) not implemented\n", s->name);
+    exit(EXIT_FAILURE);
+  }
+
+  return s->kind == SYMBOL_PARAM ? s->which : func->nparams + s->which;
 }
 
 int expr_lower(struct expr *e, struct ir_func *func) {
-  // Implementation goes here
-  return 0;  // Placeholder
+  assert(e); assert(func);
+
+  switch (e->kind) {
+    case EXPR_INT: return 0;
+    default:
+      fprintf(stderr, "Lowering for expression kind (%d) not implemented\n", e->kind);
+      exit(EXIT_FAILURE);
+  }
 }
