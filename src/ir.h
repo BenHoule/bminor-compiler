@@ -39,6 +39,8 @@ struct ir_instr {
   union {
     int64_t i;
     double d;
+    bool b;
+    char c;
     const char *s;
     type_t kind;
   } imm;

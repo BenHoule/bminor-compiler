@@ -652,11 +652,108 @@ int expr_lower_var(const struct symbol *s, const struct ir_func *func) {
   return s->kind == SYMBOL_PARAM ? s->which : func->nparams + s->which;
 }
 
+static int expr_lower_binary(struct expr *e, struct ir_func *func, ir_op_t int_op, ir_op_t double_op) {
+  assert(e); assert(func);
+
+  int arg1 = expr_lower(e->left, func);
+  int arg2 = expr_lower(e->right, func);
+  ir_op_t op = e->left->type->kind == TYPE_INTEGER
+               ? int_op
+               : double_op;
+
+  return ir_emit_op(func, op, arg1, arg2);
+}
+
+static int expr_lower_step(struct expr *e, struct ir_func *func, ir_op_t op) {
+  assert(e); assert(func);
+
+  int var = expr_lower_var(e->left->symbol, func);
+  int old = ir_emit_op(func, IR_COPY, var, IR_NONE);
+  int one = ir_new_reg(func);
+  ir_emit(func, IR_CONST, one, IR_NONE, IR_NONE)->imm.i = 1;
+  ir_emit(func, op, var, var, one);
+  return old;
+}
+
 int expr_lower(struct expr *e, struct ir_func *func) {
   assert(e); assert(func);
 
   switch (e->kind) {
-    case EXPR_INT: return 0;
+    case EXPR_ADD: return expr_lower_binary(e, func, IR_ADD, IR_FADD);
+    case EXPR_SUB: return expr_lower_binary(e, func, IR_SUB, IR_FSUB);
+    case EXPR_MUL: return expr_lower_binary(e, func, IR_MUL, IR_FMUL);
+    case EXPR_DIV: return expr_lower_binary(e, func, IR_DIV, IR_FDIV);
+    case EXPR_MOD: return expr_lower_binary(e, func, IR_MOD, IR_MOD);
+    case EXPR_POW: return expr_lower_binary(e, func, IR_POW, IR_FPOW);
+
+    case EXPR_NEG: {
+      ir_op_t op = e->left->type->kind == TYPE_INTEGER ? IR_NEG : IR_FNEG;
+      int arg1 = expr_lower(e->left, func);
+      return ir_emit_op(func, op, arg1, IR_NONE);
+    }
+
+    case EXPR_INC: return expr_lower_step(e, func, IR_ADD);
+    case EXPR_DEC: return expr_lower_step(e, func, IR_SUB);
+
+    // case EXPR_LEN: (TODO)
+
+    case EXPR_LT:  return expr_lower_binary(e, func, IR_LT, IR_FLT);
+    case EXPR_GT:  return expr_lower_binary(e, func, IR_GT, IR_FGT);
+    case EXPR_LE:  return expr_lower_binary(e, func, IR_LE, IR_FLE);
+    case EXPR_GE:  return expr_lower_binary(e, func, IR_GE, IR_FGE);
+    case EXPR_EQ:  return expr_lower_binary(e, func, IR_EQ, IR_FEQ);
+    case EXPR_NE:  return expr_lower_binary(e, func, IR_NE, IR_FNE);
+
+    // case EXPR_AND: (TODO)
+    // case EXPR_OR: (TODO)
+    case EXPR_NOT: return ir_emit_op(func, IR_NOT, expr_lower(e->left, func), IR_NONE);
+
+    case EXPR_ASGN: {
+      int value = expr_lower(e->right, func);
+      int var = expr_lower_var(e->left->symbol, func);
+      ir_emit_op(func, IR_COPY, var, value);
+      return value;
+    }
+
+    // case EXPR_IDX: (TODO)
+    // case EXPR_CALL: (TODO)
+    // case EXPR_ARG: (TODO)
+    // case EXPR_INIT: (TODO)
+
+    case EXPR_INT: {
+      int dst = ir_new_reg(func);
+      ir_emit(func, IR_CONST, dst, IR_NONE, IR_NONE)->imm.i = e->int_literal;
+      return dst;
+    }
+
+    case EXPR_BOOL: {
+      int dst = ir_new_reg(func);
+      ir_emit(func, IR_CONST, dst, IR_NONE, IR_NONE)->imm.b = e->bool_literal;
+      return dst;
+    }
+
+    case EXPR_CHAR: {
+      int dst = ir_new_reg(func);
+      ir_emit(func, IR_CONST, dst, IR_NONE, IR_NONE)->imm.c = e->char_literal;
+      return dst;
+    }
+
+    case EXPR_STR: {
+      int dst = ir_new_reg(func);
+      ir_emit(func, IR_CONST, dst, IR_NONE, IR_NONE)->imm.s = e->string_literal;
+      return dst;
+    }
+
+    case EXPR_DOUBLE: {
+      int dst = ir_new_reg(func);
+      ir_emit(func, IR_CONST, dst, IR_NONE, IR_NONE)->imm.d = e->double_literal;
+      return dst;
+    }
+
+    // Later assignment to the variable cannot change this value
+    case EXPR_NAME:
+      return ir_emit_op(func, IR_COPY, expr_lower_var(e->symbol, func), IR_NONE);
+
     default:
       fprintf(stderr, "Lowering for expression kind (%d) not implemented\n", e->kind);
       exit(EXIT_FAILURE);

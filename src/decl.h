@@ -76,3 +76,17 @@ void decl_typecheck(struct decl *d);
  * @return true if the declaration list is valid, false otherwise.
  */
 bool decl_validate(const struct decl *d);
+
+struct ir_func;  // Forward declaration
+
+/**
+ * @brief Lowers the given declaration list into the intermediate representation.
+ *
+ * @param[in] d Pointer to the declaration list to lower.
+ * @param[in] func Pointer to the IR function context.
+ *
+ * @return Pointer to the IR function context after lowering.
+ *
+ * @warning Modifies the IR function.
+ */
+struct ir_func *decl_lower(struct decl *d, struct ir_func *func);

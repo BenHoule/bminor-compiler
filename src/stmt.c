@@ -1,13 +1,15 @@
 #include "stmt.h"
-#include "memory.h"
 #include "decl.h"
 #include "expr.h"
+#include "ir.h"
+#include "memory.h"
 #include "scope.h"
 #include "type.h"
 #include "typecheck.h"
 
 #include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 struct stmt *stmt_create_simple(
   stmt_t kind,
@@ -261,4 +263,43 @@ bool stmt_validate(const struct stmt *s) {
     }
   }
   return true;
+}
+
+void stmt_lower(struct stmt *s, struct ir_func *func) {
+  for (; s; s = s->next) {
+    switch (s->kind) {
+      case STMT_DECL:  decl_lower(s->decl,  func); break;
+      case STMT_EXPR:  expr_lower(s->expr,  func); break;
+      case STMT_BLOCK: stmt_lower(s->block, func); break;
+
+      // case STMT_IF_ELSE:
+      //   expr_lower(s->cond_expr, func);
+      //   stmt_lower(s->body, func);
+      //   if (s->else_body) stmt_lower(s->else_body, func);
+      //   break;
+
+      // case STMT_FOR:
+      //   expr_lower(s->init_expr, func);
+      //   if (s->cond_expr) expr_lower(s->cond_expr, func);
+      //   expr_lower(s->loop_expr, func);
+      //   stmt_lower(s->body, func);
+      //   break;
+
+      case STMT_PRINT:
+        for (struct expr *a = s->expr; a; a = a->right) {
+          int value = expr_lower(a->left, func);
+          ir_emit(func, IR_PRINT, IR_NONE, value, IR_NONE)->imm.kind = a->left->type->kind;
+        }
+        break;
+
+      case STMT_RETURN:
+        int value = s->expr ? expr_lower(s->expr, func) : IR_NONE;
+        ir_emit(func, IR_RETURN, IR_NONE, value, IR_NONE)->imm.kind = s->expr->type->kind;
+        break;
+
+      default:
+        fprintf(stderr, "lower: statement kind %d not supported yet\n", s->kind);
+        exit(EXIT_FAILURE);
+    }
+  }
 }

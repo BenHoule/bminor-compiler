@@ -5,3 +5,5 @@
 - `-9223372036854775808` is parsed as unary minus applied to `9223372036854775808`, which is 1 larger than the max possible value of a `long long` (thank you 2s complement). Most compilers treat this as a known limitation: Reject it, or accept a value up to 2⁶³ in the scanner and have the parser check it next to unary minus. Also, decide whether `0xFFFFFFFFFFFFFFFF` is valid (a bit pattern) or an overflow; if it's valid, parse hex with strtoull.
 
 - **AST Invariant:** After successful resolution and typechecking, every value expression has a concrete type, every name has a symbol, and every function signature has a concrete return type.
+
+- Uninitialized locals start at 0 (matches the spec's rule for arrays and keeping runs deterministic).

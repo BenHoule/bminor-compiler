@@ -1,6 +1,7 @@
 #include "decl.h"
-#include "memory.h"
 #include "expr.h"
+#include "ir.h"
+#include "memory.h"
 #include "param_list.h"
 #include "resolver.h"
 #include "stmt.h"
@@ -221,4 +222,49 @@ bool decl_validate(const struct decl *d) {
         !stmt_validate(d->code)) return false;
   }
   return true;
+}
+
+static int decl_count_params(const struct param_list *p) {
+  int n = 0;
+  for (; p; p = p->next) n++;
+  return n;
+}
+
+// Local declarations are lowered into `f`.
+static void decl_lower_local(struct decl *d, struct ir_func *func) {
+  int var = expr_lower_var(d->symbol, func);
+  if (d->value) {
+    int value = expr_lower(d->value, func);
+    ir_emit(func, IR_COPY, var, value, IR_NONE);
+  } else {
+    ir_emit(func, IR_CONST, var, IR_NONE, IR_NONE);  // uninitialized = 0
+  }
+}
+
+// `func = nullptr` lowers a whole program
+struct ir_func *decl_lower(struct decl *d, struct ir_func *func) {
+  assert(d);
+
+  if (func) {
+    decl_lower_local(d, func);
+    return func;
+  }
+
+  struct ir_func *head = nullptr, **tail = &head;
+  for (; d; d = d->next) {
+    if (d->type->kind != TYPE_FUNCTION || !d->code) continue;
+
+    func = ir_func_create(
+            d->name,
+            decl_count_params(d->type->params),
+            d->symbol->frame_locals);
+
+    stmt_lower(d->code->block, func);
+    ir_emit(func, IR_RETURN, IR_NONE, IR_NONE, IR_NONE);  // falling off the end
+
+    *tail = func;
+    tail = &func->next;
+  }
+
+  return head;
 }

@@ -1,10 +1,5 @@
 #pragma once
 
-// Forward declarations
-struct decl;
-struct expr;
-struct type;
-
 typedef enum {
   STMT_DECL,
   STMT_EXPR,
@@ -14,6 +9,10 @@ typedef enum {
   STMT_RETURN,
   STMT_BLOCK
 } stmt_t;
+
+// Forward declarations
+struct decl;
+struct expr;
 
 /**
  * @brief Represents a statement node in the abstract syntax tree.
@@ -129,6 +128,9 @@ void stmt_print(struct stmt *s, int indent);
  */
 void stmt_resolve(struct stmt *s);
 
+
+struct type;  // Forward declaration
+
 /**
  * @brief Typechecks the given statement against the specified type.
  *
@@ -147,3 +149,15 @@ void stmt_typecheck(struct stmt *s, struct type *ftype);
  * @return true if the statement is valid, false otherwise.
  */
 bool stmt_validate(const struct stmt *s);
+
+struct ir_func;  // Forward declaration
+
+/**
+ * @brief Lowers the given statement into the intermediate representation.
+ *
+ * @param[in] s Pointer to the statement to lower.
+ * @param[in] func Pointer to the IR function context.
+ *
+ * @warning Modifies the IR function.
+ */
+void stmt_lower(struct stmt *s, struct ir_func *func);
