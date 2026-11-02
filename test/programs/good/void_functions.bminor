@@ -1,0 +1,15 @@
+countdown: function void (n: integer) = {
+	if (n <= 0) return;
+	print n, " ";
+	countdown(n - 1);
+}
+
+nothing: function void () = {
+}
+
+main: function integer () = {
+	countdown(3);
+	nothing();
+	print "\n";
+	return 0;
+}

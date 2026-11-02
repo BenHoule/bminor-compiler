@@ -202,16 +202,17 @@ void expr_resolve( struct expr *e ) {
 
 static const char *expr_op_name(expr_t kind) {
   switch (kind) {
-    case EXPR_ADD: return "+";   case EXPR_SUB: return "-";
-    case EXPR_MUL: return "*";   case EXPR_DIV: return "/";
-    case EXPR_MOD: return "%";   case EXPR_POW: return "^";
-    case EXPR_NEG: return "-";   case EXPR_NOT: return "!";
-    case EXPR_INC: return "++";  case EXPR_DEC: return "--";
-    case EXPR_LEN: return "#";   case EXPR_LT:  return "<";
-    case EXPR_GT:  return ">";   case EXPR_LE:  return "<=";
-    case EXPR_GE:  return ">=";  case EXPR_EQ:  return "==";
-    case EXPR_NE:  return "!=";  case EXPR_AND: return "&&";
-    case EXPR_OR:  return "||";  case EXPR_ASGN: return "=";
+    case EXPR_ADD: return "+";  case EXPR_SUB: return "-";
+    case EXPR_MUL: return "*";  case EXPR_DIV: return "/";
+    case EXPR_MOD: return "%";  case EXPR_POW: return "^";
+    case EXPR_NEG: return "-";  case EXPR_NOT: return "!";
+    case EXPR_INC: return "++"; case EXPR_DEC: return "--";
+    case EXPR_LEN: return "#";  case EXPR_LT:  return "<";
+    case EXPR_GT:  return ">";  case EXPR_LE:  return "<=";
+    case EXPR_GE:  return ">="; case EXPR_EQ:  return "==";
+    case EXPR_NE:  return "!="; case EXPR_AND: return "&&";
+    case EXPR_OR:  return "||"; case EXPR_ASGN: return "=";
+    case EXPR_IDX: return "[]"; case EXPR_CALL: return "CALL";
     default: return "?";
   }
 }
@@ -657,9 +658,9 @@ static int expr_lower_binary(struct expr *e, struct ir_func *func, ir_op_t int_o
 
   int arg1 = expr_lower(e->left, func);
   int arg2 = expr_lower(e->right, func);
-  ir_op_t op = e->left->type->kind == TYPE_INTEGER
-               ? int_op
-               : double_op;
+  ir_op_t op = e->left->type->kind == TYPE_DOUBLE
+               ? double_op
+               : int_op;  // use int op for bools/chars
 
   return ir_emit_op(func, op, arg1, arg2);
 }
@@ -687,7 +688,7 @@ int expr_lower(struct expr *e, struct ir_func *func) {
     case EXPR_POW: return expr_lower_binary(e, func, IR_POW, IR_NONE);
 
     case EXPR_NEG: {
-      ir_op_t op = e->left->type->kind == TYPE_INTEGER ? IR_NEG : IR_FNEG;
+      ir_op_t op = e->left->type->kind == TYPE_DOUBLE ? IR_FNEG : IR_NEG;
       int arg1 = expr_lower(e->left, func);
       return ir_emit_op(func, op, arg1, IR_NONE);
     }
@@ -711,7 +712,7 @@ int expr_lower(struct expr *e, struct ir_func *func) {
     case EXPR_ASGN: {
       int value = expr_lower(e->right, func);
       int var = expr_lower_var(e->left->symbol, func);
-      ir_emit_op(func, IR_COPY, var, value);
+      ir_emit(func, IR_COPY, var, value, IR_NONE);
       return value;
     }
 
@@ -727,26 +728,28 @@ int expr_lower(struct expr *e, struct ir_func *func) {
     }
 
     case EXPR_BOOL: {
+      // TODO: Find a way to represent boolean values more efficiently (64 bits is overkill)
       int dst = ir_new_reg(func);
-      ir_emit(func, IR_CONST, dst, IR_NONE, IR_NONE)->imm.b = e->bool_literal;
+      ir_emit(func, IR_CONST, dst, IR_NONE, IR_NONE)->imm.i = e->bool_literal;
       return dst;
     }
 
     case EXPR_CHAR: {
+      // TODO: Find a way to represent characters more efficiently (64 bits is overkill)
       int dst = ir_new_reg(func);
-      ir_emit(func, IR_CONST, dst, IR_NONE, IR_NONE)->imm.c = e->char_literal;
+      ir_emit(func, IR_CONST, dst, IR_NONE, IR_NONE)->imm.i = e->char_literal;
       return dst;
     }
 
     case EXPR_STR: {
       int dst = ir_new_reg(func);
-      ir_emit(func, IR_CONST, dst, IR_NONE, IR_NONE)->imm.s = e->string_literal;
+      ir_emit(func, IR_STRING, dst, IR_NONE, IR_NONE)->imm.s = e->string_literal;
       return dst;
     }
 
     case EXPR_DOUBLE: {
       int dst = ir_new_reg(func);
-      ir_emit(func, IR_CONST, dst, IR_NONE, IR_NONE)->imm.d = e->double_literal;
+      ir_emit(func, IR_DCONST, dst, IR_NONE, IR_NONE)->imm.d = e->double_literal;
       return dst;
     }
 

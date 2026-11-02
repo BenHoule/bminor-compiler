@@ -30,33 +30,27 @@ x = integer_power(a,b);
 #include <stdio.h>
 #include <stdlib.h>
 
-void print_integer(int64_t x)
-{
+void print_integer(const int64_t x) {
   printf("%" PRId64, x);
 }
 
-void print_string( const char *s )
-{
+void print_string(const char *s) {
   printf("%s",s);
 }
 
-void print_boolean( int b )
-{
-  printf("%s",b?"true":"false");
+void print_boolean(const bool b) {
+  printf("%s", b ? "true" : "false");
 }
 
-void print_character( char c )
-{
+void print_character(const char c) {
   printf("%c",c);
 }
 
-void print_double(double value)
-{
+void print_double(const double value) {
   printf("%.17g", value);
 }
 
-int64_t integer_power(int64_t x, int64_t y)
-{
+int64_t integer_power(int64_t x, int64_t y) {
   int64_t result = 1;
   while (y > 0) {
     if ((y & 1) && __builtin_mul_overflow(result, x, &result)) {

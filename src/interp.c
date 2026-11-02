@@ -17,11 +17,11 @@ union value {
 
 static void interp_print(type_t kind, union value value) {
   switch (kind) {
-    case TYPE_BOOLEAN: fputs(value.i ? "true" : "false", stdout); break;
-    case TYPE_CHAR: putchar((char)value.i); break;
-    case TYPE_DOUBLE: printf("%f", value.d); break;
-    case TYPE_INTEGER: printf("%" PRId64, value.i); break;
-    case TYPE_STRING: fputs(value.s, stdout); break;
+    case TYPE_BOOLEAN: print_boolean((bool)value.i); break;
+    case TYPE_CHAR:    print_character((char)value.i); break;
+    case TYPE_DOUBLE:  print_double(value.d); break;
+    case TYPE_INTEGER: print_integer(value.i); break;
+    case TYPE_STRING:  print_string(value.s); break;
 
     default: abort();
   }
@@ -83,7 +83,10 @@ static union value interp_call(const struct ir_func *func) {
       case IR_NOT: dst->i = !arg1.i; break;
 
       case IR_PRINT: interp_print(instr->imm.kind, arg1); break;
-      case IR_RETURN: result = arg1; break;
+      case IR_RETURN:
+        result = arg1;
+        free(r);
+        return result;
 
       default: unreachable();
     }

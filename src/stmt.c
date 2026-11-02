@@ -305,10 +305,11 @@ void stmt_lower(struct stmt *s, struct ir_func *func) {
         }
         break;
 
-      case STMT_RETURN:
+      case STMT_RETURN: {
         int value = s->expr ? expr_lower(s->expr, func) : IR_NONE;
-        ir_emit(func, IR_RETURN, IR_NONE, value, IR_NONE)->imm.kind = s->expr->type->kind;
+        ir_emit(func, IR_RETURN, IR_NONE, value, IR_NONE);
         break;
+      }
 
       default:
         fprintf(stderr, "Lowering statement kind (%s) not supported yet\n", stmt_kind_name(s->kind));

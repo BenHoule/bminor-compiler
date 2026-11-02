@@ -1,0 +1,11 @@
+main: function integer () = {
+	a: integer = 0;
+	b: integer = 0;
+	if (a++ > 0 && b++ > 0) print "wrong\n";
+	print a, " ", b, "\n";
+	if (a++ > 0 || b++ > 0) print "taken\n";
+	print a, " ", b, "\n";
+	t: boolean = a > 5 || b == 0 && a == 2;
+	print t, " ", !(a == 2) || false, "\n";
+	return 0;
+}

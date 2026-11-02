@@ -1,0 +1,13 @@
+main: function integer () = {
+	i: integer = 0;
+	for (; i < 3;) {
+		print i;
+		i++;
+	}
+	print "\n";
+	for (i = 10; ; i--) {
+		if (i < 8) return i;
+		print i, " ";
+	}
+	return 0;
+}

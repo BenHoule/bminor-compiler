@@ -243,7 +243,7 @@ static void decl_lower_local(struct decl *d, struct ir_func *func) {
 
 // `func = nullptr` lowers a whole program
 struct ir_func *decl_lower(struct decl *d, struct ir_func *func) {
-  assert(d);
+  assert(d || !func);  // Undeclared funcs should be caught during name resolution
 
   if (func) {
     decl_lower_local(d, func);

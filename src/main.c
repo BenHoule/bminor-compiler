@@ -46,6 +46,7 @@ static stage_t stage_from_flag(const char *flag) {
   };
   for (size_t i = 0; i < sizeof flags / sizeof *flags; i++)
     if (strcmp(flag, flags[i].flag) == 0) return flags[i].stage;
+
   return STAGE_INVALID;
 }
 
@@ -105,6 +106,7 @@ static int compile(stage_t stage, const char *flag) {
     return EXIT_SUCCESS;
   }
 
+  // Symbolic execution of lowered program to catch runtime errors
   if (stage == STAGE_INTERP) return interp_run(program);
 
   if (stage == STAGE_CODEGEN) {
