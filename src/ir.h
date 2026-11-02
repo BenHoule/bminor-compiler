@@ -14,12 +14,10 @@ typedef enum {
   IR_COPY,    // dst = arg1
 
   // arithmetic
-  IR_ADD, IR_SUB, IR_MUL, IR_DIV,
-  IR_MOD, IR_POW, IR_NEG,
+  IR_ADD, IR_SUB, IR_MUL, IR_DIV, IR_MOD, IR_POW, IR_NEG,
 
-  // floating-point arithmetic
-  IR_FADD, IR_FSUB, IR_FMUL, IR_FDIV,
-  IR_FPOW, IR_FNEG,
+  // floating-point arithmetic (no mod/pow)
+  IR_FADD, IR_FSUB, IR_FMUL, IR_FDIV, IR_FNEG,
 
   // comparison
   IR_EQ, IR_NE, IR_LT, IR_LE, IR_GT, IR_GE,

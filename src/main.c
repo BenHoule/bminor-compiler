@@ -2,6 +2,8 @@
 #include "bminor.tab.h"
 #include "bminor_parser.h"
 #include "decl.h"
+#include "interp.h"
+#include "ir.h"
 #include "memory.h"
 #include "resolver.h"
 #include "scope.h"
@@ -17,6 +19,9 @@ typedef enum {
   STAGE_PRINT,
   STAGE_RESOLVE,
   STAGE_TYPECHECK,
+  STAGE_VALIDATE,
+  STAGE_IR,
+  STAGE_INTERP,
   STAGE_CODEGEN,
   STAGE_INVALID
 } stage_t;
@@ -29,12 +34,15 @@ static stage_t stage_from_flag(const char *flag) {
     const char *flag;
     stage_t stage;
   } flags[] = {
-    {"-scan", STAGE_SCAN},
-    {"-parse", STAGE_PARSE},
-    {"-print", STAGE_PRINT},
+    {"-scan",    STAGE_SCAN},
+    {"-parse",   STAGE_PARSE},
+    {"-print",   STAGE_PRINT},
     {"-resolve", STAGE_RESOLVE},
     {"-typecheck", STAGE_TYPECHECK},
-    {"-codegen", STAGE_CODEGEN}
+    {"-validate",  STAGE_VALIDATE},
+    {"-ir",      STAGE_IR},
+    {"-interp",  STAGE_INTERP},
+    {"-codegen", STAGE_CODEGEN},
   };
   for (size_t i = 0; i < sizeof flags / sizeof *flags; i++)
     if (strcmp(flag, flags[i].flag) == 0) return flags[i].stage;
@@ -43,8 +51,8 @@ static stage_t stage_from_flag(const char *flag) {
 
 static void print_usage(const char *program) {
   fprintf(stderr, "Usage: %s <stage> <input file>\n"
-          "Stages: -scan -parse -print -resolve -typecheck\n"
-          "        -codegen (not implemented)\n", program);
+          "Stages: -scan -parse -print -resolve -typecheck -validate\n"
+          "        -ir -interp -codegen (not implemented)\n", program);
 }
 
 static int compile(stage_t stage, const char *flag) {
@@ -81,6 +89,7 @@ static int compile(stage_t stage, const char *flag) {
 
   decl_typecheck(parser_result);
   if (typecheck_error_count()) return EXIT_COMPILE_ERROR;
+  if (stage == STAGE_TYPECHECK) return EXIT_SUCCESS;
 
   // AST invariant: "all types are concrete and all names are bound"
   // - Array/initializer containers are exempt from value-type requirements
@@ -88,6 +97,15 @@ static int compile(stage_t stage, const char *flag) {
     typecheck_error("internal: typed AST invariant failed");
     return EXIT_COMPILE_ERROR;
   }
+  if (stage == STAGE_VALIDATE) return EXIT_SUCCESS;
+
+  struct ir_func *program = decl_lower(parser_result, nullptr);
+  if (stage == STAGE_IR) {
+    ir_print(stdout, program);
+    return EXIT_SUCCESS;
+  }
+
+  if (stage == STAGE_INTERP) return interp_run(program);
 
   if (stage == STAGE_CODEGEN) {
     fprintf(stderr, "bminor: stage not implemented (%s)\n", flag);
@@ -101,7 +119,7 @@ int main(int argc, char *argv[]) {
   // stdout set to line-buffer (vs. full-buffer):
   // - Allows real-time processing of output
   //   - Minimizes interleaving from multithreading (once implemented)
-  //   - Better for piping to other programs (according to google)
+  //   - Better for piping to other programs
   if (setvbuf(stdout, nullptr, _IOLBF, 0) != 0) {
     fprintf(stderr, "bminor: failed to configure output buffering\n");
     return EXIT_COMPILE_ERROR;

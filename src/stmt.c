@@ -69,6 +69,19 @@ struct stmt *stmt_create_for(
   return s;
 }
 
+static const char *stmt_kind_name(stmt_t kind) {
+  switch (kind) {
+    case STMT_DECL:    return "DECL";
+    case STMT_EXPR:    return "EXPR";
+    case STMT_PRINT:   return "PRINT";
+    case STMT_RETURN:  return "RETURN";
+    case STMT_BLOCK:   return "BLOCK";
+    case STMT_IF_ELSE: return "IF_ELSE";
+    case STMT_FOR:     return "FOR";
+    default: unreachable();
+  }
+}
+
 void stmt_print(struct stmt *s, const int indent) {
   for (; s; s = s->next) {
     printf("%*s", indent * 2, "");
@@ -298,7 +311,7 @@ void stmt_lower(struct stmt *s, struct ir_func *func) {
         break;
 
       default:
-        fprintf(stderr, "lower: statement kind %d not supported yet\n", s->kind);
+        fprintf(stderr, "Lowering statement kind (%s) not supported yet\n", stmt_kind_name(s->kind));
         exit(EXIT_FAILURE);
     }
   }

@@ -33,7 +33,7 @@ endif
 # Source files
 FLEX_SRC  := $(wildcard $(SRC_DIR)/*.flex)
 BISON_SRC := $(wildcard $(SRC_DIR)/*.bison)
-HAND_SRC  := $(filter-out $(SRC_DIR)/library.c,$(wildcard $(SRC_DIR)/*.c))
+HAND_SRC  := $(wildcard $(SRC_DIR)/*.c)
 
 # Generated source files
 GEN_SRC   := $(patsubst $(SRC_DIR)/%.flex,$(BUILD_DIR)/%.c,$(FLEX_SRC)) \

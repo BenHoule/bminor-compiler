@@ -683,8 +683,8 @@ int expr_lower(struct expr *e, struct ir_func *func) {
     case EXPR_SUB: return expr_lower_binary(e, func, IR_SUB, IR_FSUB);
     case EXPR_MUL: return expr_lower_binary(e, func, IR_MUL, IR_FMUL);
     case EXPR_DIV: return expr_lower_binary(e, func, IR_DIV, IR_FDIV);
-    case EXPR_MOD: return expr_lower_binary(e, func, IR_MOD, IR_MOD);
-    case EXPR_POW: return expr_lower_binary(e, func, IR_POW, IR_FPOW);
+    case EXPR_MOD: return expr_lower_binary(e, func, IR_MOD, IR_NONE);  // Unsupported ops should be caught at typechecking
+    case EXPR_POW: return expr_lower_binary(e, func, IR_POW, IR_NONE);
 
     case EXPR_NEG: {
       ir_op_t op = e->left->type->kind == TYPE_INTEGER ? IR_NEG : IR_FNEG;
@@ -755,7 +755,7 @@ int expr_lower(struct expr *e, struct ir_func *func) {
       return ir_emit_op(func, IR_COPY, expr_lower_var(e->symbol, func), IR_NONE);
 
     default:
-      fprintf(stderr, "Lowering for expression kind (%d) not implemented\n", e->kind);
+      fprintf(stderr, "Lowering for expression kind (%s) not implemented\n", expr_op_name(e->kind));
       exit(EXIT_FAILURE);
   }
 }

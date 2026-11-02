@@ -61,7 +61,7 @@ static const char * ir_op_name( ir_op_t op ) {
 
     [IR_FADD] = "fadd", [IR_FSUB] = "fsub",
     [IR_FMUL] = "fmul", [IR_FDIV] = "fdiv",
-    [IR_FPOW] = "fpow", [IR_FNEG] = "fneg",
+    [IR_FNEG] = "fneg",
 
     [IR_EQ] = "eq", [IR_NE] = "ne",
     [IR_LT] = "lt", [IR_LE] = "le",
