@@ -285,18 +285,46 @@ void stmt_lower(struct stmt *s, struct ir_func *func) {
       case STMT_EXPR:  expr_lower(s->expr,  func); break;
       case STMT_BLOCK: stmt_lower(s->block, func); break;
 
-      // case STMT_IF_ELSE:
-      //   expr_lower(s->cond_expr, func);
-      //   stmt_lower(s->body, func);
-      //   if (s->else_body) stmt_lower(s->else_body, func);
-      //   break;
+      case STMT_IF_ELSE:
+        struct ir_block *true_block = ir_block_create(func);
+        struct ir_block *join = ir_block_create(func);
+        struct ir_block *false_block = s->else_body ? ir_block_create(func) : join;
 
-      // case STMT_FOR:
-      //   expr_lower(s->init_expr, func);
-      //   if (s->cond_expr) expr_lower(s->cond_expr, func);
-      //   expr_lower(s->loop_expr, func);
-      //   stmt_lower(s->body, func);
-      //   break;
+        expr_lower_cond(s->cond_expr, func, true_block, false_block);
+
+        ir_block_place(func, true_block);
+        stmt_lower(s->body, func);
+        ir_emit_jump(func, join);
+
+        if (s->else_body) {
+          ir_block_place(func, false_block);
+          stmt_lower(s->else_body, func);
+          ir_emit_jump(func, join);
+        }
+
+        ir_block_place(func, join);
+        break;
+
+      case STMT_FOR:
+        struct ir_block *cond = ir_block_create(func);
+        struct ir_block *body = ir_block_create(func);
+        struct ir_block *step = ir_block_create(func);
+        struct ir_block *done = ir_block_create(func);
+
+        if (s->init_expr) expr_lower(s->init_expr, func);
+
+        ir_block_place(func, cond);
+        if (s->cond_expr) expr_lower_cond(s->cond_expr, func, body, done);
+
+        ir_block_place(func, body);
+        stmt_lower(s->body, func);
+
+        ir_block_place(func, step);
+        if (s->loop_expr) expr_lower(s->loop_expr, func);
+        ir_emit_jump(func, cond);
+
+        ir_block_place(func, done);
+        break;
 
       case STMT_PRINT:
         for (struct expr *a = s->expr; a; a = a->right) {

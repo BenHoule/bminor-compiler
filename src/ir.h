@@ -27,8 +27,14 @@ typedef enum {
 
   IR_NOT,
   IR_PRINT,  // print arg1 as imm.kind
+
+  // Terminators (exactly one per block)
+  IR_JUMP,   // jump to imm.target[0]
+  IR_BRANCH, // if arg1 goto imm.target[0] else goto imm.target[1]
   IR_RETURN  // return arg1 (IR_NONE for void)
 } ir_op_t;
+
+struct ir_block;  // Forward declaration
 
 struct ir_instr {
   ir_op_t op;
@@ -39,9 +45,16 @@ struct ir_instr {
     double d;
     const char *s;
     type_t kind;
+    struct ir_block *target[2];
   } imm;
 
   struct ir_instr *next;
+};
+
+struct ir_block {
+  int id;
+  struct ir_instr *head, *tail;  // tail is terminator
+  struct ir_block *next;
 };
 
 struct ir_func {
@@ -49,8 +62,10 @@ struct ir_func {
   int nparams;  // %0 .. %p-1
   int nlocals;  // %p .. %l-1
   int nregs;    // %l .. %r-1  (temp registers)
+  int nblocks;
 
-  struct ir_instr *head, *tail;
+  struct ir_block *head, *tail;
+  struct ir_block *current;
   struct ir_func *next;
 };
 
@@ -66,6 +81,15 @@ struct ir_func {
 struct ir_func *ir_func_create(const char *name, int nparams, int nlocals);
 
 /**
+ * @brief Create a new IR block and append it to the given function.
+ *
+ * @param func The IR function.
+ *
+ * @return A pointer to the newly created IR block.
+ */
+struct ir_block *ir_block_create(struct ir_func *func);
+
+/**
  * @brief Allocate a new virtual register for the given IR function.
  *
  * @param func The IR function.
@@ -73,6 +97,15 @@ struct ir_func *ir_func_create(const char *name, int nparams, int nlocals);
  * @return The index of the newly allocated register.
  */
 int ir_new_reg(struct ir_func *func);
+
+/**
+ * @brief Check if the given IR operation is a terminator.
+ *
+ * @param op The IR operation.
+ *
+ * @return true if the operation is a terminator, false otherwise.
+ */
+bool ir_is_terminator(ir_op_t op);
 
 /**
  * @brief Emit a new IR instruction for the given function.
@@ -100,9 +133,47 @@ struct ir_instr *ir_emit(struct ir_func *func, ir_op_t op, int dst, int arg1, in
 int ir_emit_op(struct ir_func *func, ir_op_t op, int arg1, int arg2);
 
 /**
+ * @brief Emit a jump instruction to the given target block.
+ *
+ * @param func The IR function.
+ * @param target The target block to jump to.
+ */
+void ir_emit_jump(struct ir_func *func, struct ir_block *target);
+
+/**
+ * @brief Emit a conditional branch instruction.
+ *
+ * @param func The IR function.
+ * @param cond The condition register.
+ * @param true_target The target block if the condition is true.
+ * @param false_target The target block if the condition is false.
+ */
+void ir_emit_branch(struct ir_func *func, int cond, struct ir_block *true_target, struct ir_block *false_target);
+
+/**
+ * @brief Get the successor blocks of the given IR block.
+ *
+ * @param block The IR block.
+ * @param out An array to store the successor blocks.
+ *
+ * @return The number of successor blocks.
+ */
+int ir_block_successors(const struct ir_block *block, struct ir_block *out[2]);
+
+/**
+ * @brief Place the given IR block in the function, ensuring proper control flow.
+ *
+ * @param func The IR function.
+ * @param block The IR block to place.
+ */
+void ir_block_place(struct ir_func *func, struct ir_block *block);
+
+/**
  * @brief Print the IR function to the given output stream.
  *
  * @param out The output stream.
  * @param func The IR function to print.
  */
 void ir_print(FILE *out, const struct ir_func *func);
+
+

@@ -653,6 +653,65 @@ int expr_lower_var(const struct symbol *s, const struct ir_func *func) {
   return s->kind == SYMBOL_PARAM ? s->which : func->nparams + s->which;
 }
 
+static int expr_lower_step(struct expr *e, struct ir_func *func, ir_op_t op) {
+  assert(e); assert(func);
+
+  int var = expr_lower_var(e->left->symbol, func);
+  int old = ir_emit_op(func, IR_COPY, var, IR_NONE);
+  int one = ir_new_reg(func);
+  ir_emit(func, IR_CONST, one, IR_NONE, IR_NONE)->imm.i = 1;
+  ir_emit(func, op, var, var, one);
+  return old;
+}
+
+void expr_lower_cond(struct expr *e, struct ir_func *func, struct ir_block *true_block, struct ir_block *false_block) {
+  assert(e); assert(func);
+
+  switch (e->kind) {
+    case EXPR_AND: {
+      struct ir_block *rhs = ir_block_create(func);
+      expr_lower_cond(e->left, func, rhs, false_block);
+      ir_block_place(func, rhs);
+      expr_lower_cond(e->right, func, true_block, false_block);
+      return;
+    }
+    case EXPR_OR: {
+      struct ir_block *rhs = ir_block_create(func);
+      expr_lower_cond(e->left, func, true_block, rhs);
+      ir_block_place(func, rhs);
+      expr_lower_cond(e->right, func, true_block, false_block);
+      return;
+    }
+    case EXPR_NOT: {
+      expr_lower_cond(e->left, func, false_block, true_block);
+      return;
+    }
+
+    default:
+      ir_emit_branch(func, expr_lower(e, func), true_block, false_block);
+  }
+}
+
+static int expr_lower_logical(struct expr *e, struct ir_func *func) {
+  int result = ir_new_reg(func);
+  struct ir_block *true_block = ir_block_create(func);
+  struct ir_block *false_block = ir_block_create(func);
+  struct ir_block *join = ir_block_create(func);
+
+  expr_lower_cond(e, func, true_block, false_block);
+
+  ir_block_place(func, true_block);
+  ir_emit(func, IR_CONST, result, IR_NONE, IR_NONE)->imm.i = 1;
+  ir_emit_jump(func, join);
+
+  ir_block_place(func, false_block);
+  ir_emit(func, IR_CONST, result, IR_NONE, IR_NONE)->imm.i = 0;
+  // Fallthrough turns to explicit jump in ir_block_place
+
+  ir_block_place(func, join);
+  return result;
+}
+
 static int expr_lower_binary(struct expr *e, struct ir_func *func, ir_op_t int_op, ir_op_t double_op) {
   assert(e); assert(func);
 
@@ -663,17 +722,6 @@ static int expr_lower_binary(struct expr *e, struct ir_func *func, ir_op_t int_o
                : int_op;  // use int op for bools/chars
 
   return ir_emit_op(func, op, arg1, arg2);
-}
-
-static int expr_lower_step(struct expr *e, struct ir_func *func, ir_op_t op) {
-  assert(e); assert(func);
-
-  int var = expr_lower_var(e->left->symbol, func);
-  int old = ir_emit_op(func, IR_COPY, var, IR_NONE);
-  int one = ir_new_reg(func);
-  ir_emit(func, IR_CONST, one, IR_NONE, IR_NONE)->imm.i = 1;
-  ir_emit(func, op, var, var, one);
-  return old;
 }
 
 int expr_lower(struct expr *e, struct ir_func *func) {
@@ -705,8 +753,9 @@ int expr_lower(struct expr *e, struct ir_func *func) {
     case EXPR_EQ:  return expr_lower_binary(e, func, IR_EQ, IR_FEQ);
     case EXPR_NE:  return expr_lower_binary(e, func, IR_NE, IR_FNE);
 
-    // case EXPR_AND: (TODO)
-    // case EXPR_OR: (TODO)
+    case EXPR_AND:
+    case EXPR_OR: return expr_lower_logical(e, func);
+
     case EXPR_NOT: return ir_emit_op(func, IR_NOT, expr_lower(e->left, func), IR_NONE);
 
     case EXPR_ASGN: {

@@ -176,6 +176,18 @@ struct ir_func;  // Forward declaration
  */
 int expr_lower_var(const struct symbol *s, const struct ir_func *func);
 
+struct ir_block;  // Forward declaration
+
+/**
+ * @brief Lowers a conditional expression to the intermediate representation.
+ *
+ * @param[in] e Pointer to the conditional expression to lower.
+ * @param[in] func Pointer to the IR function context.
+ * @param[in] true_block Pointer to the IR block to jump to if the condition is true.
+ * @param[in] false_block Pointer to the IR block to jump to if the condition is false.
+ */
+void expr_lower_cond(struct expr *e, struct ir_func *func, struct ir_block *true_block, struct ir_block *false_block);
+
 /**
  * @brief Lowers an expression to the intermediate representation.
  *
