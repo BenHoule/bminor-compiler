@@ -231,33 +231,82 @@ static int decl_count_params(const struct param_list *p) {
 }
 
 // Local declarations are lowered into `f`.
-static void decl_lower_local(struct decl *d, struct ir_func *func) {
+// static void decl_lower_local(struct decl *d, struct ir_func *func) {
+//   int var = expr_lower_var(d->symbol, func);
+//   if (d->value) {
+//     int value = expr_lower(d->value, func);
+//     ir_emit(func, IR_COPY, var, value, IR_NONE);
+//   } else {
+//     ir_emit(func, IR_CONST, var, IR_NONE, IR_NONE);  // uninitialized = 0
+//   }
+// }
+
+static bool decl_is_array(const struct decl *d) {
+  assert(d); assert(d->type);
+  return d->type->kind == TYPE_ARRAY || d->type->kind == TYPE_CARRAY;
+}
+
+// Allocates an array of type `t` into register `dst`, one length per dimension.
+static void decl_lower_array(const struct type *t, int dst, struct ir_func *func) {
+  assert(t); assert(func);
+
+  int ndims = 0;
+  for (const struct type *s = t; s->kind == TYPE_ARRAY || s->kind == TYPE_CARRAY; s = s->subtype)
+    ndims++;
+
+  int *dims = memory_allocate((size_t)(ndims) * sizeof *dims);
+  int i = 0;
+  for (const struct type *s = t; i < ndims; s = s->subtype)
+    dims[i++] = expr_lower(s->size, func);
+
+  ir_emit_list(func, IR_ARRAY, dst, dims, ndims);
+}
+
+void decl_lower(struct decl *d, struct ir_func *func) {
   int var = expr_lower_var(d->symbol, func);
-  if (d->value) {
-    int value = expr_lower(d->value, func);
-    ir_emit(func, IR_COPY, var, value, IR_NONE);
+  if (decl_is_array(d)) {
+    decl_lower_array(d->type, var, func);
+    if (d->value) expr_lower_init(d->value, var, func);
+  } else if (d->value) {
+    ir_emit(func, IR_COPY, var, expr_lower(d->value, func), IR_NONE);
   } else {
     ir_emit(func, IR_CONST, var, IR_NONE, IR_NONE);  // uninitialized = 0
   }
 }
 
-// `func = nullptr` lowers a whole program
-struct ir_func *decl_lower(struct decl *d, struct ir_func *func) {
-  assert(d || !func);  // Undeclared funcs should be caught during name resolution
+// Global storage starts zeroed (only initializers/arrays emit code).
+static void decl_lower_global(struct decl *d, struct ir_program *prog) {
+  d->symbol->which = prog->nglobals++;
+  struct ir_func *init = prog->init;
 
-  if (func) {
-    decl_lower_local(d, func);
-    return func;
-  }
+  int value;
+  if (decl_is_array(d)) {
+    value = ir_new_reg(init);
+    decl_lower_array(d->type, value, init);
+    if (d->value) expr_lower_init(d->value, value, init);
+  } else if (d->value) value = expr_lower(d->value, init);
+  else return;
 
-  struct ir_func *head = nullptr, **tail = &head;
+  ir_emit(init, IR_STORE, IR_NONE, ir_emit_global(init, d->symbol), value);
+}
+
+struct ir_program *decl_lower_program(struct decl *d) {
+  struct ir_program *prog = memory_allocate(sizeof *prog);
+  prog->init = ir_func_create("$init", 0, 0);
+
+  for (struct decl *g = d; g; g = g->next)
+    if (g->type->kind != TYPE_FUNCTION) decl_lower_global(g, prog);
+
+  ir_emit(prog->init, IR_RETURN, IR_NONE, IR_NONE, IR_NONE);
+
+  struct ir_func **tail = &prog->funcs;
   for (; d; d = d->next) {
     if (d->type->kind != TYPE_FUNCTION || !d->code) continue;
 
-    func = ir_func_create(
-            d->name,
-            decl_count_params(d->type->params),
-            d->symbol->frame_locals);
+    struct ir_func *func = ir_func_create(
+        d->name,
+        decl_count_params(d->type->params),
+        d->symbol->frame_locals);
 
     stmt_lower(d->code->block, func);
     ir_emit(func, IR_RETURN, IR_NONE, IR_NONE, IR_NONE);  // falling off the end
@@ -266,5 +315,5 @@ struct ir_func *decl_lower(struct decl *d, struct ir_func *func) {
     tail = &func->next;
   }
 
-  return head;
+  return prog;
 }

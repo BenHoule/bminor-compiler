@@ -7,3 +7,9 @@
 - **AST Invariant:** After successful resolution and typechecking, every value expression has a concrete type, every name has a symbol, and every function signature has a concrete return type.
 
 - Uninitialized locals start at 0 (matches the spec's rule for arrays and keeping runs deterministic).
+
+- No mod/pow operations on doubles (for now)
+
+- `ir_program` holds a synthetic `$init` function, which stores each global's initial value and runs before main.
+
+- `EXPR_ASGN` lowers target before the assigned value, so `a[i] = i++` indexes with `i` before incrementing it (C leaves the order unspecified).

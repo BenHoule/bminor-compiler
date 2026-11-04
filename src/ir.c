@@ -1,5 +1,6 @@
 #include "ir.h"
 #include "memory.h"
+#include "symbol.h"
 
 #include <inttypes.h>
 #include <stdlib.h>
@@ -71,6 +72,20 @@ struct ir_instr *ir_emit(struct ir_func *func, ir_op_t op, int dst, int arg1, in
   return instr;
 }
 
+struct ir_instr *ir_emit_list(struct ir_func *func, ir_op_t op, int dst, int *args, int nargs) {
+  struct ir_instr *instr = ir_emit(func, op, dst, IR_NONE, IR_NONE);
+  instr->args = args;
+  instr->nargs = nargs;
+  return instr;
+}
+
+int ir_emit_global(struct ir_func *func, const struct symbol *global) {
+  int dst = ir_new_reg(func);
+  struct ir_instr *instr = ir_emit(func, IR_GLOBAL, dst, IR_NONE, IR_NONE);
+  instr->imm.sym = (struct symbol *)global;
+  return dst;
+}
+
 int ir_emit_op(struct ir_func *func, ir_op_t op, int arg1, int arg2) {
   int dst = ir_new_reg(func);
   ir_emit(func, op, dst, arg1, arg2);
@@ -136,6 +151,11 @@ static const char * ir_op_name( ir_op_t op ) {
 
     [IR_PRINT] = "print",
 
+    [IR_GLOBAL] = "global", [IR_ARRAY] = "array",
+    [IR_INDEX]  = "index",  [IR_LOAD]  = "load",
+    [IR_STORE]  = "store",  [IR_LEN]   = "len",
+    [IR_CALL]   = "call",
+
     [IR_JUMP] = "jump", [IR_BRANCH] = "branch",
     [IR_RETURN] = "ret",
   };
@@ -167,6 +187,20 @@ static void ir_print_instr(FILE *out, const struct ir_instr *instr) {
               ir_kind_name(instr->imm.kind), instr->arg1);
       break;
 
+    case IR_GLOBAL: fprintf(out, " @%s", instr->imm.sym->name); break;
+    case IR_INDEX:
+        fprintf(out, "%s %%%d, %%%d", instr->imm.i ? "" : ".unchecked",
+                instr->arg1, instr->arg2);
+        break;
+    case IR_CALL:
+    case IR_ARRAY:
+          if (instr->op == IR_CALL) fprintf(out, "%s", instr->imm.sym->name);
+          fprintf(out, "(");
+          for (int i = 0; i < instr->nargs; i++)
+            fprintf(out, "%s%%%d", i ? ", " : "", instr->args[i]);
+          fprintf(out, ")");
+          break;
+
       case IR_JUMP:
         fprintf(out, " L%d", instr->imm.target[0]->id);
         break;
@@ -183,18 +217,21 @@ static void ir_print_instr(FILE *out, const struct ir_instr *instr) {
   fprintf(out, "\n");
 }
 
-void ir_print(FILE *out, const struct ir_func *func) {
-  for (; func; func = func->next) {
-    fprintf(out, "function %s (params=%d, locals=%d, regs=%d)\n",
-            func->name, func->nparams, func->nlocals, func->nregs);
+static void ir_print_func(FILE *out, const struct ir_func *func) {
+  fprintf(out, "function %s (params=%d, locals=%d, regs=%d)\n",
+          func->name, func->nparams, func->nlocals, func->nregs);
 
-    for (const struct ir_block *block = func->head; block; block = block->next) {
-      fprintf(out, "L%d:\n", block->id);
-      for (const struct ir_instr *instr = block->head; instr; instr = instr->next) {
-        ir_print_instr(out, instr);
-      }
-    }
-
-    fprintf(out, "\n");
+  for (const struct ir_block *block = func->head; block; block = block->next) {
+    fprintf(out, "L%d:\n", block->id);
+    for (const struct ir_instr *instr = block->head; instr; instr = instr->next)
+      ir_print_instr(out, instr);
   }
+
+  fprintf(out, "\n");
+}
+
+void ir_print(FILE *out, const struct ir_program *prog) {
+  ir_print_func(out, prog->init);
+  for (const struct ir_func *func = prog->funcs; func; func = func->next)
+    ir_print_func(out, func);
 }

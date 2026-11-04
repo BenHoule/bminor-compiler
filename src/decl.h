@@ -89,4 +89,15 @@ struct ir_func;  // Forward declaration
  *
  * @warning Modifies the IR function.
  */
-struct ir_func *decl_lower(struct decl *d, struct ir_func *func);
+void decl_lower(struct decl *d, struct ir_func *func);
+
+struct ir_program;  // Forward declaration
+
+/**
+ * @brief Lowers the given declaration list into an IR program.
+ *
+ * @param[in] d Pointer to the declaration list to lower.
+ *
+ * @return Pointer to the resulting IR program.
+ */
+struct ir_program *decl_lower_program(struct decl *d);

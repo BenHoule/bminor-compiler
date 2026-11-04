@@ -213,6 +213,7 @@ static const char *expr_op_name(expr_t kind) {
     case EXPR_NE:  return "!="; case EXPR_AND: return "&&";
     case EXPR_OR:  return "||"; case EXPR_ASGN: return "=";
     case EXPR_IDX: return "[]"; case EXPR_CALL: return "CALL";
+    case EXPR_INIT: return "INIT"; case EXPR_ARG: return "ARG";
     default: return "?";
   }
 }
@@ -643,24 +644,53 @@ bool expr_validate(const struct expr *e) {
 
 int expr_lower_var(const struct symbol *s, const struct ir_func *func) {
   assert(s); assert(func);
-
-  if (s->kind == SYMBOL_GLOBAL) {
-    // TODO: Implement lowering for global variables
-    fprintf(stderr, "Lowering global variable (%s) not implemented\n", s->name);
-    exit(EXIT_FAILURE);
-  }
+  assert(s->kind != SYMBOL_GLOBAL);  // Globals are sent to `expr_lower_place`
 
   return s->kind == SYMBOL_PARAM ? s->which : func->nparams + s->which;
+}
+
+static int expr_lower_index(struct expr *e, struct ir_func *func) {
+  int array = expr_lower(e->left, func);
+  int index = expr_lower(e->right, func);
+  int addr = ir_new_reg(func);
+  ir_emit(func, IR_INDEX, addr, array, index)->imm.i = e->left->type->kind == TYPE_ARRAY;
+  return addr;
+}
+
+// Where an assignable expression lives: a register, or a memory address.
+struct expr_place {
+  int reg;  // Variable register (or IR_NONE)
+  int addr; // Register holding an address (or IR_NONE)
+};
+
+static struct expr_place expr_lower_place(struct expr *e, struct ir_func *func) {
+  if (e->kind == EXPR_IDX)
+    return (struct expr_place){.reg = IR_NONE, .addr = expr_lower_index(e, func)};
+
+  if (e->symbol->kind == SYMBOL_GLOBAL)
+    return (struct expr_place){.reg = IR_NONE, .addr = ir_emit_global(func, e->symbol)};
+
+  return (struct expr_place){.reg = expr_lower_var(e->symbol, func), .addr = IR_NONE};
+}
+
+static int expr_place_read(struct expr_place place, struct ir_func *func) {
+  if (place.reg != IR_NONE) return ir_emit_op(func, IR_COPY, place.reg, IR_NONE);
+  return ir_emit_op(func, IR_LOAD, place.addr, IR_NONE);
+}
+
+static void expr_place_write(struct expr_place place, struct ir_func *func, int value) {
+  if (place.reg != IR_NONE) ir_emit(func, IR_COPY, place.reg, value, IR_NONE);
+  else ir_emit(func, IR_STORE, IR_NONE, place.addr, value);
 }
 
 static int expr_lower_step(struct expr *e, struct ir_func *func, ir_op_t op) {
   assert(e); assert(func);
 
-  int var = expr_lower_var(e->left->symbol, func);
-  int old = ir_emit_op(func, IR_COPY, var, IR_NONE);
+  struct expr_place place = expr_lower_place(e->left, func);
+  int old = expr_place_read(place, func);
   int one = ir_new_reg(func);
   ir_emit(func, IR_CONST, one, IR_NONE, IR_NONE)->imm.i = 1;
-  ir_emit(func, op, var, var, one);
+  expr_place_write(place, func, ir_emit_op(func, op, old, one));
   return old;
 }
 
@@ -712,6 +742,39 @@ static int expr_lower_logical(struct expr *e, struct ir_func *func) {
   return result;
 }
 
+void expr_lower_init(struct expr *init, int array, struct ir_func *func) {
+  assert(func);
+
+  int64_t i = 0;
+  for (struct expr *arg = init->left; arg; arg = arg->right, i++) {
+    int index = ir_new_reg(func);
+    ir_emit(func, IR_CONST, index, IR_NONE, IR_NONE)->imm.i = i;
+
+    // Typechecker only matches literal sizes against initializer count.
+    int addr = ir_new_reg(func);
+    ir_emit(func, IR_INDEX, addr, array, index)->imm.i = 1;
+
+    if (arg->left->kind == EXPR_INIT)
+      expr_lower_init(arg->left, ir_emit_op(func, IR_LOAD, addr, IR_NONE), func);
+    else
+      ir_emit(func, IR_STORE, IR_NONE, addr, expr_lower(arg->left, func));
+  }
+}
+
+static int expr_lower_call(struct expr *e, struct ir_func *func) {
+  int nargs = 0;
+  for (struct expr *arg = e->right; arg; arg = arg->right) nargs++;
+
+  int *args = memory_allocate((size_t)(nargs ? nargs : 1) * sizeof *args);
+  int i = 0;
+  for (struct expr *arg = e->right; arg; arg = arg->right) {
+    args[i++] = expr_lower(arg->left, func);
+  }
+  int dst = e->type->kind == TYPE_VOID ? IR_NONE : ir_new_reg(func);
+  ir_emit_list(func, IR_CALL, dst, args, nargs)->imm.sym = e->left->symbol;
+  return dst;
+}
+
 static int expr_lower_binary(struct expr *e, struct ir_func *func, ir_op_t int_op, ir_op_t double_op) {
   assert(e); assert(func);
 
@@ -744,7 +807,7 @@ int expr_lower(struct expr *e, struct ir_func *func) {
     case EXPR_INC: return expr_lower_step(e, func, IR_ADD);
     case EXPR_DEC: return expr_lower_step(e, func, IR_SUB);
 
-    // case EXPR_LEN: (TODO)
+    case EXPR_LEN: return ir_emit_op(func, IR_LEN, expr_lower(e->left, func), IR_NONE);
 
     case EXPR_LT:  return expr_lower_binary(e, func, IR_LT, IR_FLT);
     case EXPR_GT:  return expr_lower_binary(e, func, IR_GT, IR_FGT);
@@ -759,16 +822,19 @@ int expr_lower(struct expr *e, struct ir_func *func) {
     case EXPR_NOT: return ir_emit_op(func, IR_NOT, expr_lower(e->left, func), IR_NONE);
 
     case EXPR_ASGN: {
+      struct expr_place place = expr_lower_place(e->left, func);
       int value = expr_lower(e->right, func);
-      int var = expr_lower_var(e->left->symbol, func);
-      ir_emit(func, IR_COPY, var, value, IR_NONE);
+      expr_place_write(place, func, value);
       return value;
     }
 
-    // case EXPR_IDX: (TODO)
-    // case EXPR_CALL: (TODO)
-    // case EXPR_ARG: (TODO)
-    // case EXPR_INIT: (TODO)
+    case EXPR_IDX: return ir_emit_op(func, IR_LOAD, expr_lower_index(e, func), IR_NONE);
+    case EXPR_CALL: return expr_lower_call(e, func);
+
+    case EXPR_ARG:
+    case EXPR_INIT:
+      fprintf(stderr, "internal: list node passed to expr_lower\n");
+      abort();
 
     case EXPR_INT: {
       int dst = ir_new_reg(func);
@@ -804,10 +870,12 @@ int expr_lower(struct expr *e, struct ir_func *func) {
 
     // Later assignment to the variable cannot change this value
     case EXPR_NAME:
-      return ir_emit_op(func, IR_COPY, expr_lower_var(e->symbol, func), IR_NONE);
+      return expr_place_read(expr_lower_place(e, func), func);
 
     default:
       fprintf(stderr, "Lowering for expression kind (%s) not implemented\n", expr_op_name(e->kind));
       exit(EXIT_FAILURE);
   }
 }
+
+

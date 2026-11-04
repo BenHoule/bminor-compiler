@@ -28,17 +28,30 @@ typedef enum {
   IR_NOT,
   IR_PRINT,  // print arg1 as imm.kind
 
+  // Memory
+  IR_GLOBAL,  // dst = address of global imm.sym
+  IR_ARRAY,   // dst = new zeroed array; args = lengths, outermost first
+  IR_INDEX,   // dst = address of arg1[arg2]; bounds-checked when imm.i != 0
+  IR_LOAD,    // dst = *arg1
+  IR_STORE,   // *arg1 = arg2
+  IR_LEN,     // dst = length of array at arg1
+
+  IR_CALL,    // dst = imm.sym(args...); IR_NONE for void
+
   // Terminators (exactly one per block)
   IR_JUMP,   // jump to imm.target[0]
   IR_BRANCH, // if arg1 goto imm.target[0] else goto imm.target[1]
   IR_RETURN  // return arg1 (IR_NONE for void)
 } ir_op_t;
 
-struct ir_block;  // Forward declaration
+// Forward declarations
+struct ir_block;
+struct symbol;
 
 struct ir_instr {
   ir_op_t op;
   int dst, arg1, arg2;  // Virtual Registers (IR_NONE when unused)
+  int *args, nargs;     // IR_CALL arguments / IR_ARRAY lengths
 
   union {
     int64_t i;
@@ -46,6 +59,7 @@ struct ir_instr {
     const char *s;
     type_t kind;
     struct ir_block *target[2];
+    const struct symbol *sym;  // For IR_GLOBAL and IR_CALL
   } imm;
 
   struct ir_instr *next;
@@ -121,6 +135,29 @@ bool ir_is_terminator(ir_op_t op);
 struct ir_instr *ir_emit(struct ir_func *func, ir_op_t op, int dst, int arg1, int arg2);
 
 /**
+ * @brief Emit a new IR instruction with a list of argument registers.
+ *
+ * @param func The IR function.
+ * @param op The IR operation.
+ * @param dst The destination register.
+ * @param args The array of argument registers.
+ * @param nargs The number of argument registers.
+ *
+ * @return A pointer to the newly created IR instruction.
+ */
+struct ir_instr *ir_emit_list(struct ir_func *func, ir_op_t op, int dst, int *args, int nargs);
+
+/**
+ * @brief Emit a global variable instruction.
+ *
+ * @param func The IR function.
+ * @param global The global symbol.
+ *
+ * @return The destination register holding the global variable.
+ */
+int ir_emit_global(struct ir_func *func, const struct symbol *global);
+
+/**
  * @brief Emit a new IR instruction with an automatically allocated destination register.
  *
  * @param func The IR function.
@@ -168,12 +205,18 @@ int ir_block_successors(const struct ir_block *block, struct ir_block *out[2]);
  */
 void ir_block_place(struct ir_func *func, struct ir_block *block);
 
+struct ir_program {
+  struct ir_func *init;    // Stores global values (runs before main)
+  struct ir_func *funcs;   // Defined functions (in source order)
+  int nglobals;            // Number of global variables
+};
+
 /**
  * @brief Print the IR function to the given output stream.
  *
  * @param out The output stream.
  * @param func The IR function to print.
  */
-void ir_print(FILE *out, const struct ir_func *func);
+void ir_print(FILE *out, const struct ir_program *prog);
 
 

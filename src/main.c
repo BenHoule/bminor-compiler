@@ -100,7 +100,7 @@ static int compile(stage_t stage, const char *flag) {
   }
   if (stage == STAGE_VALIDATE) return EXIT_SUCCESS;
 
-  struct ir_func *program = decl_lower(parser_result, nullptr);
+  struct ir_program *program = decl_lower_program(parser_result);
   if (stage == STAGE_IR) {
     ir_print(stdout, program);
     return EXIT_SUCCESS;

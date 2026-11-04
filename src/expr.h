@@ -189,6 +189,15 @@ struct ir_block;  // Forward declaration
 void expr_lower_cond(struct expr *e, struct ir_func *func, struct ir_block *true_block, struct ir_block *false_block);
 
 /**
+ * @brief Lowers an initializer expression to the intermediate representation.
+ *
+ * @param[in] init Pointer to the initializer expression to lower.
+ * @param[in] array Index of the array being initialized.
+ * @param[in] func Pointer to the IR function context.
+ */
+void expr_lower_init(struct expr *init, int array, struct ir_func *func);
+
+/**
  * @brief Lowers an expression to the intermediate representation.
  *
  * @param[in] e Pointer to the expression to lower.

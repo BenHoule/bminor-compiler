@@ -1,6 +1,8 @@
 #pragma once
 
-struct ir_func;  // Forward declaration
+// Forward declarations
+struct ir_func;
+struct ir_program;
 
 /**
  * Runs `main` from the given IR program.
@@ -9,4 +11,4 @@ struct ir_func;  // Forward declaration
  *
  * @return The program's exit status.
  */
-int interp_run(const struct ir_func *program);
+int interp_run(const struct ir_program *program);
