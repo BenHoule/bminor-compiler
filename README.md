@@ -25,16 +25,21 @@ make test
 | `-parse` | Check syntax and report success |
 | `-print` | Print a parseable, conservatively parenthesized program |
 | `-resolve` | Bind identifiers and print symbol positions |
-| `-typecheck` | Resolve, typecheck, and validate the typed AST |
-| `-codegen` | Check the frontend, then report that generation is unimplemented |
+| `-typecheck` | Resolve and typecheck declarations |
+| `-validate` | Run frontend checks and validate typed-AST invariants |
+| `-ir` | Lower the checked program and print its intermediate representation |
+| `-interp` | Lower the checked program and execute it in the IR interpreter |
+| `-codegen` | Check and lower the program, then report that native code generation is unimplemented |
 
 Exit codes: **0** for success, **1** for compile/input errors, **2** for CLI
 usage errors.
 
-The pipeline is scanner -> parser -> AST -> resolver -> typechecker -> future IR.
+The implemented pipeline is scanner -> parser -> AST -> resolver -> typechecker
+-> AST validation -> IR lowering. The `-interp` stage executes the lowered IR;
+native code generation is not implemented.
 The [source directory guide](src/README.md) documents ownership, AST invariants,
-and the generated-program ABI. Starter filenames and the AST-centered structure
-are retained.
+the module layout, and the generated-program ABI. Starter filenames and the
+AST-centered structure are retained.
 
 Flex and Bison generate files under `build/`; edit their source specifications,
 not the generated C files. The [runtime library](src/library.c) links with

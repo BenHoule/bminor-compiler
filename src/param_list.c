@@ -18,7 +18,7 @@ struct param_list *param_list_create(char *name, struct type *type, struct param
   return p;
 }
 
-void param_list_print( struct param_list *a ) {
+void param_list_print(struct param_list *a) {
   printf("(");
   for (; a; a = a->next) {
     printf("%s: ", a->name);
@@ -28,7 +28,7 @@ void param_list_print( struct param_list *a ) {
   printf(")");
 }
 
-void param_list_resolve( struct param_list *a ) {
+void param_list_resolve(struct param_list *a) {
   int param_index = 0;
 
   for(; a; a = a->next) {

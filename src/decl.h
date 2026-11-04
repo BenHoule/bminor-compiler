@@ -85,8 +85,6 @@ struct ir_func;  // Forward declaration
  * @param[in] d Pointer to the declaration list to lower.
  * @param[in] func Pointer to the IR function context.
  *
- * @return Pointer to the IR function context after lowering.
- *
  * @warning Modifies the IR function.
  */
 void decl_lower(struct decl *d, struct ir_func *func);

@@ -51,7 +51,10 @@ linked against a compiled bminor program, not against the compiler itself.
 Project implementation notes
 ----------------------------
 
-Current pipeline is scanner -> parser -> AST -> resolver -> typechecker; IR/code generation is not implemented yet.
+The current command-line pipeline is scanner -> parser -> AST -> resolver ->
+typechecker -> AST validation -> IR lowering. `-ir` prints the lowered IR and
+`-interp` executes it. Native code generation is not implemented. `library.c`
+and `library.h` provide the runtime ABI for generated programs;
 
 Ownership:
 - AST nodes, allocated types, symbols, and accepted token strings are owned by

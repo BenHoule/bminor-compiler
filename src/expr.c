@@ -27,49 +27,49 @@ struct expr *expr_create(expr_t kind, struct expr *left, struct expr *right) {
   return e;
 }
 struct expr *expr_create_name(const char *n) {
-  struct expr *e = expr_create( EXPR_NAME, nullptr, nullptr );
+  struct expr *e = expr_create(EXPR_NAME, nullptr, nullptr);
   e->name = n ? memory_copy_string(n) : nullptr;
   e->symbol = nullptr;
   return e;
 }
 struct expr *expr_create_integer_literal(int64_t i) {
-  struct expr *e = expr_create( EXPR_INT, nullptr, nullptr );
+  struct expr *e = expr_create(EXPR_INT, nullptr, nullptr);
   e->int_literal = i;
   return e;
 }
 struct expr *expr_create_double_literal(double d) {
-  struct expr *e = expr_create( EXPR_DOUBLE, nullptr, nullptr );
+  struct expr *e = expr_create(EXPR_DOUBLE, nullptr, nullptr);
   e->double_literal = d;
   return e;
 }
 struct expr *expr_create_boolean_literal(bool b) {
-  struct expr *e = expr_create( EXPR_BOOL, nullptr, nullptr );
+  struct expr *e = expr_create(EXPR_BOOL, nullptr, nullptr);
   e->bool_literal = b;
   return e;
 }
 struct expr *expr_create_char_literal(char c) {
-  struct expr *e = expr_create( EXPR_CHAR, nullptr, nullptr );
+  struct expr *e = expr_create(EXPR_CHAR, nullptr, nullptr);
   e->char_literal = c;
   return e;
 }
 struct expr *expr_create_string_literal(const char *str) {
-  struct expr *e = expr_create( EXPR_STR, nullptr, nullptr );
+  struct expr *e = expr_create(EXPR_STR, nullptr, nullptr);
   e->string_literal = str ? memory_copy_string(str) : nullptr;
   return e;
 }
 struct expr *expr_create_false(void) {
-  struct expr *e = expr_create( EXPR_BOOL, nullptr, nullptr );
+  struct expr *e = expr_create(EXPR_BOOL, nullptr, nullptr);
   e->bool_literal = false;
   return e;
 }
 struct expr *expr_create_true(void) {
-  struct expr *e = expr_create( EXPR_BOOL, nullptr, nullptr );
+  struct expr *e = expr_create(EXPR_BOOL, nullptr, nullptr);
   e->bool_literal = true;
   return e;
 }
 
 
-static void expr_print_binop( struct expr *e, const char *op) {
+static void expr_print_binop(struct expr *e, const char *op) {
   printf("(");
   expr_print(e->left);
   printf(" %s ", op);
@@ -166,7 +166,7 @@ void expr_print(struct expr *e) {
  * traversal. See the "Expression resolver traversal" section in src/README.md
  * for a copyable implementation and its invariants.
  */
-void expr_resolve( struct expr *e ) {
+void expr_resolve(struct expr *e) {
   if (!e) return;
   size_t count = 0, capacity = 32;
   struct expr **stack = malloc(capacity * sizeof *stack);

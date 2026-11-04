@@ -39,7 +39,7 @@ struct type {
  *
  * @warning Compilation-owned; released by memory_release(), not individually.
  */
-struct type *type_create( type_t kind, struct type *subtype, struct param_list *params, struct expr *size );
+struct type *type_create(type_t kind, struct type *subtype, struct param_list *params, struct expr *size);
 
 // Constructors (aka type_create wrappers)
 struct type *type_create_void(void);
@@ -68,7 +68,7 @@ bool type_equals(struct type *a, struct type *b);
  *
  * @param[in] t Pointer to the type.
  */
-void type_print( struct type *t );
+void type_print(struct type *t);
 
 /**
  * @brief Resolves names in array-size expressions.

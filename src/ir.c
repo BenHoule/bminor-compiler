@@ -125,7 +125,7 @@ void ir_block_place(struct ir_func *func, struct ir_block *block) {
   ir_block_append(func, block);
 }
 
-static const char * ir_op_name( ir_op_t op ) {
+static const char * ir_op_name(ir_op_t op) {
   static const char *names[] = {
     [IR_CONST]  = "const",  [IR_DCONST] = "dconst",
     [IR_STRING] = "string", [IR_COPY]   = "copy",
@@ -162,7 +162,7 @@ static const char * ir_op_name( ir_op_t op ) {
   return names[op];
 }
 
-static const char * ir_kind_name( type_t kind ) {
+static const char * ir_kind_name(type_t kind) {
   switch (kind) {
     case TYPE_BOOLEAN: return "boolean";
     case TYPE_CHAR:    return "char";

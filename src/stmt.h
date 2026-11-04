@@ -45,7 +45,7 @@ struct stmt {
 };
 
 // DEPRECATED: From dthain starter code - kept for posterity
-// struct stmt *stmt_create( stmt_t kind, struct decl *decl, struct expr *init_expr, struct expr *expr, struct expr *next_expr, struct stmt *body, struct stmt *else_body, struct stmt *next );
+// struct stmt *stmt_create(stmt_t kind, struct decl *decl, struct expr *init_expr, struct expr *expr, struct expr *next_expr, struct stmt *body, struct stmt *else_body, struct stmt *next);
 
 /**
  * @brief Creates a statement node of the given kind on the heap.
@@ -58,9 +58,9 @@ struct stmt {
  * @warning Compilation-owned; released by memory_release().
  */
 struct stmt *stmt_create_simple(stmt_t kind, struct expr *expr);
-struct stmt *stmt_create_expr( struct expr *expr);
-struct stmt *stmt_create_print( struct expr *expr );
-struct stmt *stmt_create_return( struct expr *expr );
+struct stmt *stmt_create_expr(struct expr *expr);
+struct stmt *stmt_create_print(struct expr *expr);
+struct stmt *stmt_create_return(struct expr *expr);
 
 /**
  * @brief Creates a declaration statement node on the heap.
@@ -95,7 +95,7 @@ struct stmt *stmt_create_block(struct stmt *body);
  *
  * @warning Compilation-owned; released by memory_release().
  */
-struct stmt *stmt_create_if_else( struct expr *cond_expr, struct stmt *body, struct stmt *else_body );
+struct stmt *stmt_create_if_else(struct expr *cond_expr, struct stmt *body, struct stmt *else_body);
 
 /**
  * @brief Creates a for statement node on the heap.
@@ -109,7 +109,7 @@ struct stmt *stmt_create_if_else( struct expr *cond_expr, struct stmt *body, str
  *
  * @warning Compilation-owned; released by memory_release().
  */
-struct stmt *stmt_create_for( struct expr *init_expr, struct expr *cond_expr, struct expr *loop_expr, struct stmt *body );
+struct stmt *stmt_create_for(struct expr *init_expr, struct expr *cond_expr, struct expr *loop_expr, struct stmt *body);
 
 /**
  * @brief Prints the given statement with the specified indentation.

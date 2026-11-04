@@ -6,7 +6,7 @@
 #include <stddef.h>
 #include <stdio.h>
 
-struct symbol *symbol_create( symbol_t kind, struct type *type, char *name ) {
+struct symbol *symbol_create(symbol_t kind, struct type *type, char *name) {
   struct symbol *s = memory_allocate(sizeof *s);
   s->kind = kind;
   s->type = type;

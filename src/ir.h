@@ -215,7 +215,7 @@ struct ir_program {
  * @brief Print the IR function to the given output stream.
  *
  * @param out The output stream.
- * @param func The IR function to print.
+ * @param prog The IR program to print.
  */
 void ir_print(FILE *out, const struct ir_program *prog);
 
