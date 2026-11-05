@@ -1,0 +1,20 @@
+// NaN is unordered: every comparison is false except !=, which is true.
+compare: function void (a: double, b: double) = {
+	print a < b, " ", a <= b, " ", a > b, " ", a >= b, " ", a == b, " ", a != b, "\n";
+}
+
+main: function integer () = {
+	zero: double = 0.0;
+	nan: double = zero / zero;
+	compare(nan, 1.0);
+	compare(1.0, nan);
+	compare(nan, nan);
+	compare(1.0, 2.0);
+	compare(2.0, 2.0);
+	compare(-0.0, 0.0);
+
+	if (nan != nan) print "nan != nan\n"; else print "WRONG\n";
+	if (nan == nan) print "WRONG\n"; else print "nan == nan is false\n";
+	if (nan < 1.0 || nan >= 1.0) print "WRONG\n"; else print "nan is unordered\n";
+	return 0;
+}

@@ -38,8 +38,7 @@ The implemented pipeline is scanner -> parser -> AST -> resolver -> typechecker
 -> AST validation -> IR lowering. The `-interp` stage executes the lowered IR;
 native code generation is not implemented.
 The [source directory guide](src/README.md) documents ownership, AST invariants,
-the module layout, and the generated-program ABI. Starter filenames and the
-AST-centered structure are retained.
+the module layout, and the generated-program ABI.
 
 Flex and Bison generate files under `build/`; edit their source specifications,
 not the generated C files. The [runtime library](src/library.c) links with

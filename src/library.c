@@ -65,3 +65,8 @@ int64_t integer_power(int64_t x, int64_t y) {
   }
   return result;
 }
+
+void bminor_division_by_zero(void) {
+  fprintf(stderr, "runtime error: division by zero\n");
+  exit(EXIT_FAILURE);
+}

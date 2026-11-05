@@ -1,11 +1,12 @@
-#include "scanner.h"
 #include "bminor.tab.h"
 #include "bminor_parser.h"
+#include "codegen.h"
 #include "decl.h"
 #include "interp.h"
 #include "ir.h"
 #include "memory.h"
 #include "resolver.h"
+#include "scanner.h"
 #include "scope.h"
 #include "typecheck.h"
 
@@ -56,7 +57,7 @@ static void print_usage(const char *program) {
           "        -ir -interp -codegen (not implemented)\n", program);
 }
 
-static int compile(stage_t stage, const char *flag) {
+static int compile(stage_t stage) {
   if (stage == STAGE_SCAN) {
     int token;
     while ((token = scanner_next_token()) != 0) {
@@ -110,8 +111,8 @@ static int compile(stage_t stage, const char *flag) {
   if (stage == STAGE_INTERP) return interp_run(program);
 
   if (stage == STAGE_CODEGEN) {
-    fprintf(stderr, "bminor: stage not implemented (%s)\n", flag);
-    return EXIT_COMPILE_ERROR;
+    codegen_program(stdout, program);
+    return EXIT_SUCCESS;
   }
 
   return EXIT_SUCCESS;
@@ -147,7 +148,7 @@ int main(int argc, char *argv[]) {
   }
 
   scanner_open(input);
-  int status = compile(stage, argv[1]);
+  int status = compile(stage);
   scanner_close();
 
   if (fclose(input) != 0) {

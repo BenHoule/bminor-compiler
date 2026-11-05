@@ -11,8 +11,11 @@
 # the native code generator, and every optimization.
 #
 # Env:
-#   BMINOR_BIN=path       compiler to test (default ./bminor)
-#   BMINOR_RUN=-interp    stage flag that runs a program (default -interp)
+#   BMINOR_BIN=path       compiler to test (default $BMINOR, then ./bminor)
+#   BMINOR_RUN=-interp    -interp runs the IR interpreter; -codegen compiles,
+#                         links with BMINOR_RUNTIME, and runs the executable
+#   BMINOR_RUNTIME=path   runtime object for -codegen (default build/library.o)
+#   BMINOR_CC=cc          assembler/linker driver (default gcc-14)
 #   BMINOR_ONLY="a b"     run only the named programs
 #
 # Usage: test/programs/run.sh
@@ -21,16 +24,41 @@ set -u
 
 cd "$(dirname "$0")/../.." || exit 1
 
-BIN=${BMINOR_BIN:-./bminor}
+BIN=${BMINOR_BIN:-${BMINOR:-./bminor}}
 RUN=${BMINOR_RUN:--interp}
+RUNTIME=${BMINOR_RUNTIME:-build/library.o}
+CC=${BMINOR_CC:-gcc-14}
 [[ -x $BIN ]] || { echo "error: $BIN not built; run 'make' first"; exit 1; }
+if [[ $RUN == -codegen && ! -f $RUNTIME ]]; then
+    echo "error: runtime $RUNTIME not built; run 'make' first"; exit 1
+fi
 
 RED=$'\e[31m'; GREEN=$'\e[32m'; DIM=$'\e[2m'; RESET=$'\e[0m'
 [[ -t 1 ]] || { RED=; GREEN=; DIM=; RESET=; }
 
 pass=0; fail=0; failed=()
-out=$(mktemp); err=$(mktemp)
-trap 'rm -f "$out" "$err"' EXIT
+out=$(mktemp); err=$(mktemp); asm=$(mktemp --suffix=.s); exe=$(mktemp)
+trap 'rm -f "$out" "$err" "$asm" "$exe"' EXIT
+
+# Sets `status`, or `why` when the program could not be built.
+run_program() {
+    local file=$1
+    why=""
+    if [[ $RUN != -codegen ]]; then
+        timeout 10 "$BIN" "$RUN" "$file" >"$out" 2>"$err"
+        status=$?
+        return
+    fi
+
+    if ! "$BIN" -codegen "$file" >"$asm" 2>"$err"; then
+        why="compiler failed"; return
+    fi
+    if ! "$CC" -o "$exe" "$asm" "$RUNTIME" -lm 2>"$err"; then
+        why="assemble/link failed"; return
+    fi
+    timeout 10 "$exe" >"$out" 2>"$err"
+    status=$?
+}
 
 printf '\n%s=== programs (%s) ===%s\n' "$DIM" "$RUN" "$RESET"
 
@@ -45,11 +73,11 @@ for file in test/programs/good/*.bminor; do
     want_status=0
     [[ -f $status_file ]] && want_status=$(<"$status_file")
 
-    timeout 10 "$BIN" "$RUN" "$file" >"$out" 2>"$err"
-    status=$?
+    run_program "$file"
 
-    why=""
-    if [[ $status -eq 124 ]]; then
+    if [[ -n $why ]]; then
+        :
+    elif [[ $status -eq 124 ]]; then
         why="timed out"
     elif [[ $status -ne $want_status ]]; then
         why="exit status $status, expected $want_status"
