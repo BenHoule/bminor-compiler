@@ -308,6 +308,7 @@ struct ir_program *decl_lower_program(struct decl *d) {
         decl_count_params(d->type->params),
         d->symbol->frame_locals);
 
+    func->symbol = d->symbol;
     stmt_lower(d->code->block, func);
     ir_emit(func, IR_RETURN, IR_NONE, IR_NONE, IR_NONE);  // falling off the end
 
