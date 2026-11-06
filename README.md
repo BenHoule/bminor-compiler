@@ -89,6 +89,13 @@ book_tests/run-tests.sh ./bminor -parse book_tests/parser
 `make clean` removes build artifacts, generated test `out/` directories, and
 book-test `.bminor.out` files.
 
+## Instruction mapping examples
+
+The standalone [C instruction examples](instruction_examples/README.md) compare
+basic C operations with unoptimized LLVM IR and x86-64 assembly. With Clang
+installed, run `make -C instruction_examples` to generate both output stages.
+These examples are separate from the compiler build and tests.
+
 ## Tooling
 
 - **EditorConfig / clang-format:** shared formatting settings; keep bulk
