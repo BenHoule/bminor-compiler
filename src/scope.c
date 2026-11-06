@@ -33,7 +33,7 @@ void scope_enter(void) {
 }
 
 void scope_exit(void) {
-  assert(current_scope != nullptr);
+  assert(current_scope != NULL);
   struct scope *old_scope = current_scope;
   current_scope = current_scope->parent;
   hash_table_delete(old_scope->symbols);
@@ -61,6 +61,6 @@ struct symbol *scope_lookup(const char *name) {
 }
 
 struct symbol *scope_lookup_local(const char *name) {
-  assert(current_scope != nullptr);
+  assert(current_scope != NULL);
   return hash_table_lookup(current_scope->symbols, name);
 }
