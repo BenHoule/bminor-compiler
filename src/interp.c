@@ -85,9 +85,10 @@ static union value interp_call(const struct ir_func *func, const int *args, cons
         case IR_STRING: dst->s = instr->imm.s; break;
         case IR_COPY:   *dst = arg1; break;
 
-        case IR_ADD:  dst->i = arg1.i + arg2.i; break;
-        case IR_SUB:  dst->i = arg1.i - arg2.i; break;
-        case IR_MUL:  dst->i = arg1.i * arg2.i; break;
+        // Conversion nonsense enables wrap-around on integer overflow (matches x86 behavior)
+        case IR_ADD:  dst->i = (int64_t)((uint64_t)arg1.i + (uint64_t)arg2.i); break;
+        case IR_SUB:  dst->i = (int64_t)((uint64_t)arg1.i - (uint64_t)arg2.i); break;
+        case IR_MUL:  dst->i = (int64_t)((uint64_t)arg1.i * (uint64_t)arg2.i); break;
         case IR_DIV:
         case IR_MOD:
           if (arg2.i == 0) {
@@ -97,7 +98,7 @@ static union value interp_call(const struct ir_func *func, const int *args, cons
           dst->i = instr->op == IR_DIV ? arg1.i / arg2.i : arg1.i % arg2.i;
           break;
         case IR_POW:  dst->i = integer_power(arg1.i, arg2.i); break;
-        case IR_NEG:  dst->i = -arg1.i; break;
+        case IR_NEG:  dst->i = (int64_t)(0 - (uint64_t)arg1.i); break;
 
         case IR_FADD: dst->d = arg1.d + arg2.d; break;
         case IR_FSUB: dst->d = arg1.d - arg2.d; break;

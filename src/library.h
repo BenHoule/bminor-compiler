@@ -1,5 +1,5 @@
 
-/* Generated programs link this ABI (the compiler executable does not). */
+/* Generated programs link this ABI, as does the interpreter (`-interp`) */
 #pragma once
 
 #include <stdint.h>
