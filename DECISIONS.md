@@ -28,4 +28,4 @@
 
 - **NaN-correct float compares:** `ucomisd` reports "unordered" through `PF`, `ZF` and `CF` all set. Testing `a < b` as `b > a` with `seta (CF=0 and ZF=0)` makes `NaN` compare `false` for free. `==` needs `ZF=1` and `PF=0`, and `!=` needs `ZF=0` or `PF=1`.
 
-**`-x` for doubles** flips the sign bit with `btcq $63` instead of computing `0 - x`. Subtraction would give `+0.0` for `-(0.0)`.
+- **`-x` for doubles** flips the sign bit with `btcq $63` instead of computing `0 - x`. Subtraction would give `+0.0` for `-(0.0)`.

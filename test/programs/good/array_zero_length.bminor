@@ -1,0 +1,9 @@
+// Lengths only known at runtime are checked when the array is allocated.
+main: function integer () = {
+	n: integer = 2;
+	print "before\n";
+	n = n - 2;
+	a: array [n] integer;
+	print "unreachable ", #a, "\n";
+	return 0;
+}

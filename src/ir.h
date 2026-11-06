@@ -73,7 +73,7 @@ struct ir_block {
 
 struct ir_func {
   const char *name;
-    const struct symbol *symbol;  // nullptr for $init
+  const struct symbol *symbol;  // nullptr for $init
   int nparams;  // %0 .. %p-1
   int nlocals;  // %p .. %l-1
   int nregs;    // %l .. %r-1  (temp registers)

@@ -1,0 +1,10 @@
+// The bounds check must reject negative indices, not just ones past the end.
+main: function integer () = {
+	a: array [3] integer = {1, 2, 3};
+	i: integer = 0;
+	print a[i], "\n";
+	i = i - 1;
+	print a[i], "\n";
+	print "unreachable\n";
+	return 0;
+}

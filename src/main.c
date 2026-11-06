@@ -54,7 +54,7 @@ static stage_t stage_from_flag(const char *flag) {
 static void print_usage(const char *program) {
   fprintf(stderr, "Usage: %s <stage> <input file>\n"
           "Stages: -scan -parse -print -resolve -typecheck -validate\n"
-          "        -ir -interp -codegen (not implemented)\n", program);
+          "        -ir -interp -codegen\n", program);
 }
 
 static int compile(stage_t stage) {
