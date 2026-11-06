@@ -9,7 +9,7 @@ struct scope {
   struct scope *parent;
   struct hash_table *symbols;
 };
-static struct scope *current_scope = nullptr;
+static struct scope *current_scope = NULL;
 
 static int current_depth = 0;
 
@@ -57,7 +57,7 @@ struct symbol *scope_lookup(const char *name) {
     if (sym) return sym;
     scope = scope->parent;
   }
-  return nullptr;
+  return NULL;
 }
 
 struct symbol *scope_lookup_local(const char *name) {
