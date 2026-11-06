@@ -53,8 +53,11 @@ Project implementation notes
 
 The current command-line pipeline is scanner -> parser -> AST -> resolver ->
 typechecker -> AST validation -> IR lowering. `-ir` prints the lowered IR and
-`-interp` executes it. Native code generation is not implemented. `library.c`
-and `library.h` provide the runtime ABI for generated programs;
+`-interp` executes it. `-codegen` emits Linux x86-64 GNU assembler in AT&T
+syntax using the System V AMD64 ABI. Assemble and link with GCC.
+`library.c` and `library.h` provide the runtime ABI for generated programs;
+compile the runtime with `-std=c23` and link it with the generated assembly
+and `-lm`. See the [compile-and-run instructions](../README.md#compile-and-run-a-program).
 
 Ownership:
 - AST nodes, allocated types, symbols, and accepted token strings are owned by

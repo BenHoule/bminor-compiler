@@ -29,20 +29,52 @@ make test
 | `-validate` | Run frontend checks and validate typed-AST invariants |
 | `-ir` | Lower the checked program and print its intermediate representation |
 | `-interp` | Lower the checked program and execute it in the IR interpreter |
-| `-codegen` | Check and lower the program, then report that native code generation is unimplemented |
+| `-codegen` | Check and lower the program, then emit x86-64 GNU assembler (AT&T syntax) to stdout |
 
 Exit codes: **0** for success, **1** for compile/input errors, **2** for CLI
 usage errors.
 
 The implemented pipeline is scanner -> parser -> AST -> resolver -> typechecker
 -> AST validation -> IR lowering. The `-interp` stage executes the lowered IR;
-native code generation is not implemented.
+`-codegen` emits native assembly for Linux x86-64 using the System V AMD64 ABI.
 The [source directory guide](src/README.md) documents ownership, AST invariants,
 the module layout, and the generated-program ABI.
 
 Flex and Bison generate files under `build/`; edit their source specifications,
 not the generated C files. The [runtime library](src/library.c) links with
-generated programs, never with the compiler.
+generated programs.
+
+## Compile and run a program
+
+```sh
+make
+./bminor -codegen test/programs/good/arithmetic.bminor > build/arithmetic.s
+gcc-14 -std=c23 build/arithmetic.s src/library.c -o build/arithmetic
+./build/arithmetic
+```
+
+Expected output:
+
+```text
+3 -3 1 -1
+1024 9 7 3
+2 512 -4
+```
+
+The C23 flag is required when compiling the runtime source. The runtime supplies
+printing, integer exponentiation, array allocation, and runtime-error helpers;
+assembly alone is not a complete executable. GCC also links the C startup code
+that calls the generated `main`.
+
+The `.s` file can also be explicitly sent to an object file before linking the default library:
+```sh
+gcc-14 -x assembler -c test.asm -o build/program.o
+gcc-14 -std=c23 build/program.o src/library.c -lm -o build/program
+./build/program
+```
+
+To execute without assembling or linking, use
+`./bminor -interp test/programs/good/arithmetic.bminor`.
 
 ## Development and testing
 
