@@ -1,0 +1,28 @@
+function $init (params=0, locals=0, regs=0)
+L0:
+  ret
+
+function f (params=1, locals=2, regs=22)
+L0:
+  %3 = const 2
+  %4 = const 3
+  %5 = const 4
+  %6 = const 12
+  %7 = const 14
+  %1 = const 14
+  %8 = copy %0
+  %9 = const 1
+  %10 = copy %8
+  %11 = const 0
+  %12 = copy %10
+  %2 = copy %12
+  %13 = const 14
+  %14 = const 10
+  %15 = const 1
+  jump L1
+L1:
+  %16 = copy %1
+  %17 = copy %2
+  %18 = add %16, %17
+  ret %18
+

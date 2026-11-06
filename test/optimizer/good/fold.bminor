@@ -1,0 +1,8 @@
+// IR snapshot: constants fold, identities simplify, a constant branch becomes a
+// jump, and the block it can no longer reach is deleted.
+f: function integer (x: integer) = {
+	a: integer = 2 + 3 * 4;
+	b: integer = x * 1 + 0;
+	if (a > 10) return a + b;
+	return 7 / 0;
+}

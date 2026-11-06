@@ -1,0 +1,7 @@
+// The optimizer must not fold away (or fail on) a constant division by zero.
+main: function integer () = {
+	print "before\n";
+	print 7 / 0, "\n";
+	print "unreachable\n";
+	return 0;
+}

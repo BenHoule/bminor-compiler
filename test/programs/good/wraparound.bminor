@@ -1,0 +1,12 @@
+// Integer overflow wraps (two's complement) in every back end and in the optimizer.
+main: function integer () = {
+	max: integer = 9223372036854775807;
+	min: integer = max + 1;
+	print min, "\n";
+	print min - 1, "\n";
+	print -min, "\n";
+	print max * 2, "\n";
+	print 9223372036854775807 + 1, "\n";
+	print -(9223372036854775807 + 1), "\n";
+	return 0;
+}

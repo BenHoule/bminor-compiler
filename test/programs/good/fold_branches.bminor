@@ -1,0 +1,17 @@
+// Constant conditions and dead code after return must not change behaviour.
+pick: function integer (x: integer) = {
+	if (1 < 2) return x * 1 + 0;
+	print "unreachable\n";
+	return -1;
+}
+
+main: function integer () = {
+	n: integer = 3 * 4 - 2;
+	if (n == 10) print "ten\n"; else print "WRONG\n";
+	if (false) print "WRONG\n";
+	if (!false && 2 + 2 == 4) print "math works\n";
+	i: integer;
+	for (i = 0; false; i++) print "WRONG\n";
+	print pick(n), " ", 0 * pick(5), " ", n / 1, " ", n - 0, "\n";
+	return n - 10;
+}
