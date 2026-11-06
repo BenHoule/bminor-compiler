@@ -114,6 +114,7 @@ test: $(BIN) unit
 	@BMINOR=$(abspath $(BIN)) $(TEST_DIR)/printer/roundtrip.sh
 	@BMINOR=$(abspath $(BIN)) $(TEST_DIR)/resolver/positions.sh
 	@BMINOR=$(abspath $(BIN)) $(TEST_DIR)/programs/run.sh
+	@BMINOR=$(abspath $(BIN)) BMINOR_RUN=-codegen $(TEST_DIR)/programs/run.sh
 	@$(BOOK_DIR)/run-tests.sh $(abspath $(BIN)) -scan $(BOOK_DIR)/scanner
 	@$(BOOK_DIR)/run-tests.sh $(abspath $(BIN)) -parse $(BOOK_DIR)/parser
 	@$(BOOK_DIR)/run-tests.sh $(abspath $(BIN)) -print $(BOOK_DIR)/printer

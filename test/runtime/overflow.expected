@@ -1,1 +1,1 @@
-bminor runtime: integer power overflow
+runtime error: integer power overflow

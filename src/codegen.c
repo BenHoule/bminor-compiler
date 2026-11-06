@@ -18,6 +18,7 @@
 static FILE *out;
 static int func_index;  // keeps block labels unique per function
 static int string_count;
+static int dims_offset;  // frame offset of current func's temporary (aka scratch) array length var
 
 // Argument registers for x86-64 calling convention (System V AMD64 ABI)
 // 1. %rdi – 1st argument (historically destination index / file descriptor in syscalls)
@@ -26,8 +27,8 @@ static int string_count;
 // 4. %rcx – 4th argument (historically counter register)
 // 5. %r8  – 5th argument (64-bit general-purpose register added in x86-64)
 // 6. %r9  – 6th argument (64-bit general-purpose register added in x86-64)
-// NOTE: If a function takes more than six integer or pointer arguments, any additional arguments
-//       are pushed onto the stack.
+//
+// NOTE: If `nargs > 6`: additional arguments are pushed onto the stack.
 
 static const char *const int_args[] = {"%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9"};
 enum { MAX_INT_ARGS = 6, MAX_FP_ARGS = 8 };
@@ -219,6 +220,36 @@ static void codegen_fp_compare(const struct ir_instr *instr) {
   codegen_store("%rax", instr->dst);
 }
 
+// Lengths are copied into a contiguous scratch area below the register slots,
+// because bminor_array_new takes them as an int64_t array.
+static void codegen_array(const struct ir_instr *instr) {
+  for (int i = 0; i < instr->nargs; i++) {
+    codegen_load(instr->args[i], "%rax");
+    fprintf(out, "\tmovq %%rax, %d(%%rbp)\n", dims_offset + i * 8);
+  }
+  fprintf(out, ""
+    "\tleaq %d(%%rbp), %%rdi\n"
+    "\tmovq $%d, %%rsi\n"
+    "\tcall bminor_array_new\n",
+    dims_offset, instr->nargs
+  );
+  codegen_store("%rax", instr->dst);
+}
+
+static void codegen_index(const struct ir_instr *instr) {
+  codegen_load(instr->arg1, "%rax");
+  codegen_load(instr->arg2, "%rcx");
+  if (instr->imm.i)
+    fprintf(out, ""
+      "\tcmpq (%%rax), %%rcx\n"
+      "\tjb 1f\n"  // if (0 <= index < length) goto 1:
+      "\tcall bminor_bounds_error\n"
+      "\t1:\n"
+    );
+  fprintf(out, "\tleaq 8(%%rax,%%rcx,8), %%rax\n");
+  codegen_store("%rax", instr->dst);
+}
+
 static void codegen_instr(const struct ir_func *func, const struct ir_instr *instr) {
   switch (instr->op) {
     case IR_CONST:
@@ -304,11 +335,13 @@ static void codegen_instr(const struct ir_func *func, const struct ir_instr *ins
       fprintf(out, "\tmovq %%rcx, (%%rax)\n");
       break;
 
-    case IR_ARRAY:
-    case IR_INDEX:
+    case IR_ARRAY: codegen_array(instr); break;
+    case IR_INDEX: codegen_index(instr); break;
     case IR_LEN:
-      codegen_fail("arrays");
-      unreachable();
+      codegen_load(instr->arg1, "%rax");
+      fprintf(out, "\tmovq (%%rax), %%rax\n");
+      codegen_store("%rax", instr->dst);
+      break;
 
     case IR_CALL: codegen_call(instr); break;
 
@@ -367,7 +400,15 @@ static void codegen_func(const struct ir_func *func, const char *label, bool exp
     unreachable();
   }
 
-  int frame = (func->nregs * 8 + 15) & ~15;  // keeps %rsp 16-byte aligned at calls
+  int max_dims = 0;
+  for (const struct ir_block *block = func->head; block; block = block->next)
+    for (const struct ir_instr *instr = block->head; instr; instr = instr->next)
+      if (instr->op == IR_ARRAY && instr->nargs > max_dims)
+        max_dims = instr->nargs;
+
+  int slots = func->nregs + max_dims;
+  dims_offset = slots * -8;
+  int frame = (slots * 8 + 15) & ~15;  // keeps %rsp 16-byte aligned at calls
   if (exported) fprintf(out, "\n\t.globl %s\n", label);
   fprintf(out, ""
     "\t.type %s, @function\n"
