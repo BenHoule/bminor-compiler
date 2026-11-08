@@ -219,5 +219,3 @@ struct ir_program {
  * @param prog The IR program to print.
  */
 void ir_print(FILE *out, const struct ir_program *prog);
-
-

@@ -5,6 +5,7 @@
 #include "interp.h"
 #include "ir.h"
 #include "memory.h"
+#include "optimizer.h"
 #include "resolver.h"
 #include "scanner.h"
 #include "scope.h"
@@ -52,12 +53,12 @@ static stage_t stage_from_flag(const char *flag) {
 }
 
 static void print_usage(const char *program) {
-  fprintf(stderr, "Usage: %s <stage> <input file>\n"
+  fprintf(stderr, "Usage: %s [-O] <stage> <input file>\n"
           "Stages: -scan -parse -print -resolve -typecheck -validate\n"
           "        -ir -interp -codegen\n", program);
 }
 
-static int compile(stage_t stage) {
+static int compile(stage_t stage, bool optimize) {
   if (stage == STAGE_SCAN) {
     int token;
     while ((token = scanner_next_token()) != 0) {
@@ -102,6 +103,7 @@ static int compile(stage_t stage) {
   if (stage == STAGE_VALIDATE) return EXIT_SUCCESS;
 
   struct ir_program *program = decl_lower_program(parser_result);
+  if (optimize) optimize_program(program);
   if (stage == STAGE_IR) {
     ir_print(stdout, program);
     return EXIT_SUCCESS;
@@ -127,28 +129,30 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "bminor: failed to configure output buffering\n");
     return EXIT_COMPILE_ERROR;
   }
-
-  if (argc != 3) {
+  bool optimize = argc == 4 && strcmp(argv[1], "-O") == 0;
+  if (argc != 3 + optimize) {
     print_usage(argv[0]);
     return EXIT_USAGE_ERROR;
   }
+  const char *flag = argv[1 + optimize];
+  const char *path = argv[2 + optimize];
 
-  stage_t stage = stage_from_flag(argv[1]);
+  stage_t stage = stage_from_flag(flag);
   if (stage == STAGE_INVALID) {
-    fprintf(stderr, "bminor: invalid flag (%s)\n", argv[1]);
+    fprintf(stderr, "bminor: invalid flag (%s)\n", flag);
     print_usage(argv[0]);
     return EXIT_USAGE_ERROR;
   }
 
-  FILE *input = fopen(argv[2], "r");
+  FILE *input = fopen(path, "r");
   if (!input) {
-    fprintf(stderr, "bminor: failed to open '%s': ", argv[2]);
+    fprintf(stderr, "bminor: failed to open '%s': ", path);
     perror(nullptr);
     return EXIT_COMPILE_ERROR;
   }
 
   scanner_open(input);
-  int status = compile(stage);
+  int status = compile(stage, optimize);
   scanner_close();
 
   if (fclose(input) != 0) {

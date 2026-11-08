@@ -8,4 +8,4 @@ struct ir_program;  // Forward declaration
  * Rewrites the IR in place. Observable behaviour (output, exit status, runtime
  * errors) must be identical to the unoptimized program.
  */
-void optimize_program(struct ir_program *program);
+void optimize_program(struct ir_program *prog);

@@ -14,6 +14,7 @@
 #   BMINOR_BIN=path       compiler to test (default $BMINOR, then ./bminor)
 #   BMINOR_RUN=-interp    -interp runs the IR interpreter; -codegen compiles,
 #                         links with BMINOR_RUNTIME, and runs the executable
+#   BMINOR_OPT=-O         optimization flag for the compiler (optional)
 #   BMINOR_RUNTIME=path   runtime object for -codegen (default build/library.o)
 #   BMINOR_CC=cc          assembler/linker driver (default gcc-14)
 #   BMINOR_ONLY="a b"     run only the named programs
@@ -26,6 +27,7 @@ cd "$(dirname "$0")/../.." || exit 1
 
 BIN=${BMINOR_BIN:-${BMINOR:-./bminor}}
 RUN=${BMINOR_RUN:--interp}
+OPT=${BMINOR_OPT:-}
 RUNTIME=${BMINOR_RUNTIME:-build/library.o}
 CC=${BMINOR_CC:-gcc-14}
 [[ -x $BIN ]] || { echo "error: $BIN not built; run 'make' first"; exit 1; }
@@ -45,12 +47,12 @@ run_program() {
     local file=$1
     why=""
     if [[ $RUN != -codegen ]]; then
-        timeout 10 "$BIN" "$RUN" "$file" >"$out" 2>"$err"
+        timeout 10 "$BIN" ${OPT:+"$OPT"} "$RUN" "$file" >"$out" 2>"$err"
         status=$?
         return
     fi
 
-    if ! "$BIN" -codegen "$file" >"$asm" 2>"$err"; then
+    if ! "$BIN" ${OPT:+"$OPT"} -codegen "$file" >"$asm" 2>"$err"; then
         why="compiler failed"; return
     fi
     if ! "$CC" -o "$exe" "$asm" "$RUNTIME" -lm 2>"$err"; then
@@ -60,7 +62,7 @@ run_program() {
     status=$?
 }
 
-printf '\n%s=== programs (%s) ===%s\n' "$DIM" "$RUN" "$RESET"
+printf '\n%s=== programs (%s) ===%s\n' "$DIM" "${OPT:+$OPT }$RUN" "$RESET"
 
 for file in test/programs/good/*.bminor; do
     name=$(basename "$file" .bminor)

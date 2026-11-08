@@ -32,6 +32,7 @@ STAGES=(
     "printer:-print"
     "resolver:-resolve"
     "typechecker:-typecheck"
+    "optimizer:-O -ir"
 )
 
 # Color codes for output formatting
@@ -59,9 +60,9 @@ run_case() {
     if [[ ${BMINOR_VALGRIND:-0} == 1 ]]; then
         valgrind --quiet --error-exitcode=125 --leak-check=full \
                  --errors-for-leak-kinds=definite \
-                 "$BIN" "$flag" "$file" >"$output_file" 2>&1
+                 "$BIN" $flag "$file" >"$output_file" 2>&1
     else
-        "$BIN" "$flag" "$file" >"$output_file" 2>&1
+        "$BIN" $flag "$file" >"$output_file" 2>&1
     fi
     status=$? # capture the exit status of the command
 
