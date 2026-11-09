@@ -19,9 +19,7 @@ L0:
   %13 = const 14
   %14 = const 10
   %15 = const 1
-  jump L1
-L1:
-  %16 = copy %1
+  %16 = const 14
   %17 = copy %2
   %18 = add %16, %17
   ret %18

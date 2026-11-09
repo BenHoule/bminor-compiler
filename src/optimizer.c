@@ -2,6 +2,7 @@
 #include "ir.h"
 #include "memory.h"
 
+#include <assert.h>
 #include <stdint.h>
 #include <string.h>
 
@@ -149,14 +150,92 @@ static void opt_remove_unreachable(struct ir_func *func) {
   func->tail = kept;
 }
 
+static bool opt_is_empty_jump(const struct ir_block *block) {
+  return block->head == block->tail && block->tail->op == IR_JUMP;
+}
+
+// Follows chain of blocks that only jump. A chain that never reaches a real
+// block is an empty infinite loop, which must be kept as is.
+static struct ir_block *opt_skip_empty(struct ir_block *block, int limit) {
+  struct ir_block *start = block;
+  for (; limit > 0 && opt_is_empty_jump(block); limit--)
+    block = block->tail->imm.target[0];
+
+  return opt_is_empty_jump(block) ? start : block;
+}
+
+static bool opt_thread_jumps(struct ir_func *func) {
+  bool changed = false;
+  for (struct ir_block *block = func->head; block; block = block->next) {
+    struct ir_instr *term = block->tail;
+    int ntargets = term->op == IR_BRANCH ? 2
+      : term->op == IR_JUMP ? 1
+      : 0;
+
+    for (int i = 0; i < ntargets; i++) {
+      struct ir_block *target = opt_skip_empty(term->imm.target[i], func->nblocks);
+      if (target == term->imm.target[i]) continue;
+      term->imm.target[i] = target;
+      changed = true;
+    }
+    if (term->op == IR_BRANCH && term->imm.target[0] == term->imm.target[1]) {
+      term->op = IR_JUMP;
+      term->arg1 = IR_NONE;
+      changed = true;
+    }
+  }
+  return changed;
+}
+
+// Appends B to A when A ends in "jump B" and nothing else reaches B. The
+// emptied B is left in the list unreachable for opt_remove_unreachable.
+static bool opt_merge_blocks(struct ir_func *func) {
+  int *preds = memory_allocate(((size_t)func->nblocks + 1) * sizeof *preds);
+  for (struct ir_block *block = func->head; block; block = block->next) {
+    struct ir_block *succ[2];
+    int nsucc = ir_block_successors(block, succ);
+    for (int i = 0; i < nsucc; i++)
+      preds[succ[i]->id]++;
+  }
+
+  bool changed = false;
+  for (struct ir_block *block = func->head; block; block = block->next) {
+    while (block->tail && block->tail->op == IR_JUMP) {
+      struct ir_block *target = block->tail->imm.target[0];
+      if (target == block || target == func->head || preds[target->id] != 1) break;
+
+      // Merge block into target
+      if (block->head == block->tail) block->head = target->head;
+      else {
+        struct ir_instr *prev = block->head;
+        while (prev->next != block->tail) prev = prev->next;
+        prev->next = target->head;
+      }
+      block->tail = target->tail;
+      target->head = target->tail = nullptr;
+      changed = true;
+    }
+  }
+  return changed;
+}
+
+// Each CFG change can expose more: merged blocks give folding a longer block
+// to work with, and folded branches create new empty or single-entry blocks.
 static void optimize_function(struct ir_func *func) {
   if (func == nullptr) return;
-  opt_fold_constants(func);
-  opt_remove_unreachable(func);
+  bool changed = true;
+  while (changed) {
+    opt_fold_constants(func);
+    opt_remove_unreachable(func);
+    changed = opt_thread_jumps(func);
+    changed |= opt_merge_blocks(func);
+    opt_remove_unreachable(func);
+  }
+
 }
 
 void optimize_program(struct ir_program *prog) {
-  if (prog == nullptr) return;
+  assert(prog->init != nullptr);
   optimize_function(prog->init);
   for (struct ir_func *func = prog->funcs; func; func = func->next)
     optimize_function(func);

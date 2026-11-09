@@ -1,0 +1,64 @@
+function $init (params=0, locals=0, regs=0)
+L0:
+  ret
+
+function nested (params=2, locals=0, regs=7)
+L0:
+  %2 = copy %0
+  branch %2, L1, L2
+L1:
+  %3 = copy %1
+  branch %3, L3, L5
+L3:
+  %4 = string <string>
+  print.string %4
+  jump L2
+L5:
+  %5 = string <string>
+  print.string %5
+  jump L2
+L2:
+  %6 = string <string>
+  print.string %6
+  ret
+
+function count (params=1, locals=2, regs=15)
+L0:
+  %3 = const 0
+  %1 = const 0
+  %2 = const 0
+  %4 = const 0
+  %2 = const 0
+  jump L1
+L1:
+  %5 = copy %2
+  %6 = copy %0
+  %7 = lt %5, %6
+  branch %7, L2, L4
+L2:
+  %8 = copy %1
+  %9 = copy %2
+  %10 = add %8, %9
+  %1 = copy %10
+  %11 = copy %2
+  %12 = const 1
+  %13 = add %11, %12
+  %2 = copy %13
+  jump L1
+L4:
+  %14 = copy %1
+  ret %14
+
+function spin (params=0, locals=0, regs=0)
+L0:
+  jump L1
+L1:
+  jump L1
+
+function spin_branch (params=1, locals=0, regs=2)
+L0:
+  jump L2
+L2:
+  %1 = copy %0
+  jump L2
+

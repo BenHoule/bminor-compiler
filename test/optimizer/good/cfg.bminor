@@ -1,0 +1,22 @@
+// IR snapshot: empty join blocks are threaded through, single-entry blocks are
+// merged into their predecessor, and empty infinite loops survive (and do not
+// hang the optimizer).
+nested: function void (a: boolean, b: boolean) = {
+	if (a) if (b) print "ab"; else print "a";
+	print "|";
+}
+
+count: function integer (n: integer) = {
+	total: integer = 0;
+	i: integer;
+	for (i = 0; i < n; i++) total = total + i;
+	return total;
+}
+
+spin: function void () = {
+	for (;;) {}
+}
+
+spin_branch: function void (b: boolean) = {
+	for (;;) { if (b) {} else {} }
+}
